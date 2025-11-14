@@ -1,0 +1,9 @@
+{
+  "id": "8f912f63-50ed-42fb-b482-2d64db5fdb91",
+  "lastExecution": 0,
+  "description": "Weekday report",
+  "enabled": true,
+  "taskCode": "PrintPullSlips",
+  "rrule": "FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,TU,WE,TH,FR;BYHOUR=6,13",
+  "taskConfig": "{\"locations\":[],\"emailAddresses\":[\"mike@indexdata.com\",\"sauropoda@gmail.com\"]}"
+}

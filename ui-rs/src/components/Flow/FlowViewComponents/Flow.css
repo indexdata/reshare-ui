@@ -1,0 +1,71 @@
+.container {
+  display: flex;
+  height: 100%;
+}
+
+.flow {
+  flex: 0 0 320px; 
+  padding: var(--gutter-static);
+  border-right: 1px solid var(--color-border-p2);
+}
+
+.context {
+  flex: 1;
+  padding: var(--gutter-static);
+  max-width: 80em;
+}
+
+.cards > * {
+  margin-top: var(--gutter-static);
+}
+.cards > *:first-child {
+  margin-top: 0;
+}
+
+/**
+ * Be stupidly selective so we can override the default button classes without resorting to !important
+ */
+[dir="rtl"],
+:not([dir="rtl"]) {	
+	& .optionList {
+	
+	  & * {
+      margin-bottom: 0;
+      margin-top: 0;
+    }
+	  &.noBorderRadius {
+	    & > *,
+	    & > * > button:nth-child(1) {
+	      &::hover {
+	         background: var(--color-fill-hover);
+	      }
+	      border-radius: 0;
+	      &::before {
+	        border-radius: 0;
+	        left: 0;
+	        right: 0;
+	      }
+	    }
+	  }
+		& > span, & > div {
+      margin-bottom: 0;
+      margin-top: 0;
+      
+		  &:nth-child(even) {
+	      background-color: var(--color-fill-table-row-even);
+	    }
+	    &:nth-child(odd) {
+	      background-color: var(--color-fill-table-row-odd);
+	    }
+		}
+  }
+}
+
+.title_headline {
+	margin-top: 2.33rem;
+  margin-bottom: 2.33rem;
+}
+
+.title_links > * {
+  margin-right: var(--gutter-static);
+}

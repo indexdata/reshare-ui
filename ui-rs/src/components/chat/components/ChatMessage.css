@@ -1,0 +1,61 @@
+.headerTime {
+  color: #9ea4aa;
+  font-size: 75%;
+}
+
+.contents {
+  word-wrap: break-word;
+}
+
+.actionButton {
+  padding: 5px;
+  align-self: center;
+}
+
+.rightHandSide {
+  display: flex;
+  margin-left: auto;
+}
+
+.leftHandSide {
+  margin: 10px auto 10px 5px;
+  width: 100%;
+}
+
+.unread {
+  background-color: rgba(43, 117, 187, 0.15);
+}
+
+.read {
+  background-color: #fff;
+}
+
+.actionMessage {
+  background-color: #fffbd9;
+}
+
+.displayFlex {
+  display: flex;
+}
+
+.actionText {
+  color: #9ea4aa;
+}
+
+.messageContainer {
+  border-width: 0px 0px 1px 0px;
+  border-style: solid;
+  border-color:  #9ea4aa;
+  margin-right: -15px;
+  margin-left: -15px;
+}
+
+.sender {
+  border-left-width: 5px;
+  border-left-color:  coral;
+}
+
+.receiver {
+  border-left-width: 5px;
+  border-color: var(--primary);
+}

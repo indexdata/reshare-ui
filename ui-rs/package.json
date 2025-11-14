@@ -1,0 +1,147 @@
+{
+  "name": "@projectreshare/rs",
+  "version": "1.20.17",
+  "description": "Resource Sharing",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openlibraryenvironment/ui-rs"
+  },
+  "main": "src/index.js",
+  "repository": "",
+  "license": "Apache-2.0",
+  "scripts": {
+    "start": "stripes serve",
+    "build": "stripes build --output ./output",
+    "lint": "eslint src"
+  },
+  "devDependencies": {
+    "@folio/eslint-config-stripes": "~7.1.0",
+    "@folio/stripes-cli": "~3.1.0",
+    "eslint": "^7.0.0"
+  },
+  "dependencies": {
+    "@folio/stripes-data-transfer-components": "~6.0.0",
+    "@folio/stripes-erm-components": "~9.0.0",
+    "@folio/stripes-template-editor": "^3.0.0",
+    "@k-int/stripes-kint-components": "^5.4.0",
+    "@projectreshare/stripes-reshare": "^2.0.0",
+    "classnames": "^2.2.6",
+    "final-form": "^4.2.0",
+    "final-form-arrays": "^3.0.2",
+    "graphql-tag": "^2.5.0",
+    "html-to-react": "^1.4.2",
+    "json-stable-stringify": "^1.0.1",
+    "ky": "^0.23.0",
+    "lodash": "^4.17.4",
+    "omit-deep-lodash": "^1.1.7",
+    "prop-types": "^15.6.0",
+    "query-string": "^8.1.0",
+    "react-final-form": "^6.3.0",
+    "react-final-form-arrays": "^3.1.1",
+    "react-syntax-highlighter": "^15.5.0",
+    "rrule": "2.6.4",
+    "xml-beautify": "^1.2.3"
+  },
+  "peerDependencies": {
+    "@folio/stripes": "^9.0.0",
+    "moment": "^2.29.0",
+    "react": "*",
+    "react-intl": "^6.4.7",
+    "react-query": "^3.9.0",
+    "react-router": "^5.2.0",
+    "react-router-dom": "^5.0.0"
+  },
+  "resolutions": {
+        "@rehooks/local-storage": "2.4.4",
+        "postcss-nesting" : "^10.0.0"
+  },
+  "stripes": {
+    "actsAs": [
+      "settings"
+    ],
+    "displayName": "ui-rs.meta.title",
+    "route": "/rs",
+    "stripesDeps": [
+      "@folio/stripes-erm-components",
+      "@k-int/stripes-kint-components",
+      "@projectreshare/stripes-reshare",
+      "@folio/stripes-template-editor"
+    ],
+    "icons": [
+      {
+        "name": "app",
+        "alt": "Create, view and manage patron requests",
+        "title": "Requests"
+      }
+    ],
+    "okapiInterfaces": {
+      "rs": "1.0 2.0",
+      "tags": "1.0"
+    },
+    "permissionSets": [
+      {
+        "permissionName": "module.rs.enabled",
+        "displayName": "UI: resource-sharing module is enabled",
+        "visible": true
+      },
+      {
+        "permissionName": "settings.rs.enabled",
+        "displayName": "Settings (resource-sharing): settings enabled",
+        "subPermissions": [
+          "settings.enabled"
+        ],
+        "visible": false
+      },
+      {
+        "permissionName": "ui-rs.settings.system",
+        "displayName": "Settings (resource-sharing): can view and edit system settings that do not have separate permissions",
+        "subPermissions": [
+          "settings.rs.enabled",
+          "rs.settings.get",
+          "rs.settings.put",
+          "rs.refdata.get",
+          "rs.refdata.put"
+        ],
+        "visible": true
+      },
+      {
+        "permissionName": "ui-rs.settings.notices",
+        "displayName": "Settings (resource-sharing): Can create, edit and remove notices and notice policies",
+        "subPermissions": [
+          "settings.rs.enabled",
+          "rs.noticePolicies",
+          "rs.refdata.get",
+          "rs.template.write"
+        ],
+        "visible": true
+      },
+      {
+        "permissionName": "ui-rs.settings.hostlmslocations",
+        "displayName": "Settings (resource-sharing): Can edit host LMS locations and patron profiles",
+        "subPermissions": [
+          "settings.rs.enabled",
+          "rs.directoryentry.get",
+          "rs.hostlmslocations.write",
+          "rs.hostlmspatronprofiles.write",
+          "rs.hostlmsitemloanpolicies.write",
+          "rs.shelvingLocations.write"
+        ],
+        "visible": true
+      },
+      {
+        "permissionName": "ui-rs.settings.pullslip-notifications",
+        "displayName": "Settings (resource-sharing): Can create, edit and remove pullslip notifications and templates",
+        "subPermissions": [
+          "settings.rs.enabled",
+          "rs.file.upload",
+          "rs.hostlmslocations.get",
+          "rs.refdata.get",
+          "rs.report.admin",
+          "rs.template.write",
+          "rs.timers"
+        ],
+        "visible": true
+      }
+    ]
+  }
+}
