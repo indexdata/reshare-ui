@@ -8,6 +8,8 @@ import { SearchAndSortQuery, makeQueryFunction } from '@folio/stripes/smart-comp
 
 import Entries from '../components/Entries';
 
+const PER_PAGE = 100;
+
 const EntriesRoute = ({ children }) => {
   const ky = useOkapiKy();
   const location = useLocation();
@@ -30,7 +32,11 @@ const EntriesRoute = ({ children }) => {
     {
       queryKey: ['rsdir/entries', cql, '@projectreshare/rsdir'],
       queryFn: ({ pageParam = 0 }) => {
-        const url = cql ? `rsdir/entries?q=${encodeURIComponent(cql)}` : 'rsdir/entries';
+        const params = new URLSearchParams();
+        if (cql) params.append('q', cql);
+        params.append('limit', PER_PAGE);
+        params.append('offset', pageParam);
+        const url = `rsdir/entries?${params.toString()}`;
         return ky(url).json();
       },
       useErrorBoundary: true,
@@ -65,6 +71,7 @@ const EntriesRoute = ({ children }) => {
           getFilterHandlers={getFilterHandlers}
           resetAll={resetAll}
           searchChanged={searchChanged}
+          perPage={PER_PAGE}
         >
           {children}
         </Entries>
