@@ -14,18 +14,31 @@ const EntriesRoute = ({ children }) => {
   const ky = useOkapiKy();
   const location = useLocation();
 
-  // Create CQL query builder using makeQueryFunction
+  // Read query params from URL (SearchAndSortQuery manages the URL, we just read it)
+  const urlParams = queryString.parse(location.search);
+  const queryParams = {
+    query: urlParams.query || '',
+    qindex: urlParams.qindex || '',
+    filters: '',
+    sort: ''
+  };
+
+  const queryTemplates = {
+    // When qindex is empty string (All fields)
+    '': '(name="*%{query.query}*" or description="*%{query.query}*")',
+    'name': 'name="*%{query.query}*"',
+  };
+
+  const selectedTemplate = queryTemplates[queryParams.qindex] || queryTemplates[''];
+
+  // Create CQL query builder using makeQueryFunction with selected template
   const getCQL = makeQueryFunction(
     'cql.allRecords=1',  // fallback when no search/filters
-    '(name="*%{query.query}*" or description="*%{query.query}*")',  // search template for entries
+    selectedTemplate,
     {},  // sortMap (empty for now)
     [],  // filterConfig (empty for now)
     0,   // don't fail on empty query
   );
-
-  // Read query params from URL (SearchAndSortQuery manages the URL, we just read it)
-  const urlParams = queryString.parse(location.search);
-  const queryParams = { query: urlParams.query || '', filters: '', sort: '' };
   const cql = getCQL(queryParams, {}, { query: queryParams }, console);
 
   const entriesQuery = useInfiniteQuery(

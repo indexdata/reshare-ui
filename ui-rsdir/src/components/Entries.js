@@ -94,7 +94,7 @@ const Entries = ({
             symbols: intl.formatMessage({ id: 'ui-rsdir.entry.symbols' }),
           }}
           formatter={resultsFormatter}
-          isEmptyMessage={intl.formatMessage({ id: 'stripes-smart-components.noResults.noTerms' })}
+          isEmptyMessage={intl.formatMessage({ id: 'stripes-smart-components.sas.noResults.noTerms' })}
           loading={entriesQuery.isFetching}
           onNeedMoreData={fetchMore}
           onRowClick={(_e, rowData) => history.push(`${match.url}/view/${rowData.id}${location.search}`)}
