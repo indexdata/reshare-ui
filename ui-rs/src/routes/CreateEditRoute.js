@@ -28,6 +28,18 @@ const OP_ACTION = {
 };
 
 const SI_FIELDS = ['title', 'author', 'edition', 'isbn', 'issn', 'oclcNumber', 'publisher', 'publicationDate', 'placeOfPublication', 'publicationType'];
+const SI_FIELD_MAP = {
+  title: 'bibliographicInfo.title',
+  author: 'bibliographicInfo.author',
+  edition: 'bibliographicInfo.edition',
+  isbn: 'identifiers.ISBN',
+  issn: 'identifiers.ISSN',
+  oclcNumber: 'identifiers.OCLC',
+  publisher: 'publicationInfo.publisher',
+  publicationDate: 'publicationInfo.publicationDate',
+  placeOfPublication: 'publicationInfo.placeOfPublication',
+  publicationType: "publicationInfo.publicationType['#text']",
+};
 // Eventually we want an allowlist of the fields mutable via the form but currently rerequest depends on
 // the previous behaviour of resubmitting the whole request. Trimming at this point mainly to avoid noise
 // in the audit trail.
@@ -37,7 +49,7 @@ const LARGE_UNEDITABLE_FIELDS = ['audit', 'bibrecord', 'batches', 'conditions', 
 const handleSISelect = (args, state, tools) => {
   const leader = args?.[0]?.__leader__;
   if (leader && leader?.[6] === 'a') {
-    const stval = state.formState.values?.serviceType?.value;
+    const stval = state.formState.values?.serviceInfo?.serviceType;
     const leaderField = leader?.[7];
     const pubTypeMatch = {
       'loan' : {
@@ -63,11 +75,13 @@ const handleSISelect = (args, state, tools) => {
   }
 
   Object.entries(args[0]).forEach(([field, value]) => {
-    tools.changeValue(state, field, () => value);
+    const mappedField = SI_FIELD_MAP[field] ?? field;
+    tools.changeValue(state, mappedField, () => value);
   });
 
   SI_FIELDS.filter(field => !(field in args[0])).forEach(field => {
-    tools.changeValue(state, field, () => undefined);
+    const mappedField = SI_FIELD_MAP[field] ?? field;
+    tools.changeValue(state, mappedField, () => undefined);
   });
 };
 
@@ -81,43 +95,56 @@ const CreateEditRoute = props => {
   const queryClient = useQueryClient();
   const okapiKy = useOkapiKy();
   const close = useCloseDirect();
-  const [copyrightTypes, copyrightTypesLoaded] = useSelectifiedRefdata('copyrightType', 'ui-rs.refdata.copyrightType');
-  const [serviceLevels, serviceLevelsLoaded] = useSelectifiedRefdata('ServiceLevels', 'ui-rs.refdata.serviceLevel', 'other', 'displayed_service_levels');
+  // TODO: Broker API
+  // const [copyrightTypes, copyrightTypesLoaded] = useSelectifiedRefdata('copyrightType', 'ui-rs.refdata.copyrightType');
+  // const [serviceLevels, serviceLevelsLoaded] = useSelectifiedRefdata('ServiceLevels', 'ui-rs.refdata.serviceLevel', 'other', 'displayed_service_levels');
+  const copyrightTypes = [];
+  const copyrightTypesLoaded = true;
+  const serviceLevels = [];
+  const serviceLevelsLoaded = true;
   const stripes = useStripes();
   const config = stripes.config?.reshare;
 
-  const borrowerCheckSetting = useSetting('borrower_check', 'hostLMSIntegration');
-  const defaultRequesterSymbolSetting = useSetting('default_request_symbol', 'requests');
-  const defaultCopyrightSetting = useSetting('default_copyright_type', 'other');
-  const defaultServiceLevelSetting = useSetting('default_service_level', 'other');
-  const routingAdapterSetting = useSetting('routing_adapter');
+  // TODO: Broker API
+  // const borrowerCheckSetting = useSetting('borrower_check', 'hostLMSIntegration');
+  // const defaultRequesterSymbolSetting = useSetting('default_request_symbol', 'requests');
+  // const defaultCopyrightSetting = useSetting('default_copyright_type', 'other');
+  // const defaultServiceLevelSetting = useSetting('default_service_level', 'other');
+  // const routingAdapterSetting = useSetting('routing_adapter');
+  const defaultRequesterSymbolSetting = { value: { label: 'Default', value: 'ISIL:DEFAULT' }, isSuccess: true };
+  const routingAdapterSetting = { value: 'disabled', isSuccess: true };
 
-  const locationQuery = useOkapiQuery(
-    'directory/entry',
-    {
-      searchParams: encodeURI('?filters=tags.value=i=pickup&filters=status.value==managed&perPage=1000'),
-      kyOpt: { throwHttpErrors: false },
-      useErrorBoundary: false,
-      refetchOnWindowFocus: false,
-      retryOnMount:false,
-      enabled: routingAdapterSetting.isSuccess === true && routingAdapterSetting.value !== 'disabled'
-    }
-  );
-  const institutionQuery = useOkapiQuery(
-    'directory/entry',
-    {
-      searchParams: encodeURI('?filters=type.value==institution&filters=status.value==managed&perPage=1000'),
-      kyOpt: { throwHttpErrors: false },
-      useErrorBoundary: false,
-      refetchOnWindowFocus: false,
-      retryOnMount:false,
-      enabled: routingAdapterSetting.isSuccess === true && routingAdapterSetting.value !== 'disabled'
-    }
-  );
-  const { data: enabledFields } = useOkapiQuery('rs/patronrequests/editableFields/edit', {
-    useErrorBoundary: false,
-    staleTime: 2 * 60 * 60 * 1000
-  });
+  // const locationQuery = useOkapiQuery(
+  //   'directory/entry',
+  //   {
+  //     searchParams: encodeURI('?filters=tags.value=i=pickup&filters=status.value==managed&perPage=1000'),
+  //     kyOpt: { throwHttpErrors: false },
+  //     useErrorBoundary: false,
+  //     refetchOnWindowFocus: false,
+  //     retryOnMount:false,
+  //     enabled: routingAdapterSetting.isSuccess === true && routingAdapterSetting.value !== 'disabled'
+  //   }
+  // );
+  const locationQuery = { isSuccess: true, data: [] };
+
+  // const institutionQuery = useOkapiQuery(
+  //   'directory/entry',
+  //   {
+  //     searchParams: encodeURI('?filters=type.value==institution&filters=status.value==managed&perPage=1000'),
+  //     kyOpt: { throwHttpErrors: false },
+  //     useErrorBoundary: false,
+  //     refetchOnWindowFocus: false,
+  //     retryOnMount:false,
+  //     enabled: routingAdapterSetting.isSuccess === true && routingAdapterSetting.value !== 'disabled'
+  //   }
+  // );
+  const institutionQuery = { isSuccess: true, data: [] };
+  // TODO: Broker API
+  // const { data: enabledFields } = useOkapiQuery('rs/patronrequests/editableFields/edit', {
+  //   useErrorBoundary: false,
+  //   staleTime: 2 * 60 * 60 * 1000
+  // });
+  const enabledFields = undefined;
   const reqQuery = useOkapiQuery(`rs/patronrequests/${id}`, { enabled: !!id });
 
   const publicationTypesList = ['ArchiveMaterial', 'Article', 'AudioBook',
@@ -152,23 +179,18 @@ const CreateEditRoute = props => {
 
   const creator = useMutation({
     mutationFn: (newRecord) => okapiKy
-      .post('rs/patronrequests', { json: { ...newRecord, maximumCostsCurrencyCode: stripes.currency } }),
+      .post('broker/patron_requests', { json: newRecord }),
     onSuccess: async (res) => {
       const created = await res.json();
-      // When creating a new request we need to delay before redirecting to the request's page to
-      // give the server some time to resolve the requesting institution from the symbol and generate
-      // an appropriate ID.
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      // We want to go to the new record but we also want it to be easy to return to where we were,
-      // hence use of history.replace rather than history.push -- the create form turns into the
-      // created record.
+      // TODO: Redirect to view page once implemented
+      // if (routerLocation?.pathname?.match('/request/requests/create/.+')) {
+      //   history.replace(`../view/${created.ID}?${routerLocation.search}`);
+      // } else {
+      //   history.replace(`view/${created.ID}?${routerLocation.search}`);
+      // }
 
-      // Conditional to see if we have a deeplink attached to the path
-      if (routerLocation?.pathname?.match('/request/requests/create/.+')) {
-        history.replace(`../view/${created.id}?${routerLocation.search}`);
-      } else {
-        history.replace(`view/${created.id}?${routerLocation.search}`);
-      }
+      // For now, go back to the request list
+      close();
     },
     onError: async (err) => {
       callout.sendCallout({ type: 'error',
@@ -189,7 +211,8 @@ const CreateEditRoute = props => {
     throw new Error('Cannot resolve symbol to create requests as');
   }
 
-  const directoryEntriesQuery = useNewDirectoryEntries();
+  // const directoryEntriesQuery = useNewDirectoryEntries();
+  const directoryEntriesQuery = { isSuccess: true, data: { items: [] } };
 
   // Only proceed to render once everything is loaded
   if (!routingAdapterSetting.isSuccess) return null;
@@ -236,14 +259,15 @@ const CreateEditRoute = props => {
       serviceLevel: { value: record?.serviceLevel?.value },
       serviceType: { value: record?.serviceType?.value } };
     if (config?.useTiers) {
-      initialValues.tier = tierForRequest(record, tiersByRequester[record.requestingInstitutionSymbol])?.id;
+      initialValues.tier = tierForRequest(record, tiersByRequester[record.requesterSymbol])?.id;
     }
   } else {
     record = null;
     initialValues = {
-      copyrightType: defaultCopyrightSetting,
-      serviceLevel: { value: config?.useTiers ? undefined : defaultServiceLevelSetting.value },
-      serviceType: { value: SERVICE_TYPE_LOAN },
+      // TODO: Broker API
+      // copyrightType: defaultCopyrightSetting,
+      // serviceLevel: { value: config?.useTiers ? undefined : defaultServiceLevelSetting.value },
+      serviceInfo: { serviceType: SERVICE_TYPE_LOAN },
     };
   }
 
@@ -255,18 +279,19 @@ const CreateEditRoute = props => {
     initialValues.systemInstanceIdentifier = sysIdMatch[1];
   }
 
-  if (borrowerCheckSetting.value === 'none' && op === CREATE) {
-    const institutions = directoryEntriesQuery.isSuccess
-      ? directoryEntriesQuery.data?.items?.filter(item => item.type === 'institution')
-      : [];
+  // TODO: Broker API
+  // if (borrowerCheckSetting.value === 'none' && op === CREATE) {
+  //   const institutions = directoryEntriesQuery.isSuccess
+  //     ? directoryEntriesQuery.data?.items?.filter(item => item.type === 'institution')
+  //     : [];
 
-    if (institutions?.length) {
-      initialValues.patronEmail = institutions[0].email;
-    }
+  //   if (institutions?.length) {
+  //     initialValues.patronEmail = institutions[0].email;
+  //   }
 
-    initialValues.patronGivenName = stripes?.user?.user?.firstName;
-    initialValues.patronSurname = stripes?.user?.user?.lastName;
-  }
+  //   initialValues.patronGivenName = stripes?.user?.user?.firstName;
+  //   initialValues.patronSurname = stripes?.user?.user?.lastName;
+  // }
 
   const getEntriesByType = (entryData, typeValue) => {
     return entryData?.items?.filter(entry => { return entry.type === typeValue; });
@@ -320,21 +345,28 @@ const CreateEditRoute = props => {
 
   const submit = async submittedRecord => {
     if (op === CREATE) {
-      const baseRecord = {
-        requestingInstitutionSymbol: requesterList[0].value,
-        isRequester: true,
-        // deliveryAddress: 'dummy address'
-      };
-
-      if (submittedRecord.pickupLocation && directoryEntriesQuery.isSuccess) {
-        baseRecord.deliveryAddress = getAddressForPickupLocation(
-          directoryEntriesQuery.data, submittedRecord.pickupLocation,
-        );
-      }
+      // Transform identifiers object to bibliographicItemId array
+      const identifiers = submittedRecord.identifiers || {};
+      const bibliographicItemId = Object.entries(identifiers)
+        .filter(([_, value]) => value)
+        .map(([code, value]) => ({
+          bibliographicItemIdentifier: value,
+          bibliographicItemIdentifierCode: { text: code }
+        }));
+      const bibliographicRecordId = submittedRecord.systemInstanceIdentifier ? [{
+        bibliographicRecordIdentifier: submittedRecord.systemInstanceIdentifier,
+        bibliographicRecordIdentifierCode: { text: 'systemInstanceIdentifier' }
+      }] : [];
 
       const newRecord = {
-        ...baseRecord,
-        ...(submittedRecord.serviceType?.value === SERVICE_TYPE_COPY ? submittedRecord : omit(submittedRecord, 'copyrightType')),
+        illRequest: {
+          ...omit(submittedRecord, ['identifiers', 'systemInstanceIdentifier']),
+          bibliographicInfo: {
+            ...submittedRecord.bibliographicInfo,
+            ...(bibliographicItemId.length > 0 && { bibliographicItemId }),
+            ...(bibliographicRecordId.length > 0 && { bibliographicRecordId })
+          },
+        },
       };
       return creator.mutateAsync(newRecord);
     }

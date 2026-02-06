@@ -7,7 +7,6 @@ import {
 } from 'react-intl';
 import { Link, useHistory, useLocation, useRouteMatch } from 'react-router-dom';
 import queryString from 'query-string';
-import { useQueryClient } from 'react-query';
 import {
   Badge,
   Button,
@@ -20,9 +19,8 @@ import {
   Pane,
   PaneMenu,
 } from '@folio/stripes/components';
-import { AppIcon, IfPermission, useOkapiKy, useStripes } from '@folio/stripes/core';
+import { AppIcon, IfPermission, useStripes } from '@folio/stripes/core';
 import { SearchAndSortQuery, PersistedPaneset } from '@folio/stripes/smart-components';
-import { useIntlCallout } from '@projectreshare/stripes-reshare';
 import AppNameContext from '../../AppNameContext';
 import Filters from './Filters';
 import Search from './Search';
@@ -32,8 +30,8 @@ const appDetails = {
     title: 'Requests',
     visibleColumns: [
       'flags', 'hrid',
-      'dateCreated', 'lastUpdated', 'selectedItemBarcode', 'patronIdentifier', 'state', 'serviceType',
-      'supplyingInstitutionSymbol', 'pickupLocation',
+      'dateCreated', 'lastUpdated', 'selectedItemBarcode', 'patron', 'state', 'serviceType',
+      'supplierSymbol', 'pickupLocation',
       'title',
     ],
     extraFilter: 'r.true',
@@ -47,7 +45,7 @@ const appDetails = {
     visibleColumns: [
       'flags', 'hrid',
       'dateCreated', 'lastUpdated', 'state', 'serviceType',
-      'requestingInstitutionSymbol', 'selectedItemBarcode', 'pickLocation',
+      'requesterSymbol', 'selectedItemBarcode', 'pickLocation',
       'pickShelvingLocation', 'title'
     ],
     extraFilter: 'r.false',
@@ -58,21 +56,21 @@ const appDetails = {
   },
 };
 
-const PatronRequests = ({ requestsQuery, queryGetter, querySetter, filterOptions, searchParams, perPage, children }) => {
+const PatronRequests = ({ requestsQuery, perPage, children }) => {
   const appName = useContext(AppNameContext);
-  const sendCallout = useIntlCallout();
   const history = useHistory();
   const intl = useIntl();
   const location = useLocation();
   const match = useRouteMatch();
-  const okapiKy = useOkapiKy();
-  const queryClient = useQueryClient();
   const stripes = useStripes();
   const [offset, setOffset] = useState(0);
 
-  const requests = requestsQuery?.data?.pages?.[offset / perPage]?.results;
+  const pageData = requestsQuery?.data?.pages?.[offset / perPage];
+  const requests = Array.isArray(pageData)
+    ? pageData
+    : pageData?.items || [];
   const sparseRequests = (new Array(offset)).concat(requests);
-  const totalCount = requestsQuery?.data?.pages?.[0]?.total;
+  const totalCount = requestsQuery?.data?.pages?.[0]?.about?.count || 0;
   const parsedParams = queryString.parse(location.search);
   const sortOrder = parsedParams.sort || '';
   const fetchMore = (_askAmount, index) => {
@@ -88,31 +86,6 @@ const PatronRequests = ({ requestsQuery, queryGetter, querySetter, filterOptions
     }
   });
 
-  const onPrintAll = () => {
-    okapiKy(`rs/patronrequests/generatePickListBatch${searchParams}`).then(async res => {
-      const { batchId } = await res.json();
-      queryClient.invalidateQueries('rs/batch');
-      history.push(`requests/batch/${batchId}/pullslip`, { direct: true });
-    }).catch(async e => {
-      const res = await e?.response?.text();
-      sendCallout('ui-rs.pullSlip.error', 'error', { errMsg: (res.startsWith('{') ? JSON.parse(res)?.error : res) || (e.message ?? '') });
-    });
-  };
-
-  const getActionMenu = () => (
-    <FormattedMessage id="ui-rs.printAllPullSlips">
-      {ariaLabel => (
-        <Button
-          id="clickable-print-pull-slips"
-          aria-label={ariaLabel[0]}
-          buttonStyle="dropdownItem"
-          onClick={onPrintAll}
-        >
-          <Icon icon="print"><FormattedMessage id="ui-rs.printPullSlips" /></Icon>
-        </Button>
-      )}
-    </FormattedMessage>
-  );
 
   const { title, visibleColumns, createPerm } = appDetails[appName];
 
@@ -122,51 +95,18 @@ const PatronRequests = ({ requestsQuery, queryGetter, querySetter, filterOptions
       initialSearch={initialSearch}
       initialSearchState={{ query: '' }}
       key={location.search}
-      queryGetter={queryGetter}
-      querySetter={querySetter}
     >
       {
         ({
-          activeFilters,
-          filterChanged,
-          getFilterHandlers,
-          getSearchHandlers,
           onSort,
-          onSubmitSearch,
-          resetAll,
-          searchChanged,
-          searchValue,
         }) => (
           <div>
             <PersistedPaneset
               appId={`@projectreshare/${appName}`}
               id="requests"
             >
-              <Pane
-                defaultWidth="20%"
-                paneTitle={<FormattedMessage id="stripes-smart-components.searchAndFilter" />}
-              >
-                <form onSubmit={onSubmitSearch}>
-                  <Search
-                    filterChanged={filterChanged}
-                    searchChanged={searchChanged}
-                    searchHandlers={getSearchHandlers()}
-                    searchValue={searchValue}
-                    resetAll={resetAll}
-                  />
-                  {filterOptions &&
-                    <Filters
-                      activeFilters={activeFilters.state}
-                      filterHandlers={getFilterHandlers()}
-                      options={filterOptions}
-                      appDetails={appDetails}
-                    />
-                  }
-                </form>
-              </Pane>
               {requestsQuery.isSuccess ?
                 <Pane
-                  actionMenu={getActionMenu}
                   appIcon={<AppIcon app={appName} iconKey="app" size="small" />}
                   defaultWidth="fill"
                   firstMenu={(
@@ -208,15 +148,14 @@ const PatronRequests = ({ requestsQuery, queryGetter, querySetter, filterOptions
                     columnMapping={{
                       flags: '',
                       hrid: <FormattedMessage id="ui-rs.patronrequests.id" />,
-                      isRequester: <FormattedMessage id="ui-rs.patronrequests.isRequester" />,
                       dateCreated: <FormattedMessage id="ui-rs.patronrequests.dateCreated" />,
                       lastUpdated: <FormattedMessage id="ui-rs.patronrequests.lastUpdated" />,
                       title: <FormattedMessage id="ui-rs.patronrequests.title" />,
-                      patronIdentifier: <FormattedMessage id="ui-rs.patronrequests.patronIdentifier" />,
+                      patron: <FormattedMessage id="ui-rs.patronrequests.patronIdentifier" />,
                       state: <FormattedMessage id="ui-rs.patronrequests.state" />,
                       serviceType: <FormattedMessage id="ui-rs.patronrequests.serviceType" />,
-                      requestingInstitutionSymbol: <FormattedMessage id="ui-rs.patronrequests.requestingInstitutionSymbol" />,
-                      supplyingInstitutionSymbol: <FormattedMessage id="ui-rs.patronrequests.supplyingInstitutionSymbol" />,
+                      requesterSymbol: <FormattedMessage id="ui-rs.patronrequests.requestingInstitutionSymbol" />,
+                      supplierSymbol: <FormattedMessage id="ui-rs.patronrequests.supplyingInstitutionSymbol" />,
                       selectedItemBarcode: <FormattedMessage id="ui-rs.patronrequests.selectedItemBarcode" />,
                       pickLocation: <FormattedMessage id="ui-rs.patronrequests.pickLocation" />,
                       pickShelvingLocation: <FormattedMessage id="ui-rs.patronrequests.pickShelvingLocation" />,
@@ -224,7 +163,6 @@ const PatronRequests = ({ requestsQuery, queryGetter, querySetter, filterOptions
                     }}
                     columnWidths={{
                       flags: '60px',
-                      id: { max: 115 },
                       dateCreated: '96px',
                       lastUpdated: '96px',
                       state: { min: 84 },
@@ -233,43 +171,20 @@ const PatronRequests = ({ requestsQuery, queryGetter, querySetter, filterOptions
                     }}
                     contentData={sparseRequests}
                     formatter={{
-                      flags: a => {
-                        const attn = a?.state?.needsAttention;
-                        const msgs = a?.unreadMessageCount;
-                        const cost = a?.cost;
-                        if (!(attn || msgs > 0 || cost > 0)) return '';
-                        const str = (msgs > 0 ? msgs : '') + (attn ? '!' : '') + (cost > 0 ? '$' : '');
-                        const color = attn ? 'red' : (msgs > 0 ? 'primary' : 'default');
-                        const ariaLabel = [
-                          ...(attn ? [intl.formatMessage({ id: 'ui-rs.needsAttention' })] : []),
-                          ...(msgs > 0 ? [intl.formatMessage({ id: 'ui-rs.unread' })] : []),
-                          ...(cost > 0 ? [intl.formatMessage({ id: 'ui-rs.hasCost' })] : []),
-                        ].join(' ');
-                        return <Badge color={color} aria-label={ariaLabel}>{str}</Badge>;
+                      hrid: a => a.id,
+                      dateCreated: a => (new Date(a.timestamp).toLocaleDateString() === new Date().toLocaleDateString()
+                        ? <FormattedTime value={a.timestamp} />
+                        : <FormattedDate value={a.timestamp} />),
+                      lastUpdated: a => (new Date(a.timestamp).toLocaleDateString() === new Date().toLocaleDateString()
+                        ? <FormattedTime value={a.timestamp} />
+                        : <FormattedDate value={a.timestamp} />),
+                      patron: a => {
+                        const p = a.illRequest?.patronInfo;
+                        if (p?.givenName && p?.surname) return `${p.surname}, ${p.givenName}`;
+                        return p?.surname ?? p?.givenName ?? p?.patronId ?? a.patron;
                       },
-                      isRequester: a => (a.isRequester === true ? '✓' : a.isRequester === false ? '✗' : ''),
-                      dateCreated: a => (new Date(a.dateCreated).toLocaleDateString() === new Date().toLocaleDateString()
-                        ? <FormattedTime value={a.dateCreated} />
-                        : <FormattedDate value={a.dateCreated} />),
-                      lastUpdated: a => (new Date(a.lastUpdated).toLocaleDateString() === new Date().toLocaleDateString()
-                        ? <FormattedTime value={a.lastUpdated} />
-                        : <FormattedDate value={a.lastUpdated} />),
-                      patronIdentifier: a => {
-                        const { patronGivenName, patronSurname } = a;
-                        if (patronGivenName && patronSurname) return `${patronSurname}, ${patronGivenName}`;
-                        if (patronSurname) return patronSurname;
-                        if (patronGivenName) return patronGivenName;
-                        return a.patronIdentifier;
-                      },
-                      state: a => <FormattedMessage id={`stripes-reshare.states.${a.state?.code}`} />,
-                      serviceType: a => a.serviceType && a.serviceType.value,
-                      supplyingInstitutionSymbol:
-                        a => (a?.resolvedSupplier?.owner?.symbolSummary ?? (a?.supplyingInstitutionSymbol ?? '')).replace(/,.*/, ''),
-                      title: a => a.title || a.titleOfComponent,
-                      pickLocation: a => a.pickLocation && a.pickLocation.name,
-                      pickShelvingLocation: a => a.pickShelvingLocation && a.pickShelvingLocation.name,
-                      selectedItemBarcode: a => (a.volumes?.length <= 1 ? (a.volumes[0]?.itemId || a.selectedItemBarcode) : <FormattedMessage id="ui-rs.flow.info.itemBarcode.multiVolRequest" />),
-                      pickupLocation: a => a?.pickupLocation ?? '',
+                      serviceType: a => a.illRequest?.serviceInfo?.serviceType,
+                      title: a => a.illRequest?.bibliographicInfo?.title,
                     }}
                     hasMargin
                     isEmptyMessage={
