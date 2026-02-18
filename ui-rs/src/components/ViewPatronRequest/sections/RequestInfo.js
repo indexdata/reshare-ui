@@ -1,7 +1,7 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { FormattedMessage } from 'react-intl';
 import {
+  Accordion,
   Card,
   Col,
   KeyValue,
@@ -11,17 +11,17 @@ import {
 import formattedDateTime from '../../../util/formattedDateTime';
 
 class RequestInfo extends React.Component {
-  static propTypes = {
-    record: PropTypes.object,
-    id: PropTypes.string,
-  };
-
   render() {
-    const { record } = this.props;
+    const { record = {} } = this.props;
+    const illRequest = record.illRequest || {};
+    const deliveryInfo = illRequest.deliveryInfo || {};
+    const serviceInfo = illRequest.serviceInfo || {};
+    const pickupLocation = deliveryInfo.pickupLocation || deliveryInfo?.address?.physicalAddress?.line1;
+    const requestIdentifiers = Array.isArray(illRequest.requestIdentifiers) ? illRequest.requestIdentifiers : [];
 
     return (
+      <Accordion label={<FormattedMessage id="ui-rs.information.heading.request" />}>
       <Card
-        id={`${this.props.id}-card`}
         headerStart={record.id}
         roundedBorder
       >
@@ -29,7 +29,7 @@ class RequestInfo extends React.Component {
           <Col xs={6}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.hrid" />}
-              value={record.hrid}
+              value={record.requesterRequestId}
             />
           </Col>
           <Col xs={6}>
@@ -43,46 +43,69 @@ class RequestInfo extends React.Component {
           <Col xs={6}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.dateSubmitted" />}
-              value={formattedDateTime(record.dateCreated)}
+              value={record.timestamp ? formattedDateTime(record.timestamp) : ''}
             />
           </Col>
           <Col xs={6}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.lastUpdated" />}
-              value={formattedDateTime(record.lastUpdated)}
+              value={record.timestamp ? formattedDateTime(record.timestamp) : ''}
             />
           </Col>
         </Row>
         <Row>
           <Col xs={6}>
             <KeyValue
-              label={<FormattedMessage id="ui-rs.information.dateNeeded" />}
-              value={record.neededBy ? <FormattedUTCDate value={record.neededBy} /> : ''}
+              label={<FormattedMessage id="ui-rs.status" />}
+            >
+              {record.state ? <FormattedMessage id={`stripes-reshare.states.${record.state}`} defaultMessage={record.state} /> : ''}
+            </KeyValue>
+          </Col>
+          <Col xs={6}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rs.information.requestingInstitution" />}
+              value={record.requesterSymbol}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <Col xs={6}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rs.flow.info.supplier" />}
+              value={record.supplierSymbol}
             />
           </Col>
           <Col xs={6}>
             <KeyValue
-              label={<FormattedMessage id="ui-rs.information.pickupLocation" />}
-              value={record.pickupLocation}
+              label={<FormattedMessage id="ui-rs.information.dateNeeded" />}
+              value={illRequest.neededBy ? <FormattedUTCDate value={illRequest.neededBy} /> : ''}
             />
           </Col>
         </Row>
-        {record?.pickupURL &&
+        <Row>
+          <Col xs={12}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rs.information.pickupLocation" />}
+              value={pickupLocation}
+            />
+          </Col>
+        </Row>
+        {deliveryInfo?.pickupUrl &&
           <Row>
             <Col xs={12}>
               <KeyValue
                 label={<FormattedMessage id="ui-rs.information.pickupURL" />}
-                value={record.pickupURL}
+                value={deliveryInfo.pickupUrl}
               />
             </Col>
           </Row>
         }
-        {record?.requestIdentifiers?.length > 0 &&
+        {requestIdentifiers.length > 0 &&
           <Row>
             <Col xs={12}>
               <KeyValue
                 label={<FormattedMessage id="ui-rs.information.otherIdentifiers" />}
-                value={record.requestIdentifiers.map(ident => `${ident.identifierType}: ${ident.identifier}`).join(', ')}
+                value={requestIdentifiers.map(ident => `${ident.identifierType}: ${ident.identifier}`).join(', ')}
               />
             </Col>
           </Row>
@@ -91,11 +114,12 @@ class RequestInfo extends React.Component {
           <Col xs={12}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.notes" />}
-              value={record.patronNote}
+              value={serviceInfo.note}
             />
           </Col>
         </Row>
       </Card>
+      </Accordion>
     );
   }
 }

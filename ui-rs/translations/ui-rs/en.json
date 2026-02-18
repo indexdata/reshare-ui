@@ -37,6 +37,8 @@
   "patronrequests.withoutFilter": "Click here to try search again without filters.",
   "information.heading.developer": "Developer info",
   "information.heading.developer.help": "(JSON dump of raw record)",
+  "information.heading.developer.record": "Record",
+  "information.heading.developer.actions": "Actions",
   "information.heading.request": "Request information",
   "information.heading.catalogInfo": "Catalog record",
   "information.title": "Title",
