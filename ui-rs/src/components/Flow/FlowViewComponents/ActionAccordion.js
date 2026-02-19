@@ -2,12 +2,12 @@ import React from 'react';
 import { FormattedMessage } from 'react-intl';
 import { Button, Layout, Accordion } from '@folio/stripes/components';
 import renderNamedWithProps from '../../../util/renderNamedWithProps';
+import usePerformAction from '../../../util/usePerformAction';
 import * as moreActions from '../moreActions';
 import css from './Flow.css';
 
-const NOOP = () => {};
-
 const ActionAccordion = ({ actions = [], request }) => {
+  const performAction = usePerformAction(request, actions);
   const actionCodes = actions.filter(Boolean);
   const primaryAction = actionCodes[0];
 
@@ -22,7 +22,7 @@ const ActionAccordion = ({ actions = [], request }) => {
             <Button
               buttonStyle="primary mega"
               fullWidth
-              onClick={NOOP}
+              onClick={() => performAction(primaryAction)}
             >
               <FormattedMessage id={`stripes-reshare.actions.${primaryAction}`} defaultMessage={primaryAction} />
             </Button>
@@ -31,7 +31,7 @@ const ActionAccordion = ({ actions = [], request }) => {
         {actionCodes.length > 0 &&
           <Layout className={`padding-top-gutter ${css.optionList} ${css.noBorderRadius}`}>
             <strong><FormattedMessage id="ui-rs.flow.actions.moreOptions" /></strong>
-            {renderNamedWithProps(actionCodes, moreActions, { request, performAction: NOOP }, moreActions.Generic)}
+            {renderNamedWithProps(actionCodes, moreActions, { request, performAction }, moreActions.Generic)}
           </Layout>
         }
       </>
