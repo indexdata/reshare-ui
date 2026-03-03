@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useState } from 'react';
 import {
   FormattedDate,
   FormattedMessage,
@@ -56,7 +56,7 @@ const appDetails = {
   },
 };
 
-const PatronRequests = ({ requestsQuery, perPage, children }) => {
+const PatronRequests = ({ requestsQuery, perPage, filterOptions, children }) => {
   const appName = useContext(AppNameContext);
   const history = useHistory();
   const intl = useIntl();
@@ -77,14 +77,7 @@ const PatronRequests = ({ requestsQuery, perPage, children }) => {
     requestsQuery.fetchNextPage({ pageParam: index });
     setOffset(index);
   };
-  const initialSearch = '?filters=terminal.false&sort=-dateCreated';
-
-  useEffect(() => {
-    // Update the search criteria to default if none found in location search
-    if (!location.search || location.search === '') {
-      history.push(location.pathname + initialSearch);
-    }
-  });
+  const initialSearch = '?sort=-dateCreated';
 
 
   const { title, visibleColumns, createPerm } = appDetails[appName];
@@ -98,13 +91,40 @@ const PatronRequests = ({ requestsQuery, perPage, children }) => {
     >
       {
         ({
+          searchValue,
+          getSearchHandlers,
+          onSubmitSearch,
           onSort,
+          activeFilters,
+          getFilterHandlers,
+          resetAll,
+          searchChanged,
+          filterChanged,
         }) => (
           <div>
             <PersistedPaneset
               appId={`@projectreshare/${appName}`}
               id="requests"
             >
+              <Pane
+                defaultWidth="20%"
+                paneTitle={<FormattedMessage id="stripes-smart-components.searchAndFilter" />}
+              >
+                <form onSubmit={onSubmitSearch}>
+                  <Search
+                    searchValue={searchValue}
+                    searchHandlers={getSearchHandlers()}
+                    searchChanged={searchChanged}
+                    filterChanged={filterChanged}
+                    resetAll={resetAll}
+                  />
+                </form>
+                <Filters
+                  activeFilters={activeFilters.state}
+                  filterHandlers={getFilterHandlers()}
+                  options={filterOptions}
+                />
+              </Pane>
               {requestsQuery.isSuccess ?
                 <Pane
                   appIcon={<AppIcon app={appName} iconKey="app" size="small" />}
