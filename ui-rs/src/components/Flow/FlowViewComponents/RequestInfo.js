@@ -38,7 +38,7 @@ const RequestInfo = ({ request }) => {
           pathname: location?.pathname?.replace('flow', 'details'),
           search: location?.search,
           state: {
-            scrollToAuditTrail: true
+            scrollToEventHistory: true
           }
         }}
         >

@@ -1,0 +1,32 @@
+.eventCard {
+  background-color: #ffe7ff;
+}
+
+.eventCardHeader {
+  background-color: #f4cdf4;
+  font-weight: bold;
+}
+
+.headerGrid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  width: 100%;
+}
+
+.summaryArea {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  padding-left: 1.2rem;
+}
+
+.summaryText {
+  flex: 1 1 0px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding-right: var(--gutter-static, 1rem);
+}
