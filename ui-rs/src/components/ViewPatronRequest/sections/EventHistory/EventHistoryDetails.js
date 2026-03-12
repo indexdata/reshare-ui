@@ -118,13 +118,13 @@ const EventHistoryDetails = ({ event }) => {
       {eventError && (
         <div>
           <h4><FormattedMessage id="ui-rs.eventHistory.error" /></h4>
-          <pre>{formatError(eventError)}</pre>
+          <pre style={{ textWrap: 'wrap' }}>{formatError(eventError)}</pre>
         </div>
       )}
       {problem && (
         <div>
           <h4><FormattedMessage id="ui-rs.eventHistory.problem" /></h4>
-          <pre>{formatError(problem)}</pre>
+          <pre style={{ textWrap: 'wrap' }}>{formatError(problem)}</pre>
         </div>
       )}
       {note && !eventError && !problem && (
