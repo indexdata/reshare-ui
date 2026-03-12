@@ -85,7 +85,6 @@
   "information.heading.customIdentifiers": "Custom Identifiers",
   "information.heading.suppliers": "Suppliers",
   "information.heading.eventHistory": "Event history",
-  "eventHistory.loading": "Loading events\u2026",
   "eventHistory.empty": "No events recorded.",
   "eventHistory.metadata": "Metadata",
   "eventHistory.eventName": "Event name",

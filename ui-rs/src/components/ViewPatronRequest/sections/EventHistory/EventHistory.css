@@ -30,3 +30,7 @@
   text-overflow: ellipsis;
   padding-right: var(--gutter-static, 1rem);
 }
+
+.eventBody {
+  background-color: rgba(255, 255, 255, 0.5);
+}

@@ -1,7 +1,7 @@
 import { useLocation } from 'react-router-dom';
 import { FormattedMessage } from 'react-intl';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
-import { Accordion, AccordionSet, Card } from '@folio/stripes/components';
+import { Accordion, AccordionSet, Card, Loading } from '@folio/stripes/components';
 import EventHistoryRow from './EventHistoryRow';
 import css from './EventHistory.css';
 
@@ -47,7 +47,7 @@ const EventHistory = ({ record }) => {
 
   let content;
   if (isLoading) {
-    content = <FormattedMessage id="ui-rs.eventHistory.loading" />;
+    content = <Loading />;
   } else if (isSuccess && eventList.length === 0) {
     content = <FormattedMessage id="ui-rs.eventHistory.empty" />;
   } else {

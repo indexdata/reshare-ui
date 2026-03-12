@@ -1,9 +1,12 @@
 import { FormattedMessage } from 'react-intl';
 import { LightAsync as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { github as githubStyle } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import { github } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import XmlBeautify from 'xml-beautify';
 import { Accordion, AccordionSet, Col, KeyValue, Row } from '@folio/stripes/components';
 import formattedDateTime from '../../../../util/formattedDateTime';
+import css from './EventHistory.css';
+
+const githubStyle = { ...github, hljs: { ...github.hljs, background: 'transparent' } };
 
 const formatPayloadString = (txt) => {
   if (!txt) return null;
@@ -70,9 +73,8 @@ const EventHistoryDetails = ({ event }) => {
   ].filter(([, v]) => v);
 
   return (
-    <div>
+    <div className={css.eventBody}>
       {/* 1. Metadata */}
-      <h4><FormattedMessage id="ui-rs.eventHistory.metadata" /></h4>
       <Row>
         <Col xs={2}>
           <KeyValue
