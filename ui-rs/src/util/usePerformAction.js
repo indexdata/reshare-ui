@@ -11,22 +11,28 @@ export default (request, _actions) => {
       ky.post(`broker/patron_requests/${request.id}/action`, { json: { action, actionParams } })
   );
 
+  const showError = (action, opts, errMsg) => {
+    if (opts.error) sendCallout(opts.error, 'error', { errMsg });
+    else sendCallout('stripes-reshare.actions.generic.error', 'error', { action: `stripes-reshare.actions.${action}`, errMsg }, ['action']);
+  };
+
   return async (action, payload = {}, opts = {}) => {
     try {
       const res = await mutateAsync({ action, actionParams: payload });
+      const result = await res.json();
+      if (result.actionResult && result.actionResult !== 'SUCCESS') {
+        if (opts.display !== 'none') showError(action, opts, result.message || result.actionResult);
+        return result;
+      }
       if (opts.display !== 'none') {
         if (opts.success) sendCallout(opts.success, 'success');
         else sendCallout('stripes-reshare.actions.generic.success', 'success', { action: `stripes-reshare.actions.${action}` }, ['action']);
       }
-      return res;
+      return result;
     } catch (err) {
       if (opts.display !== 'none') {
-        const showError = errMsg => {
-          if (opts.error) sendCallout(opts.error, 'error', { errMsg });
-          else sendCallout('stripes-reshare.actions.generic.error', 'error', { action: `stripes-reshare.actions.${action}`, errMsg }, ['action']);
-        };
-        if (err?.response?.json) err.response.json().then(res => showError(res.message));
-        else showError(err.message);
+        if (err?.response?.json) err.response.json().then(res => showError(action, opts, res.message));
+        else showError(action, opts, err.message);
       }
       return err;
     }
