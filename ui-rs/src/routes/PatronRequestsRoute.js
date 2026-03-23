@@ -1,19 +1,29 @@
 import React from 'react';
 import { useInfiniteQuery } from 'react-query';
+import { useIntl } from 'react-intl';
 import { useLocation } from 'react-router-dom';
 import queryString from 'query-string';
 import { useOkapiKy } from '@folio/stripes/core';
 import { makeQueryFunction } from '@folio/stripes/smart-components';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 import PatronRequests from '../components/PatronRequests';
+import { ServiceType, ServiceLevel } from '../constants/iso18626';
 
 const PER_PAGE = 100;
 
 const filterConfig = [
   { name: 'state', cql: 'state', values: [] },
+  { name: 'needsAttention', cql: 'needs_attention', operator: '=', values: [] },
+  { name: 'hasCost', cql: 'has_cost', operator: '=', values: [] },
+  { name: 'hasUnread', cql: 'has_unread_notification', operator: '=', values: [] },
+  { name: 'serviceType', cql: 'service_type', operator: '=', values: [] },
+  { name: 'serviceLevel', cql: 'service_level', operator: '=', values: [] },
+  { name: 'created_at', cql: 'created_at', parse: (values) => values.join(' and '), values: [] },
+  { name: 'needed_at', cql: 'needed_at', parse: (values) => values.join(' and '), values: [] },
 ];
 
 const PatronRequestsRoute = ({ appName, children }) => {
+  const intl = useIntl();
   const ky = useOkapiKy();
   const location = useLocation();
   const side = appName === 'supply' ? 'lending' : 'borrowing';
@@ -67,6 +77,11 @@ const PatronRequestsRoute = ({ appName, children }) => {
   });
 
   const filterOptions = {
+    needsAttention: [{ label: intl.formatMessage({ id: 'ui-rs.needsAttention' }), value: 'true' }],
+    hasCost: [{ label: intl.formatMessage({ id: 'ui-rs.hasCost' }), value: 'true' }],
+    hasUnread: [{ label: intl.formatMessage({ id: 'ui-rs.unread' }), value: 'true' }],
+    serviceType: ServiceType.map(v => ({ label: v, value: v.toLowerCase() })),
+    serviceLevel: ServiceLevel.map(v => ({ label: v, value: v })),
     state: (stateModelQuery.data?.states || [])
       .filter(s => s.side === stateSide)
       .map(s => ({ label: s.display, value: s.name })),
