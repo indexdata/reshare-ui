@@ -80,8 +80,8 @@ const PatronRequestsRoute = ({ appName, children }) => {
     needsAttention: [{ label: intl.formatMessage({ id: 'ui-rs.needsAttention' }), value: 'true' }],
     hasCost: [{ label: intl.formatMessage({ id: 'ui-rs.hasCost' }), value: 'true' }],
     hasUnread: [{ label: intl.formatMessage({ id: 'ui-rs.unread' }), value: 'true' }],
-    serviceType: ServiceType.map(v => ({ label: v, value: v.toLowerCase() })),
-    serviceLevel: ServiceLevel.map(v => ({ label: v, value: v })),
+    serviceType: ServiceType.map(v => ({ label: intl.formatMessage({ id: `ui-rs.information.serviceType.${v}` }), value: v })),
+    serviceLevel: ServiceLevel.map(v => ({ label: intl.formatMessage({ id: `ui-rs.refdata.serviceLevel.${v}` }), value: v })),
     state: (stateModelQuery.data?.states || [])
       .filter(s => s.side === stateSide)
       .map(s => ({ label: s.display, value: s.name })),

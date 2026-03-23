@@ -16,18 +16,17 @@ import {
 import { required } from '@folio/stripes/util';
 import { Pluggable, useStripes } from '@folio/stripes/core';
 import { useSetting } from '@projectreshare/stripes-reshare';
-import { SERVICE_TYPE_COPY, SERVICE_TYPE_LOAN } from '../../constants/serviceType';
 
 const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
   serviceLevels, publicationTypes, locations, requesters, tiersByRequester, onSISelect, operation, patronRequest }) => {
   const { change } = useForm();
   const { values } = useFormState();
-  const isCopyReq = values?.serviceInfo?.serviceType === SERVICE_TYPE_COPY;
+  const isCopyReq = values?.serviceInfo?.serviceType === 'Copy';
   const stripes = useStripes();
   const EDIT = 'update';
 
   const currentRequester = values.requesterSymbol?.value ?? requesters[0];
-  const tiers = tiersByRequester?.[currentRequester]?.filter(tier => tier.type?.toLowerCase() === values.serviceType?.value) ?? [];
+  const tiers = tiersByRequester?.[currentRequester]?.filter(tier => tier.type === values.serviceType?.value) ?? [];
   const showCost = stripes.config?.reshare?.showCost;
   const useTiers = stripes.config?.reshare?.useTiers;
   const resetTier = () => { if (useTiers) change('tier', undefined); };
@@ -136,19 +135,19 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
             component={RadioButton}
             inline
             onClick={resetTier}
-            label={<FormattedMessage id="ui-rs.information.serviceType.loan" />}
+            label={<FormattedMessage id="ui-rs.information.serviceType.Loan" />}
             name="serviceInfo.serviceType"
             type="radio"
-            value={SERVICE_TYPE_LOAN}
+            value="Loan"
           />
           <Field
             component={RadioButton}
             inline
             onClick={resetTier}
-            label={<FormattedMessage id="ui-rs.information.serviceType.copy" />}
+            label={<FormattedMessage id="ui-rs.information.serviceType.Copy" />}
             name="serviceInfo.serviceType"
             type="radio"
-            value={SERVICE_TYPE_COPY}
+            value="Copy"
           />
         </Col>
       </Row>

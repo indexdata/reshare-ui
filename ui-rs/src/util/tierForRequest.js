@@ -3,9 +3,9 @@
  * or undefined if none matches.
  */
 const tierForRequest = (request, tiers) => {
-  return tiers?.find?.(t => t.level?.toLowerCase() === request.serviceLevel?.value?.toLowerCase()
+  return tiers?.find?.(t => t.level === request.serviceLevel?.value
       && t.cost === request.maximumCostsMonetaryValue
-      && t.type?.toLowerCase() === request.serviceType?.value?.toLowerCase());
+      && t.type === request.serviceType?.value);
 };
 
 export default tierForRequest;

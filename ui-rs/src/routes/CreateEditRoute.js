@@ -8,7 +8,6 @@ import { Button, Pane, Paneset, PaneMenu, KeyValue } from '@folio/stripes/compon
 import { CalloutContext, useOkapiKy, useStripes } from '@folio/stripes/core';
 import { useCloseDirect, useOkapiQuery, usePerformAction, useSetting } from '@projectreshare/stripes-reshare';
 import PatronRequestForm from '../components/PatronRequestForm';
-import { SERVICE_TYPE_COPY, SERVICE_TYPE_LOAN } from '../constants/serviceType';
 import tiersBySymbol from '../util/tiersBySymbol';
 import useSelectifiedRefdata from '../util/useSelectifiedRefdata';
 import useNewDirectoryEntries from '../util/useNewDirectoryEntries';
@@ -52,13 +51,13 @@ const handleSISelect = (args, state, tools) => {
     const stval = state.formState.values?.serviceInfo?.serviceType;
     const leaderField = leader?.[7];
     const pubTypeMatch = {
-      'loan' : {
+      'Loan' : {
         'a' : 'chapter',
         'b' : 'article',
         'm' : 'book',
         's' : 'journal'
       },
-      'copy' : {
+      'Copy' : {
         'a' : 'chapter',
         'b' : 'article',
         'm' : 'chapter',
@@ -267,7 +266,7 @@ const CreateEditRoute = props => {
       // TODO: Broker API
       // copyrightType: defaultCopyrightSetting,
       // serviceLevel: { value: config?.useTiers ? undefined : defaultServiceLevelSetting.value },
-      serviceInfo: { serviceType: SERVICE_TYPE_LOAN },
+      serviceInfo: { serviceType: 'Loan' },
     };
   }
 
