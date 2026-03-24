@@ -352,10 +352,6 @@ const CreateEditRoute = props => {
           bibliographicItemIdentifier: value,
           bibliographicItemIdentifierCode: { text: code }
         }));
-      const bibliographicRecordId = submittedRecord.systemInstanceIdentifier ? [{
-        bibliographicRecordIdentifier: submittedRecord.systemInstanceIdentifier,
-        bibliographicRecordIdentifierCode: { text: 'systemInstanceIdentifier' }
-      }] : [];
 
       const newRecord = {
         patron: submittedRecord?.patronInfo?.patronId,
@@ -364,7 +360,7 @@ const CreateEditRoute = props => {
           bibliographicInfo: {
             ...submittedRecord.bibliographicInfo,
             ...(bibliographicItemId.length > 0 && { bibliographicItemId }),
-            ...(bibliographicRecordId.length > 0 && { bibliographicRecordId })
+            supplierUniqueRecordId: submittedRecord.systemInstanceIdentifier,
           },
         },
       };
