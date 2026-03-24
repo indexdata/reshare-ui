@@ -358,6 +358,7 @@ const CreateEditRoute = props => {
       }] : [];
 
       const newRecord = {
+        patron: submittedRecord?.patronInfo?.patronId,
         illRequest: {
           ...omit(submittedRecord, ['identifiers', 'systemInstanceIdentifier']),
           bibliographicInfo: {
