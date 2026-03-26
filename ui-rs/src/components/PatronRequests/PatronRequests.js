@@ -191,7 +191,7 @@ const PatronRequests = ({ requestsQuery, perPage, filterOptions, children }) => 
                     contentData={requests}
                     pagingOffset={offset}
                     formatter={{
-                      hrid: a => a.id,
+                      hrid: a => a.requesterRequestId ?? a.id,
                       dateCreated: a => (new Date(a.timestamp).toLocaleDateString() === new Date().toLocaleDateString()
                         ? <FormattedTime value={a.timestamp} />
                         : <FormattedDate value={a.timestamp} />),
