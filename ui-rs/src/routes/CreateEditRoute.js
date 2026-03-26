@@ -144,7 +144,7 @@ const CreateEditRoute = props => {
   //   staleTime: 2 * 60 * 60 * 1000
   // });
   const enabledFields = undefined;
-  const reqQuery = useOkapiQuery(`rs/patronrequests/${id}`, { enabled: !!id });
+  const reqQuery = useOkapiQuery(`broker/patron_requests/${id}`, { enabled: !!id });
 
   const publicationTypesList = ['ArchiveMaterial', 'Article', 'AudioBook',
     'Book', 'Chapter', 'ConferenceProc', 'Game', 'GovernmentPubl', 'Image',
@@ -155,14 +155,14 @@ const CreateEditRoute = props => {
 
   const onSuccessfulEdit = async () => {
     await new Promise(resolve => setTimeout(resolve, 3000));
-    await queryClient.invalidateQueries(`rs/patronrequests/${id}`);
-    await queryClient.invalidateQueries('rs/patronrequests');
+    await queryClient.invalidateQueries(`broker/patron_requests/${id}`);
+    await queryClient.invalidateQueries('broker/patron_requests');
     close();
   };
 
   const updater = useMutation({
     mutationFn: (updated) => okapiKy
-      .put(`rs/patronrequests/${id}`, { json: updated })
+      .put(`broker/patron_requests/${id}`, { json: updated })
       .then((res) => res.data),
     onSuccess: onSuccessfulEdit,
     onError: async (err) => {

@@ -1,9 +1,10 @@
-import { useMutation } from 'react-query';
+import { useMutation, useQueryClient } from 'react-query';
 import { useOkapiKy } from '@folio/stripes/core';
 import { useIntlCallout } from '@projectreshare/stripes-reshare';
 
 export default (request, _actions) => {
   const ky = useOkapiKy();
+  const queryClient = useQueryClient();
   const sendCallout = useIntlCallout();
 
   const { mutateAsync } = useMutation(
@@ -28,6 +29,8 @@ export default (request, _actions) => {
         if (opts.success) sendCallout(opts.success, 'success');
         else sendCallout('stripes-reshare.actions.generic.success', 'success', { action: `stripes-reshare.actions.${action}` }, ['action']);
       }
+      queryClient.invalidateQueries(`broker/patron_requests/${request.id}`);
+      queryClient.invalidateQueries('broker/patron_requests');
       return result;
     } catch (err) {
       if (opts.display !== 'none') {
