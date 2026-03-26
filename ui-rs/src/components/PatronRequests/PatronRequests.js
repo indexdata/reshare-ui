@@ -69,7 +69,6 @@ const PatronRequests = ({ requestsQuery, perPage, filterOptions, children }) => 
   const requests = Array.isArray(pageData)
     ? pageData
     : pageData?.items || [];
-  const sparseRequests = (new Array(offset)).concat(requests);
   const totalCount = requestsQuery?.data?.pages?.[0]?.about?.count || 0;
   const parsedParams = queryString.parse(location.search);
   const sortOrder = parsedParams.sort || '';
@@ -189,7 +188,8 @@ const PatronRequests = ({ requestsQuery, perPage, filterOptions, children }) => 
                       serviceType: { max: 80 },
                       selectedItemBarcode: '130px',
                     }}
-                    contentData={sparseRequests}
+                    contentData={requests}
+                    pagingOffset={offset}
                     formatter={{
                       hrid: a => a.id,
                       dateCreated: a => (new Date(a.timestamp).toLocaleDateString() === new Date().toLocaleDateString()
