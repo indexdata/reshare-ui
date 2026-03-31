@@ -16,6 +16,7 @@ const filterConfig = [
   { name: 'needsAttention', cql: 'needs_attention', operator: '=', values: [] },
   { name: 'hasCost', cql: 'has_cost', operator: '=', values: [] },
   { name: 'hasUnread', cql: 'has_unread_notification', operator: '=', values: [] },
+  { name: 'terminal', cql: 'terminal_state', operator: '=', values: [] },
   { name: 'serviceType', cql: 'service_type', operator: '=', values: [] },
   { name: 'serviceLevel', cql: 'service_level', operator: '=', values: [] },
   { name: 'created_at', cql: 'created_at', parse: (values) => values.join(' and '), values: [] },
@@ -80,6 +81,7 @@ const PatronRequestsRoute = ({ appName, children }) => {
     needsAttention: [{ label: intl.formatMessage({ id: 'ui-rs.needsAttention' }), value: 'true' }],
     hasCost: [{ label: intl.formatMessage({ id: 'ui-rs.hasCost' }), value: 'true' }],
     hasUnread: [{ label: intl.formatMessage({ id: 'ui-rs.unread' }), value: 'true' }],
+    terminal: [{ label: intl.formatMessage({ id: 'ui-rs.hideComplete' }), value: 'false' }],
     serviceType: ServiceType.map(v => ({ label: intl.formatMessage({ id: `ui-rs.information.serviceType.${v}` }), value: v })),
     serviceLevel: ServiceLevel.map(v => ({ label: intl.formatMessage({ id: `ui-rs.refdata.serviceLevel.${v}` }), value: v })),
     state: (stateModelQuery.data?.states || [])

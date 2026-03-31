@@ -36,6 +36,12 @@ const Filters = ({ activeFilters, filterHandlers, options }) => {
         selectedValues={activeFilters?.hasUnread}
         onChange={onChangeHandler}
       />
+      <CheckboxFilter
+        name="terminal"
+        dataOptions={options.terminal}
+        selectedValues={activeFilters?.terminal}
+        onChange={onChangeHandler}
+      />
       <AccordionSet>
         <Accordion
           label={<FormattedMessage id="ui-rs.filter.state" />}
