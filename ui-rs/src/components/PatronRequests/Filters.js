@@ -1,12 +1,20 @@
 import React from 'react';
 import { FormattedMessage } from 'react-intl';
-import { CheckboxFilter, MultiSelectionFilter } from '@folio/stripes/smart-components';
+import { CheckboxFilter, DateRangeFilter, MultiSelectionFilter } from '@folio/stripes/smart-components';
 import {
   Accordion,
   AccordionSet,
   FilterAccordionHeader,
 } from '@folio/stripes/components';
-import DateFilter from './DateFilter';
+
+// Extract dates from stored CQL fragment, e.g. "created_at>=2024-01-01 and created_at<=2024-12-31"
+const parseDateValues = (filterStrings) => {
+  const str = filterStrings?.[0] || '';
+  return {
+    startDate: str.match(/>=([\d-]+)/)?.[1] || '',
+    endDate: str.match(/<=([\d-]+)/)?.[1] || '',
+  };
+};
 
 const Filters = ({ activeFilters, filterHandlers, options }) => {
   const onChangeHandler = (group) => {
@@ -92,20 +100,40 @@ const Filters = ({ activeFilters, filterHandlers, options }) => {
           />
         </Accordion>
       </AccordionSet>
-      <DateFilter
-        accordionLabel={<FormattedMessage id="ui-rs.filter.dateSubmitted" />}
-        activeFilters={activeFilters}
-        filterHandlers={filterHandlers}
-        hideNoDateSetCheckbox
-        name="created_at"
-      />
-      <DateFilter
-        accordionLabel={<FormattedMessage id="ui-rs.filter.dateNeeded" />}
-        activeFilters={activeFilters}
-        filterHandlers={filterHandlers}
-        hideNoDateSetCheckbox
-        name="needed_at"
-      />
+      <Accordion
+        closedByDefault
+        displayClearButton={activeFilters?.createdAt?.length > 0}
+        header={FilterAccordionHeader}
+        id="createdAt"
+        label={<FormattedMessage id="ui-rs.filter.dateSubmitted" />}
+        onClearFilter={() => filterHandlers.clearGroup('createdAt')}
+        separator={false}
+      >
+        <DateRangeFilter
+          name="createdAt"
+          selectedValues={parseDateValues(activeFilters?.createdAt)}
+          makeFilterString={(s, e) => [s && `created_at>=${s}`, e && `created_at<=${e}`].filter(Boolean).join(' and ')}
+          onChange={onChangeHandler}
+          requiredFields={[]}
+        />
+      </Accordion>
+      <Accordion
+        closedByDefault
+        displayClearButton={activeFilters?.neededAt?.length > 0}
+        header={FilterAccordionHeader}
+        id="neededAt"
+        label={<FormattedMessage id="ui-rs.filter.dateNeeded" />}
+        onClearFilter={() => filterHandlers.clearGroup('neededAt')}
+        separator={false}
+      >
+        <DateRangeFilter
+          name="neededAt"
+          selectedValues={parseDateValues(activeFilters?.neededAt)}
+          makeFilterString={(s, e) => [s && `needed_at>=${s}`, e && `needed_at<=${e}`].filter(Boolean).join(' and ')}
+          onChange={onChangeHandler}
+          requiredFields={[]}
+        />
+      </Accordion>
     </>
   );
 };

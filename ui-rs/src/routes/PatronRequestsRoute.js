@@ -19,8 +19,8 @@ const filterConfig = [
   { name: 'terminal', cql: 'terminal_state', operator: '=', values: [] },
   { name: 'serviceType', cql: 'service_type', operator: '=', values: [] },
   { name: 'serviceLevel', cql: 'service_level', operator: '=', values: [] },
-  { name: 'created_at', cql: 'created_at', parse: (values) => values.join(' and '), values: [] },
-  { name: 'needed_at', cql: 'needed_at', parse: (values) => values.join(' and '), values: [] },
+  { name: 'createdAt', cql: 'created_at', parse: (values) => values.join(' and '), values: [] },
+  { name: 'neededAt', cql: 'needed_at', parse: (values) => values.join(' and '), values: [] },
 ];
 
 const PatronRequestsRoute = ({ appName, children }) => {
