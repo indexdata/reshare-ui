@@ -39,19 +39,14 @@ const PatronRequestsRoute = ({ appName, children }) => {
     sort: '',
   };
 
-  const queryTemplates = {
-    '': 'cql.serverChoice="%{query.query}*"',
-    'hrid': 'requester_request_id="%{query.query}*"',
-  };
-
-  const selectedTemplate = queryTemplates[queryParams.qindex] || queryTemplates[''];
-
   const getCQL = makeQueryFunction(
     'cql.allRecords=1',
-    selectedTemplate,
+    'cql.serverChoice="%{query.query}"',
     {},
     filterConfig,
     0,
+    undefined,
+    { rightTrunc: false, escape: true },
   );
   const cql = getCQL(queryParams, {}, { query: queryParams }, console);
 

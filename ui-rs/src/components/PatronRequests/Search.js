@@ -9,6 +9,8 @@ const Search = ({ resetAll, searchHandlers, searchValue, searchChanged, filterCh
   const searchableIndexes = [
     { label: 'allFields', value: '' },
     { label: 'hrid', value: 'hrid' },
+    { label: 'title', value: 'title' },
+    { label: 'requesterIdentifier', value: 'patron' },
   ].map(x => ({
     label: intl.formatMessage({ id: `ui-rs.index.${x.label}` }),
     value: x.value,
