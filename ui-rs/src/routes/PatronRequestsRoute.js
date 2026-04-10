@@ -36,13 +36,26 @@ const PatronRequestsRoute = ({ appName, children }) => {
     query: urlParams.query || '',
     qindex: urlParams.qindex || '',
     filters: urlParams.filters || '',
-    sort: '',
+    sort: urlParams.sort || '',
+  };
+
+  const sortMap = {
+    dateCreated: 'created_at',
+    lastUpdated: 'updated_at',
+    neededAt: 'needed_at',
+    title: 'title',
+    patron: 'patron',
+    state: 'state',
+    serviceType: 'service_type',
+    requesterSymbol: 'requester_symbol',
+    supplierSymbol: 'supplier_symbol',
+    hrid: 'requester_req_id',
   };
 
   const getCQL = makeQueryFunction(
     'cql.allRecords=1',
     'cql.serverChoice="%{query.query}"',
-    {},
+    sortMap,
     filterConfig,
     0,
     undefined,

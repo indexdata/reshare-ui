@@ -192,12 +192,12 @@ const PatronRequests = ({ requestsQuery, perPage, filterOptions, children }) => 
                     pagingOffset={offset}
                     formatter={{
                       hrid: a => a.requesterRequestId ?? a.id,
-                      dateCreated: a => (new Date(a.timestamp).toLocaleDateString() === new Date().toLocaleDateString()
-                        ? <FormattedTime value={a.timestamp} />
-                        : <FormattedDate value={a.timestamp} />),
-                      lastUpdated: a => (new Date(a.timestamp).toLocaleDateString() === new Date().toLocaleDateString()
-                        ? <FormattedTime value={a.timestamp} />
-                        : <FormattedDate value={a.timestamp} />),
+                      dateCreated: a => (new Date(a.createdAt).toLocaleDateString() === new Date().toLocaleDateString()
+                        ? <FormattedTime value={a.createdAt} />
+                        : <FormattedDate value={a.createdAt} />),
+                      lastUpdated: a => (a.updatedAt && new Date(a.updatedAt).toLocaleDateString() === new Date().toLocaleDateString()
+                        ? <FormattedTime value={a.updatedAt} />
+                        : a.updatedAt ? <FormattedDate value={a.updatedAt} /> : null),
                       patron: a => {
                         const p = a.illRequest?.patronInfo;
                         if (p?.givenName && p?.surname) return `${p.surname}, ${p.givenName}`;
