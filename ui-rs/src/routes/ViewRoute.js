@@ -27,10 +27,11 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
     `broker/patron_requests/${id}`,
     { parseResponse: false, staleTime: 2 * 60 * 1000, notifyOnChangeProps: 'tracked' }
   );
-  const { data: actions = [] } = useOkapiQuery(
+  const { data: actionsData } = useOkapiQuery(
     `broker/patron_requests/${id}/actions`,
     { parseResponse: false, staleTime: 2 * 60 * 1000 }
   );
+  const actions = actionsData?.actions ?? [];
 
   if (!hasRequestLoaded) return null;
 

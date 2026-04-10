@@ -1,15 +1,27 @@
 import React from 'react';
 import { FormattedMessage } from 'react-intl';
-import { Button, Layout, Accordion } from '@folio/stripes/components';
+import { Layout, Accordion } from '@folio/stripes/components';
+import initialToUpper from '../../../util/initialToUpper';
 import renderNamedWithProps from '../../../util/renderNamedWithProps';
 import usePerformAction from '../../../util/usePerformAction';
+import * as primaryActions from '../primaryActions';
 import * as moreActions from '../moreActions';
+import { actionMeta } from '../actionMeta';
 import css from './Flow.css';
 
 const ActionAccordion = ({ actions = [], request }) => {
   const performAction = usePerformAction(request, actions);
-  const actionCodes = actions.filter(Boolean);
-  const primaryAction = actionCodes[0];
+  const primaryActionObj = actions.find(a => a.primary);
+  const primaryActionName = primaryActionObj?.name;
+  const actionCodes = actions.map(a => a.name);
+
+  const moreActionCodes = primaryActionName && actionMeta[primaryActionName]?.primaryOnly
+    ? actionCodes.filter(a => a !== primaryActionName)
+    : actionCodes;
+
+  const PrimaryAction = primaryActionName
+    ? (primaryActions[initialToUpper(primaryActionName)] || primaryActions.Generic)
+    : null;
 
   return (
     <Accordion
@@ -17,21 +29,20 @@ const ActionAccordion = ({ actions = [], request }) => {
       label={<FormattedMessage id="ui-rs.flow.sections.actions" />}
     >
       <>
-        {primaryAction &&
+        {PrimaryAction &&
           <Layout className="padding-top-gutter">
-            <Button
-              buttonStyle="primary mega"
-              fullWidth
-              onClick={() => performAction(primaryAction)}
-            >
-              <FormattedMessage id={`stripes-reshare.actions.${primaryAction}`} defaultMessage={primaryAction} />
-            </Button>
+            <PrimaryAction
+              request={request}
+              name={primaryActionName}
+              performAction={performAction}
+              withNote={primaryActionObj?.parameters?.includes('note')}
+            />
           </Layout>
         }
-        {actionCodes.length > 0 &&
+        {moreActionCodes.length > 0 &&
           <Layout className={`padding-top-gutter ${css.optionList} ${css.noBorderRadius}`}>
             <strong><FormattedMessage id="ui-rs.flow.actions.moreOptions" /></strong>
-            {renderNamedWithProps(actionCodes, moreActions, { request, performAction }, moreActions.Generic)}
+            {renderNamedWithProps(moreActionCodes, moreActions, { request, performAction, actions }, moreActions.Generic)}
           </Layout>
         }
       </>

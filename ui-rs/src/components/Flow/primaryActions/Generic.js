@@ -19,7 +19,6 @@ const Generic = props => {
   }
   return <ScanConfirmAction
     action={action}
-    label={`stripes-reshare.actions.${action}`}
     {...props}
   />;
 };

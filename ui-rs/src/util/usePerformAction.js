@@ -30,6 +30,7 @@ export default (request, _actions) => {
         else sendCallout('stripes-reshare.actions.generic.success', 'success', { action: `stripes-reshare.actions.${action}` }, ['action']);
       }
       queryClient.invalidateQueries(`broker/patron_requests/${request.id}`);
+      queryClient.invalidateQueries(`broker/patron_requests/${request.id}/actions`);
       queryClient.invalidateQueries('broker/patron_requests');
       return result;
     } catch (err) {

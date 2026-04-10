@@ -8,11 +8,10 @@ import interCss from '@folio/stripes-components/lib/sharedStyles/interactionStyl
 
 import css from './ActionButton.css';
 import NoteForm from '../NoteForm';
-import { includesNote } from './actionsByState';
 
 const DEFAULT_ICON = 'chevron-double-right';
 
-const ActionButton = ({ action, disabled, performAction, payload = {}, success = null, error = null, icon = null, label, withoutNote = false }) => {
+const ActionButton = ({ action, disabled, performAction, payload = {}, success = null, error = null, icon = null, label, withNote = false }) => {
   const [noteFieldOpen, setNoteFieldOpen] = useState(false);
   const onSubmitNote = (note) => {
     performAction(action, { ...payload, note }, { success, error });
@@ -28,8 +27,6 @@ const ActionButton = ({ action, disabled, performAction, payload = {}, success =
     }
     // else NOOP.
   };
-
-  const withNote = !withoutNote && ((action ? includesNote[action] : null) ?? includesNote.default);
 
   if (!noteFieldOpen) {
     return (
@@ -70,7 +67,7 @@ ActionButton.propTypes = {
   success: PropTypes.string,
   error: PropTypes.string,
   performAction: PropTypes.func.isRequired,
-  withoutNote: PropTypes.bool,
+  withNote: PropTypes.bool,
 };
 
 export default ActionButton;
