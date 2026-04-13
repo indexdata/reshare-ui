@@ -21,8 +21,8 @@ export default (request, _actions) => {
     try {
       const res = await mutateAsync({ action, actionParams: payload });
       const result = await res.json();
-      if (result.actionResult && result.actionResult !== 'SUCCESS') {
-        if (opts.display !== 'none') showError(action, opts, result.message || result.actionResult);
+      if (result.outcome !== 'success') {
+        if (opts.display !== 'none') showError(action, opts, result.message || result.result);
         return result;
       }
       if (opts.display !== 'none') {
