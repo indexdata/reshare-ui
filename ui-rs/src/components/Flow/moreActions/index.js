@@ -4,6 +4,8 @@ import { DirectLink } from '@projectreshare/stripes-reshare';
 import { Button, Icon } from '@folio/stripes/components';
 import { IfInterface } from '@folio/stripes/core';
 import { ShowModalButton } from '../../ModalButtons';
+import ActionReasonButton from '../ActionReasonButton';
+import { ReasonUnfilled } from '../../../constants/iso18626';
 
 export { default as Generic } from './Generic';
 export { default as AddManualFee } from './AddManualFee';
@@ -21,15 +23,19 @@ export const ManualClose = () => (
   </ShowModalButton>
 );
 
-export const SupplierCannotSupply = () => (
-  <ShowModalButton buttonStyle="dropdownItem" modal="supplierCannotSupply">
-    <Icon icon="times-circle-solid"><FormattedMessage id="ui-rs.actions.supplierCannotSupply" /></Icon>
-  </ShowModalButton>
+export const CannotSupply = props => (
+  <ActionReasonButton
+    action="cannot-supply"
+    reasons={ReasonUnfilled}
+    reasonField="reasonUnfilled"
+    reasonTranslationPrefix="ui-rs.iso18626.ReasonUnfilled"
+    {...props}
+  />
 );
 
 export const NonreturnableSupplierRespondCannotSupply = () => (
   <ShowModalButton buttonStyle="dropdownItem" modal="nonreturnableSupplierRespondCannotSupply">
-    <Icon icon="times-circle-solid"><FormattedMessage id="ui-rs.actions.supplierCannotSupply" /></Icon>
+    <Icon icon="times-circle-solid"><FormattedMessage id="ui-rs.actions.nonreturnableSupplierRespondCannotSupply" /></Icon>
   </ShowModalButton>
 );
 

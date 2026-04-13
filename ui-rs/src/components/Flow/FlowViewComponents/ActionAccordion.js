@@ -1,8 +1,7 @@
 import React from 'react';
 import { FormattedMessage } from 'react-intl';
 import { Layout, Accordion } from '@folio/stripes/components';
-import initialToUpper from '../../../util/initialToUpper';
-import renderNamedWithProps from '../../../util/renderNamedWithProps';
+import kebabToPascal from '../../../util/kebabToPascal';
 import usePerformAction from '../../../util/usePerformAction';
 import * as primaryActions from '../primaryActions';
 import * as moreActions from '../moreActions';
@@ -20,7 +19,7 @@ const ActionAccordion = ({ actions = [], request }) => {
     : actionCodes;
 
   const PrimaryAction = primaryActionName
-    ? (primaryActions[initialToUpper(primaryActionName)] || primaryActions.Generic)
+    ? (primaryActions[kebabToPascal(primaryActionName)] || primaryActions.Generic)
     : null;
 
   return (
@@ -42,7 +41,19 @@ const ActionAccordion = ({ actions = [], request }) => {
         {moreActionCodes.length > 0 &&
           <Layout className={`padding-top-gutter ${css.optionList} ${css.noBorderRadius}`}>
             <strong><FormattedMessage id="ui-rs.flow.actions.moreOptions" /></strong>
-            {renderNamedWithProps(moreActionCodes, moreActions, { request, performAction, actions }, moreActions.Generic)}
+            {moreActionCodes.map(name => {
+              const MoreAction = moreActions[kebabToPascal(name)] || moreActions.Generic;
+
+              return (
+                <MoreAction
+                  key={name}
+                  name={name}
+                  request={request}
+                  performAction={performAction}
+                  actions={actions}
+                />
+              );
+            })}
           </Layout>
         }
       </>

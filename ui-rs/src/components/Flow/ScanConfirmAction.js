@@ -11,7 +11,7 @@ const ScanConfirmAction = ({ performAction, request, action, prompt, error, succ
   const actionPending = !!useIsActionPending(request.id);
 
   const onSubmit = async values => {
-    if (values?.reqId?.trim()?.toUpperCase() !== request.hrid?.toUpperCase()) {
+    if (values?.reqId?.trim()?.toUpperCase() !== request.requesterRequestId?.toUpperCase()) {
       sendCallout('ui-rs.actions.wrongId', 'error');
       return false;
     }
