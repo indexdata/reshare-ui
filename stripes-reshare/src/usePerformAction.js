@@ -1,77 +1,56 @@
 /**
- * A hook that performs an action in the context of a react-query for a ReShare
- * patron request and surfaces a success or error message.
+ * A hook that performs an action on a ReShare patron request via broker
+ * and surfaces a success or error message.
  */
 
 import { useMutation, useQueryClient } from 'react-query';
-import { useIntl } from 'react-intl';
 import { useOkapiKy } from '@folio/stripes/core';
 import useIntlCallout from './useIntlCallout';
 
 export default (hookReqId) => {
-  const intl = useIntl();
   const ky = useOkapiKy();
   const queryClient = useQueryClient();
   const sendCallout = useIntlCallout();
-  // POSTing an action
-  const { mutateAsync: postAction } = useMutation(
+
+  const { mutateAsync } = useMutation(
     ['@reshare/stripes-reshare', 'performAction'],
-    ({ id, ...data }) => ky
-      .extend({ timeout: 45000 }) // longer timeout as some actions take a while
-      .post(`rs/patronrequests/${id}/performAction`, { json: data })
+    ({ id, action, actionParams }) => ky.post(
+      `broker/patron_requests/${id}/action`,
+      { json: { action, actionParams } }
+    )
   );
 
-  const performAction = async (reqId, action, payload, opt = {}) => {
-    let id;
-    if (typeof reqId === 'string') id = reqId;
-    else if (typeof reqId === 'object') {
-      // when given a whole request ensure action is valid
-      if (!reqId?.validActions?.some(a => a.actionCode === action)) {
-        throw new Error(intl.formatMessage({ id: 'stripes-reshare.action.notValidForState' }));
-      }
-      id = reqId.id;
-    } else throw new Error('performAction missing id');
+  const showError = (action, opts, errMsg) => {
+    if (opts.error) sendCallout(opts.error, 'error', { errMsg });
+    else sendCallout('stripes-reshare.actions.generic.error', 'error', { action: `stripes-reshare.actions.${action}`, errMsg }, ['action']);
+  };
 
+  const performAction = async (id, action, payload = {}, opts = {}) => {
     try {
-      const res = await postAction({ id, action, actionParams: payload || {} });
-      if (opt.display !== 'none') {
-        if (opt.success) {
-          sendCallout(opt.success, 'success');
-        } else {
-          sendCallout('stripes-reshare.actions.generic.success', 'success', { action: `stripes-reshare.actions.${action}` }, ['action']);
-        }
+      const res = await mutateAsync({ id, action, actionParams: payload });
+      const result = await res.json();
+      if (result.outcome !== 'success') {
+        if (opts.display !== 'none') showError(action, opts, result.message || result.result);
+        return result;
       }
-      const invalidateRequest = () => queryClient.invalidateQueries(`rs/patronrequests/${id}`);
-      invalidateRequest();
-
-      // unfortunately, actions do not always block until they are fully complete and things
-      // (for example responses from ncip) may take a while to show up in the audit log, etc.
-      // so we have to expire the cache a few times to keep the record reasonably up to date
-      // as that happens.
-
-      // provide noAsync option to exclude an action from these follow-ups
-      if (!opt.noAsync) {
-        setTimeout(invalidateRequest, 15000);
-        setTimeout(invalidateRequest, 45000);
-        setTimeout(invalidateRequest, 90000);
+      if (opts.display !== 'none') {
+        if (opts.success) sendCallout(opts.success, 'success');
+        else sendCallout('stripes-reshare.actions.generic.success', 'success', { action: `stripes-reshare.actions.${action}` }, ['action']);
       }
-
-      queryClient.invalidateQueries('rs/patronrequests');
-      return res;
+      queryClient.invalidateQueries(`broker/patron_requests/${id}`);
+      queryClient.invalidateQueries(`broker/patron_requests/${id}/actions`);
+      queryClient.invalidateQueries('broker/patron_requests');
+      return result;
     } catch (err) {
-      if (opt.display !== 'none') {
-        const showError = errMsg => {
-          if (opt.error) sendCallout(opt.error, 'error', { errMsg });
-          else sendCallout('stripes-reshare.actions.generic.error', 'error', { action: `stripes-reshare.actions.${action}`, errMsg }, ['action']);
-        };
-        if (err?.response?.json) {
-          err.response.json().then(res => showError(res.message));
-        } else {
-          showError(err.message);
-        }
-      } else throw new Error(err);
+      if (opts.display !== 'none') {
+        if (err?.response?.json) err.response.json().then(r => showError(action, opts, r.message));
+        else showError(action, opts, err.message);
+      }
       return err;
     }
   };
-  return hookReqId ? async (...params) => performAction(hookReqId, ...params) : performAction;
+
+  return hookReqId
+    ? (action, payload, opts) => performAction(hookReqId, action, payload, opts)
+    : performAction;
 };
