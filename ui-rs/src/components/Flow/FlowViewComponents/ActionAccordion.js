@@ -2,14 +2,14 @@ import React from 'react';
 import { FormattedMessage } from 'react-intl';
 import { Layout, Accordion } from '@folio/stripes/components';
 import kebabToPascal from '../../../util/kebabToPascal';
-import usePerformAction from '../../../util/usePerformAction';
+import { usePerformAction } from '@projectreshare/stripes-reshare';
 import * as primaryActions from '../primaryActions';
 import * as moreActions from '../moreActions';
 import { actionMeta } from '../actionMeta';
 import css from './Flow.css';
 
 const ActionAccordion = ({ actions = [], request }) => {
-  const performAction = usePerformAction(request, actions);
+  const performAction = usePerformAction(request.id);
   const primaryActionObj = actions.find(a => a.primary);
   const primaryActionName = primaryActionObj?.name;
   const actionCodes = actions.map(a => a.name);
