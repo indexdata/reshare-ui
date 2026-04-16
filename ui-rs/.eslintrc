@@ -2,5 +2,17 @@
   "extends": "@folio/eslint-config-stripes",
   "rules": {
     "react/prop-types": "off"
+  },
+  "overrides": [
+    {
+      "files": [ "src/**/tests/*", "*.test.js", "test/**/*" ],
+      "rules": {
+        "react/prop-types": "off",
+        "import/prefer-default-export": "off"
+      }
+    }
+  ],
+  "env": {
+    "jest": true
   }
 }
