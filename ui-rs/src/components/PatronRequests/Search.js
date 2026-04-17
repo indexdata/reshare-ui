@@ -8,8 +8,9 @@ const Search = ({ resetAll, searchHandlers, searchValue, searchChanged, filterCh
   const [qIndex, setQIndex] = useQIndex();
   const searchableIndexes = [
     { label: 'allFields', value: '' },
-    { label: 'hrid', value: 'hrid' },
+    { label: 'hrid', value: 'requester_req_id' },
     { label: 'title', value: 'title' },
+    { label: 'author', value: 'author' },
     { label: 'requesterIdentifier', value: 'patron' },
   ].map(x => ({
     label: intl.formatMessage({ id: `ui-rs.index.${x.label}` }),
