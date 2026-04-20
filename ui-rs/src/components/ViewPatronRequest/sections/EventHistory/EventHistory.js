@@ -43,7 +43,10 @@ const EventHistory = ({ record }) => {
     resultData: flattenPayload(event.resultData),
   });
 
-  const eventList = Array.isArray(events) ? [...events].reverse().map(normalizeEvent) : [];
+  const eventList = (Array.isArray(events?.items) ? events.items : [])
+    .slice()
+    .reverse()
+    .map(normalizeEvent);
 
   let content;
   if (isLoading) {
