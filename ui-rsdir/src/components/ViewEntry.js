@@ -45,7 +45,7 @@ const ViewEntry = ({ entry }) => {
   const formatLMSConfig = (lmsConfig) => {
     return (
       <Card
-        headerStart={<Headline margin="none">LMS Config</Headline>}
+        headerStart={<Headline margin="none"><FormattedMessage id="ui-rsdir.lmsConfig.header" /></Headline>}
         cardStyle="positive"
         roundedBorder
         marginBottom0
@@ -126,7 +126,7 @@ const ViewEntry = ({ entry }) => {
           <Col xs={3}>
             <KeyValue
               label={<FormattedMessage id="ui-rsdir.lmsConfig.supplierPickupLocation" />}
-              value={lmsConfig.requesterPickupLocation}
+              value={lmsConfig.supplierPickupLocation}
             />
           </Col>
         </Row>
@@ -134,7 +134,7 @@ const ViewEntry = ({ entry }) => {
           <Col xs={3}>
             <KeyValue
               label={<FormattedMessage id="ui-rsdir.lmsConfig.requestItemRequestScopeType" />}
-              value={lmsConfig.requestItemrequestScopeType}
+              value={lmsConfig.requestItemRequestScopeType}
             />
           </Col>
           <Col xs={3}>
@@ -154,7 +154,14 @@ const ViewEntry = ({ entry }) => {
     }
     return (
       <Card
-        headerStart={<Headline margin="none">{`Closure - ${closure.reason}`}</Headline>}
+        headerStart={
+          <Headline margin="none">
+            <FormattedMessage
+              id="ui-rsdir.closure.header"
+              values={{ reason: closure.reason }}
+            />
+          </Headline>
+        }
         cardStyle="positive"
         roundedBorder
         marginBottom0
@@ -180,14 +187,22 @@ const ViewEntry = ({ entry }) => {
   const formatAddress = (address) => {
     return (
       <Card
-        headerStart={<Headline margin="none">{address.type} address</Headline>}
+        headerStart={(
+          <Headline margin="none">
+            <FormattedMessage
+              id="ui-rsdir.address.header"
+              defaultMessage="{type} address"
+              values={{ type: address.type }}
+            />
+          </Headline>
+         )}
         cardStyle="positive"
         roundedBorder
         marginBottom0
       >
         { address.addressComponents && address.addressComponents.map(component => {
           return (
-            <Row>
+            <Row key={`${address.id}-${component.seq}`}>
               <Col xs={3}>
                 <KeyValue
                   label={<FormattedMessage id="ui-rsdir.address.sequence" />}
@@ -311,16 +326,19 @@ const ViewEntry = ({ entry }) => {
           </Row>
           { entry.addresses &&
             <Row>
-              { entry.addresses.map((address) => { return formatAddress(address); }) }
+              { entry.addresses.map((address) => {
+                return (<React.Fragment key={address.id}>{formatAddress(address)}</React.Fragment>);
+              })}
             </Row>
           }
           { entry.closures &&
             <Row>
-              { entry.closures.map((it, index) => { return formatClosure(it); }) }
+              { entry.closures.map((it) => { return (<React.Fragment key={it.id}>{formatClosure(it)}</React.Fragment>); }) }
             </Row>
           }
           { entry.lmsConfig &&
             <Accordion
+              id="directory-entry-lms-config"
               closedByDefault
               label={<FormattedMessage id="ui-rsdir.viewentry.lmsConfig" />}
             >
