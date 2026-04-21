@@ -5,7 +5,9 @@ import {
   Accordion,
   AccordionSet,
   Button,
+  Card,
   Col,
+  Headline,
   KeyValue,
   Pane,
   PaneMenu,
@@ -24,6 +26,206 @@ const ViewEntry = ({ entry }) => {
     return symbols
       .map(s => `${s.authority}:${s.symbol}`)
       .join(', ');
+  };
+
+  const formatTiers = (tiers) => {
+    if (!tiers || tiers.length === 0) return '';
+    return tiers
+      .map(t => t.name)
+      .join(', ');
+  };
+
+  const formatNetworks = (networks) => {
+    if (!networks || networks.length === 0) return '';
+    return networks
+      .map(n => n.name)
+      .join(', ');
+  };
+
+  const formatLMSConfig = (lmsConfig) => {
+    return (
+      <Card
+        headerStart={<Headline margin="none"><FormattedMessage id="ui-rsdir.lmsConfig.header" /></Headline>}
+        cardStyle="positive"
+        roundedBorder
+        marginBottom0
+      >
+        <Row>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.address" />}
+              value={lmsConfig.address}
+            />
+          </Col>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.fromAgency" />}
+              value={lmsConfig.fromAgency}
+            />
+          </Col>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.toAgency" />}
+              value={lmsConfig.toAgency}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.fromAgencyAuthentication" />}
+              value={lmsConfig.fromAgencyAuthentication}
+            />
+          </Col>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.itemLocation" />}
+              value={lmsConfig.itemLocation}
+            />
+          </Col>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.requestItemBibIdCode" />}
+              value={lmsConfig.requestItemBibIdCode}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.acceptItemEnabled" />}
+              value={lmsConfig.acceptItemEnabled}
+            />
+          </Col>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.checkInItemEnabled" />}
+              value={lmsConfig.checkInItemEnabled}
+            />
+          </Col>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.checkOutItemEnabled" />}
+              value={lmsConfig.checkOutItemEnabled}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.pickupLocationEnabled" />}
+              value={lmsConfig.pickupLocationEnabled}
+            />
+          </Col>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.requesterPickupLocation" />}
+              value={lmsConfig.requesterPickupLocation}
+            />
+          </Col>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.supplierPickupLocation" />}
+              value={lmsConfig.supplierPickupLocation}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.requestItemRequestScopeType" />}
+              value={lmsConfig.requestItemRequestScopeType}
+            />
+          </Col>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.requesterPatronPattern" />}
+              value={lmsConfig.requesterPatronPattern}
+            />
+          </Col>
+        </Row>
+      </Card>
+    );
+  };
+
+  const formatClosure = (closure) => {
+    if (!closure) {
+      return null;
+    }
+    return (
+      <Card
+        headerStart={
+          <Headline margin="none">
+            <FormattedMessage
+              id="ui-rsdir.closure.header"
+              values={{ reason: closure.reason }}
+            />
+          </Headline>
+        }
+        cardStyle="positive"
+        roundedBorder
+        marginBottom0
+      >
+        <Row>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.closure.startDate" />}
+              value={closure.startDate}
+            />
+          </Col>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.closure.endDate" />}
+              value={closure.endDate}
+            />
+          </Col>
+        </Row>
+      </Card>
+    );
+  };
+
+  const formatAddress = (address) => {
+    return (
+      <Card
+        headerStart={(
+          <Headline margin="none">
+            <FormattedMessage
+              id="ui-rsdir.address.header"
+              defaultMessage="{type} address"
+              values={{ type: address.type }}
+            />
+          </Headline>
+         )}
+        cardStyle="positive"
+        roundedBorder
+        marginBottom0
+      >
+        { address.addressComponents && address.addressComponents.map(component => {
+          return (
+            <Row key={`${address.id}-${component.seq}`}>
+              <Col xs={3}>
+                <KeyValue
+                  label={<FormattedMessage id="ui-rsdir.address.sequence" />}
+                  value={component.seq}
+                />
+              </Col>
+              <Col xs={3}>
+                <KeyValue
+                  label={<FormattedMessage id="ui-rsdir.address.type" />}
+                  value={component.type}
+                />
+              </Col>
+              <Col xs={3}>
+                <KeyValue
+                  label={<FormattedMessage id="ui-rsdir.address.value" />}
+                  value={component.value}
+                />
+              </Col>
+            </Row>
+          );
+        })}
+      </Card>
+    );
   };
 
   const handleEdit = () => {
@@ -55,21 +257,96 @@ const ViewEntry = ({ entry }) => {
           label={<FormattedMessage id="ui-rsdir.entries.info" />}
         >
           <Row>
-            <Col xs={12}>
+            <Col xs={4}>
               <KeyValue
                 label={<FormattedMessage id="ui-rsdir.entry.name" />}
                 value={entry.name}
+              />
+            </Col>
+            <Col xs={4}>
+              <KeyValue
+                label={<FormattedMessage id="ui-rsdir.entry.type" />}
+                value={entry.type}
               />
             </Col>
           </Row>
           <Row>
             <Col xs={12}>
               <KeyValue
+                label={<FormattedMessage id="ui-rsdir.entry.description" />}
+                value={entry.description}
+              />
+            </Col>
+          </Row>
+          <Row>
+            <Col xs={3}>
+              <KeyValue
+                label={<FormattedMessage id="ui-rsdir.entry.organizationId" />}
+                value={entry.organizationId}
+              />
+            </Col>
+            <Col xs={3}>
+              <KeyValue
+                label={<FormattedMessage id="ui-rsdir.entry.contactName" />}
+                value={entry.contactName}
+              />
+            </Col>
+            <Col xs={3}>
+              <KeyValue
+                label={<FormattedMessage id="ui-rsdir.entry.email" />}
+                value={entry.email}
+              />
+            </Col>
+            <Col xs={3}>
+              <KeyValue
+                label={<FormattedMessage id="ui-rsdir.entry.phoneNumber" />}
+                value={entry.phoneNumber}
+              />
+            </Col>
+          </Row>
+          <Row>
+            <Col xs={4}>
+              <KeyValue
                 label={<FormattedMessage id="ui-rsdir.entry.symbols" />}
                 value={formatSymbols(entry.symbols)}
               />
             </Col>
+            <Col xs={4}>
+              <KeyValue
+                label={<FormattedMessage id="ui-rsdir.entry.networks" />}
+                value={formatNetworks(entry.networks)}
+              />
+            </Col>
+            <Col xs={4}>
+              <KeyValue
+                label={<FormattedMessage id="ui-rsdir.entry.tiers" />}
+                value={formatTiers(entry.tiers)}
+              />
+            </Col>
           </Row>
+          { entry.addresses &&
+            <Row>
+              { entry.addresses.map((address) => {
+                return (<React.Fragment key={address.id}>{formatAddress(address)}</React.Fragment>);
+              })}
+            </Row>
+          }
+          { entry.closures &&
+            <Row>
+              { entry.closures.map((it) => { return (<React.Fragment key={it.id}>{formatClosure(it)}</React.Fragment>); }) }
+            </Row>
+          }
+          { entry.lmsConfig &&
+            <Accordion
+              id="directory-entry-lms-config"
+              closedByDefault
+              label={<FormattedMessage id="ui-rsdir.viewentry.lmsConfig" />}
+            >
+              <Row>
+                { formatLMSConfig(entry.lmsConfig) }
+              </Row>
+            </Accordion>
+          }
         </Accordion>
       </AccordionSet>
     </Pane>
