@@ -36,7 +36,7 @@ const ActionReasonButton = ({ action, reasons, reasonField, reasonTranslationPre
           onSubmit={onSubmit}
           render={({ handleSubmit, submitting, pristine, form }) => (
             <form onSubmit={handleSubmit}>
-              <FormattedMessage id={`ui-rs.actions.${action}.confirm`} values={{ id: (request.hrid || request.id), item: request.title }} />
+              <FormattedMessage id={`ui-rs.actions.${action}.confirm`} values={{ id: request.requesterRequestId || request.id, item: request.illRequest?.bibliographicInfo?.title }} />
               <Layout className="padding-top-gutter">
                 <strong><FormattedMessage id={`ui-rs.actions.${action}.reason`} /></strong>
               </Layout>

@@ -3,6 +3,7 @@ import ActionReasonButton from '../ActionReasonButton';
 import { ReasonUnfilled } from '../../../constants/iso18626';
 
 export { default as Generic } from './Generic';
+export { default as AddCondition } from './AddCondition';
 
 export const CannotSupply = props => (
   <ActionReasonButton
