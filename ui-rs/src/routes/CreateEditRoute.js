@@ -8,6 +8,7 @@ import { Button, Pane, Paneset, PaneMenu, KeyValue } from '@folio/stripes/compon
 import { CalloutContext, useOkapiKy, useStripes } from '@folio/stripes/core';
 import { useCloseDirect, useOkapiQuery, usePerformAction, useSetting } from '@projectreshare/stripes-reshare';
 import PatronRequestForm from '../components/PatronRequestForm';
+import { CopyrightCompliance, ServiceLevel } from '../constants/iso18626';
 import tiersBySymbol from '../util/tiersBySymbol';
 import useSelectifiedRefdata from '../util/useSelectifiedRefdata';
 import useNewDirectoryEntries from '../util/useNewDirectoryEntries';
@@ -94,12 +95,12 @@ const CreateEditRoute = props => {
   const queryClient = useQueryClient();
   const okapiKy = useOkapiKy();
   const close = useCloseDirect();
-  // TODO: Broker API
-  // const [copyrightTypes, copyrightTypesLoaded] = useSelectifiedRefdata('copyrightType', 'ui-rs.refdata.copyrightType');
-  // const [serviceLevels, serviceLevelsLoaded] = useSelectifiedRefdata('ServiceLevels', 'ui-rs.refdata.serviceLevel', 'other', 'displayed_service_levels');
-  const copyrightTypes = [];
+  // We could provision these vocabs on the form directly but are passing them
+  // in because they will end up requiring something from the backend as the
+  // terms can vary by consortium.
+  const copyrightTypes = CopyrightCompliance.map(value => ({ label: value, value }));
   const copyrightTypesLoaded = true;
-  const serviceLevels = [];
+  const serviceLevels = ServiceLevel.map(value => ({ label: value, value }));
   const serviceLevelsLoaded = true;
   const stripes = useStripes();
   const config = stripes.config?.reshare;
@@ -364,6 +365,15 @@ const CreateEditRoute = props => {
           },
         },
       };
+
+      const maximumCosts = newRecord.illRequest?.billingInfo?.maximumCosts;
+
+      if (maximumCosts?.monetaryValue == null || maximumCosts.monetaryValue === '') {
+        delete newRecord.illRequest?.billingInfo?.maximumCosts;
+      } else {
+        newRecord.illRequest.billingInfo.maximumCosts.currencyCode = { '#text': stripes.currency };
+      }
+
       return creator.mutateAsync(newRecord);
     }
 

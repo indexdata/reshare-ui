@@ -15,7 +15,6 @@ import {
 } from '@folio/stripes/components';
 import { required } from '@folio/stripes/util';
 import { Pluggable, useStripes } from '@folio/stripes/core';
-import { useSetting } from '@projectreshare/stripes-reshare';
 
 const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
   serviceLevels, publicationTypes, locations, requesters, tiersByRequester, onSISelect, operation, patronRequest }) => {
@@ -239,9 +238,9 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
             rows={5}
           />
         </Col>
-        {/* TODO: Broker API */}
-        {/* <Col xs={3}>
-          {useTiers &&
+        <Col xs={3}>
+          {/* TODO: Broker API */}
+          {/* {useTiers &&
             <Row>
               <Col xs={12}>
                 <Field
@@ -256,12 +255,12 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
                 />
               </Col>
             </Row>
-          }
+          } */}
           <Row>
             <Col xs={6}>
               <Field
                 id="edit-request-metadata-serviceLevel"
-                name="serviceLevel.value"
+                name="serviceInfo.serviceLevel['#text']"
                 label={<FormattedMessage id="ui-rs.information.serviceLevel" />}
                 placeholder=" "
                 component={Select}
@@ -274,7 +273,7 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
               <Col xs={6}>
                 <Field
                   id="edit-request-metadata-maximumCostsMonetaryValue"
-                  name="maximumCostsMonetaryValue"
+                  name="billingInfo.maximumCosts.monetaryValue"
                   label={<FormattedMessage id="ui-rs.information.maximumCost" />}
                   component={TextField}
                   disabled={useTiers}
@@ -287,7 +286,7 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
         <Col xs={3}>
           <Field
             id="edit-request-metadata-copyright-type"
-            name="copyrightType.value"
+            name="serviceInfo.copyrightCompliance['#text']"
             label={<FormattedMessage id="ui-rs.information.copyrightType" />}
             placeholder=" "
             component={Select}
@@ -296,7 +295,7 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
             validate={required}
           />
         </Col>
-        } */}
+        }
       </Row>
 
 
