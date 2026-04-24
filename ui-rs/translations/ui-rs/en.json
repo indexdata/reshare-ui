@@ -250,6 +250,7 @@
   "view.chatMessage.actions.noAvailableActions": "There are no available actions",
   "view.chatMessage.actions.Read": "Read",
   "view.chatMessage.actions.Unread": "Unread",
+  "view.chatMessage.conditionSummary": "Condition: {condition}",
   "view.withAction.requestResponse": "The supplier has responded to this request with a note:",
   "view.withAction.requestResponse.willSupply": "The supplier has responded 'Will supply' to this request with a note:",
   "view.withAction.requestResponse.expectToSupply": "The supplier has responded 'Will supply' to this request with a note:",

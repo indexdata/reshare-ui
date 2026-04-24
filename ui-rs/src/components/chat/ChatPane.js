@@ -1,156 +1,190 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Form, Field } from 'react-final-form';
 import { FormattedMessage, useIntl } from 'react-intl';
 
-import { Button, Layout, Pane, TextArea } from '@folio/stripes/components';
-import { useIntlCallout, usePerformAction } from '@projectreshare/stripes-reshare';
+import { Button, Layout, Pane, Spinner, TextArea } from '@folio/stripes/components';
+import { useIntlCallout } from '@projectreshare/stripes-reshare';
 import { ChatMessage } from './components';
 import css from './ChatPane.css';
-import MessageDropdown from './components/MessageDropdown';
-import useChatActions from './useChatActions';
+import { useNotificationList, useNotificationMutations } from './useNotifications';
 
-const ENTER_KEY = 13;
+const ENTER_KEY = 'Enter';
+const AUTO_MARK_SEEN_DELAY_MS = 1500;
 
-const ChatPane = ({
-  onToggle,
-  request: {
-    id: reqId,
-    isRequester,
-    notifications,
-    validActions
-  } = {}
-}) => {
+const normalise = (n) => ({
+  id: n.id,
+  messageContent: n.note ?? '',
+  timestamp: n.createdAt ? new Date(n.createdAt).getTime() : 0,
+  isSender: n.direction === 'sent',
+  seen: n.direction === 'sent' ? true : n.receipt === 'SEEN',
+  sendFailed: n.receipt === 'FAILED_TO_SEND',
+  senderSymbol: n.fromSymbol,
+  receiverSymbol: n.toSymbol,
+  kind: n.kind,
+  condition: n.condition,
+  cost: n.cost,
+  currency: n.currency,
+});
+
+const ChatPane = ({ onToggle, request }) => {
+  const { id: reqId, side } = request || {};
   const latestMessage = useRef();
-
+  const seenAttemptedIds = useRef(new Set());
+  const autoMarkTimeouts = useRef(new Set());
   const intl = useIntl();
-  const performAction = usePerformAction(reqId);
-
   const sendCallout = useIntlCallout();
-  const { handleMarkAllRead, handleMessageRead } = useChatActions(reqId);
+
+  const { data, isLoading } = useNotificationList(request);
+  const { post, markSeen, markSeenMany } = useNotificationMutations(request);
+  const markSeenManyMutate = markSeenMany.mutate;
+
+  const notifications = useMemo(() => {
+    const items = data?.items ?? [];
+    return [...items].map(normalise).sort((a, b) => a.timestamp - b.timestamp);
+  }, [data]);
+  const loadedUnseenIds = useMemo(() => [...new Set(
+    notifications
+      .filter((notification) => !notification.isSender && !notification.seen && Boolean(notification.id))
+      .map((notification) => notification.id)
+  )], [notifications]);
 
   const scrollToLatestMessage = () => {
-    return latestMessage?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    latestMessage?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const jumpToLatestMessage = () => {
-    return latestMessage?.current?.scrollIntoView({ block: 'end' });
+    latestMessage?.current?.scrollIntoView({ block: 'end' });
   };
 
-  // TODO Maybe no longer need this with hasFired
-  /*   const [unreadMessageCount, setUnreadMessageCount] = useState(notifications?.filter(notification => notification.seen === false && notification.isSender === false)?.length ?? 0);
-
   useEffect(() => {
-    setUnreadMessageCount(notifications?.filter(notification => notification.seen === false && notification.isSender === false)?.length ?? 0);
-  }, [notifications]); */
-
-  // Ensure this only fires once, on mount
-  useEffect(() => {
-    /*  if (isOpen('chat') && unreadMessageCount > 0) {
-      handleMarkAllRead(true);
-    } */
     jumpToLatestMessage();
-  /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Track if new notification has arrived, and if so scroll to it
-  const [notificationCount, setNotificationCount] = useState(notifications?.length);
+  const [notificationCount, setNotificationCount] = useState(notifications.length);
   useEffect(() => {
-    if (notificationCount !== notifications?.length) {
+    if (notificationCount !== notifications.length) {
       scrollToLatestMessage();
-      setNotificationCount(notifications?.length);
+      setNotificationCount(notifications.length);
     }
-  }, [notificationCount, notifications, setNotificationCount]);
+  }, [notificationCount, notifications.length]);
 
-  const renderPaneFooter = () => {
-    const messageValid = validActions?.some(a => a.actionCode === 'message');
-    return (
-      <Form
-        onSubmit={payload => performAction('message', (payload || {}), {
-          success:'ui-rs.actions.message.success',
-          error:'ui-rs.actions.message.error',
-          display: 'none',
-          noAsync: true
-        })}
-        render={({ form, handleSubmit, pristine }) => {
-          const onEnterPress = async (e) => {
-            if (e.keyCode === ENTER_KEY && e.shiftKey === false && !pristine) {
-              e.preventDefault();
-              if (messageValid) {
-                await handleSubmit();
-                form.reset();
-              } else {
-                sendCallout('ui-rs.view.chatPane.stateInvalidMessage', 'error');
-                form.reset();
-              }
-            } else if (e.keyCode === ENTER_KEY && e.shiftKey === false) {
-              e.preventDefault();
+  useEffect(() => {
+    seenAttemptedIds.current = new Set();
+    autoMarkTimeouts.current.forEach((timeoutId) => clearTimeout(timeoutId));
+    autoMarkTimeouts.current = new Set();
+
+    return () => {
+      autoMarkTimeouts.current.forEach((timeoutId) => clearTimeout(timeoutId));
+      autoMarkTimeouts.current = new Set();
+      seenAttemptedIds.current = new Set();
+    };
+  }, [reqId, side]);
+
+  useEffect(() => {
+    const idsToMark = loadedUnseenIds.filter((id) => !seenAttemptedIds.current.has(id));
+    if (idsToMark.length === 0) return;
+
+    idsToMark.forEach((id) => seenAttemptedIds.current.add(id));
+
+    const timeoutId = setTimeout(() => {
+      autoMarkTimeouts.current.delete(timeoutId);
+      markSeenManyMutate(idsToMark);
+    }, AUTO_MARK_SEEN_DELAY_MS);
+
+    autoMarkTimeouts.current.add(timeoutId);
+  }, [loadedUnseenIds, markSeenManyMutate]);
+
+  const handleMessageRead = (notification) => {
+    if (!notification.seen && !notification.isSender) {
+      markSeen.mutate(notification.id);
+    }
+  };
+
+  const submit = async (payload) => {
+    const note = payload?.note?.trim();
+    if (!note) return;
+    try {
+      await post.mutateAsync({ note });
+    } catch (e) {
+      sendCallout('ui-rs.actions.message.error', 'error');
+    }
+  };
+
+  const renderPaneFooter = () => (
+    <Form
+      onSubmit={submit}
+      render={({ form, handleSubmit, pristine }) => {
+        const onEnterPress = async (e) => {
+          if (e.key === ENTER_KEY && e.shiftKey === false) {
+            e.preventDefault();
+            if (!pristine) {
+              await handleSubmit();
               form.reset();
             }
-          };
-
-          return (
-            <form
-              id="chatPaneMessageForm"
-              onSubmit={async event => {
-                await handleSubmit(event);
-                form.reset();
-              }}
-              autoComplete="off"
-            >
-              <Layout className="flex full">
-                <div className={css.messageFieldContainer}>
-                  <Field
-                    className={css.messageField}
-                    name="note"
-                    component={TextArea}
-                    onKeyDown={onEnterPress}
-                    autoFocus
-                    placeholder={intl.formatMessage({ id: 'ui-rs.view.chatPane.placeholder' }, { chatOtherParty: isRequester ? 'supplier' : 'requester' })}
-                  />
-                </div>
-                <Button
-                  buttonClass={css.sendButton}
-                  buttonStyle="primary"
-                  onClick={async event => {
-                    await handleSubmit(event);
-                    form.reset();
-                  }}
-                  disabled={pristine || !messageValid}
-                >
-                  <FormattedMessage id="ui-rs.view.chatPane.sendMessage" />
-                </Button>
-              </Layout>
-            </form>
-          );
-        }}
-      />
-    );
-  };
+          }
+        };
+        return (
+          <form
+            id="chatPaneMessageForm"
+            onSubmit={async (event) => {
+              await handleSubmit(event);
+              form.reset();
+            }}
+            autoComplete="off"
+          >
+            <Layout className="flex full">
+              <div className={css.messageFieldContainer}>
+                <Field
+                  className={css.messageField}
+                  name="note"
+                  component={TextArea}
+                  onKeyDown={onEnterPress}
+                  autoFocus
+                  placeholder={intl.formatMessage(
+                    { id: 'ui-rs.view.chatPane.placeholder' },
+                    { chatOtherParty: side === 'borrowing' ? 'supplier' : 'requester' }
+                  )}
+                />
+              </div>
+              <Button
+                buttonClass={css.sendButton}
+                buttonStyle="primary"
+                onClick={async (event) => {
+                  await handleSubmit(event);
+                  form.reset();
+                }}
+                disabled={pristine || post.isLoading}
+              >
+                <FormattedMessage id="ui-rs.view.chatPane.sendMessage" />
+              </Button>
+            </Layout>
+          </form>
+        );
+      }}
+    />
+  );
 
   const displayMessages = () => {
-    if (notifications) {
-      // Sort the notifications into order by time recieved/sent
-      notifications.sort((a, b) => a.timestamp - b.timestamp);
-
-      return (
-        <div className={css.noTopMargin}>
-          {notifications.map((notification, index) => (
-            <ChatMessage
-              key={`notificationMessage[${index}]`}
-              notification={notification}
-              ref={index === notifications.length - 1 ? latestMessage : null}
-              handleMessageRead={handleMessageRead}
-            />
-          ))}
-          {notifications.length === 0 &&
-            <Layout className={`padding-all-gutter flex ${css.noMessages}`}>
-              <FormattedMessage id="ui-rs.view.chatPane.noMessages" />
-            </Layout>
-          }
-        </div>
-      );
+    if (isLoading) {
+      return <Layout className="padding-all-gutter flex centerContent"><Spinner /></Layout>;
     }
-    return null;
+    return (
+      <div className={css.noTopMargin}>
+        {notifications.length === 0 && (
+          <Layout className={`padding-all-gutter flex ${css.noMessages}`}>
+            <FormattedMessage id="ui-rs.view.chatPane.noMessages" />
+          </Layout>
+        )}
+        {notifications.map((notification, index) => (
+          <ChatMessage
+            key={notification.id ?? `msg-${index}`}
+            notification={notification}
+            ref={index === notifications.length - 1 ? latestMessage : null}
+            handleMessageRead={handleMessageRead}
+          />
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -158,22 +192,13 @@ const ChatPane = ({
       defaultWidth="30%"
       dismissible
       onClose={onToggle}
-      paneTitle={<FormattedMessage id="ui-rs.view.chatPane" values={{ chatOtherParty: isRequester ? 'supplier' : 'requester' }} />}
-      lastMenu={
-        <MessageDropdown
-          actionItems={[
-            {
-              label: <FormattedMessage id="ui-rs.view.chatPane.actions.markAllAsRead" />,
-              onClick: () => handleMarkAllRead(true)
-            },
-            {
-              label: <FormattedMessage id="ui-rs.view.chatPane.actions.markAllAsUnread" />,
-              onClick: () => handleMarkAllRead(false)
-            }
-          ]}
+      paneTitle={
+        <FormattedMessage
+          id="ui-rs.view.chatPane"
+          values={{ chatOtherParty: side === 'borrowing' ? 'supplier' : 'requester' }}
         />
       }
-      footer={renderPaneFooter()}
+      footer={reqId ? renderPaneFooter() : null}
       id="chat-pane"
     >
       {displayMessages()}

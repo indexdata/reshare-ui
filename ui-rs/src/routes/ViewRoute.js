@@ -1,12 +1,17 @@
 import React from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { Route, Switch } from 'react-router-dom';
-import { Button, ButtonGroup, Icon, Layout, Pane, PaneMenu, Paneset, Tooltip } from '@folio/stripes/components';
+import { Button, ButtonGroup, IconButton, Icon, Layout, Pane, PaneMenu, Paneset, Tooltip } from '@folio/stripes/components';
 import { upNLevels, useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
 
 import FlowRoute from './FlowRoute';
 import ViewPatronRequest from '../components/ViewPatronRequest';
+import { ChatPane } from '../components/chat';
+import { useUnseenCount } from '../components/chat/useNotifications';
+import { useRequestAside } from '../components/RequestAside';
 import css from './ViewRoute.css';
+
+const ASIDE_SLOTS = { chat: ChatPane };
 
 const subheading = (req, params) => {
   if (!req || params.id !== req.id) return undefined;
@@ -32,6 +37,9 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
     { parseResponse: false, staleTime: 2 * 60 * 1000 }
   );
   const actions = actionsData?.actions ?? [];
+
+  const { AsidePane, toggle, isOpen } = useRequestAside(ASIDE_SLOTS);
+  const unseenCount = useUnseenCount(request);
 
   if (!hasRequestLoaded) return null;
 
@@ -63,6 +71,22 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
                 )}
               </Tooltip>
             }
+            <Tooltip
+              id="rs-chat-tooltip"
+              text={<FormattedMessage id="ui-rs.view.showChat" />}
+            >
+              {({ ref, ariaIds }) => (
+                <IconButton
+                  icon="comment"
+                  id="clickable-show-chat"
+                  badgeCount={unseenCount}
+                  onClick={() => toggle('chat')}
+                  aria-labelledby={ariaIds.text}
+                  aria-pressed={isOpen('chat')}
+                  ref={ref}
+                />
+              )}
+            </Tooltip>
           </PaneMenu>
         )}
         defaultWidth="fill"
@@ -96,6 +120,7 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
           <Route path={`${match.path}/flow`} render={() => <FlowRoute request={request} actions={actions} />} />
         </Switch>
       </Pane>
+      <AsidePane request={request} />
     </Paneset>
   );
 };
