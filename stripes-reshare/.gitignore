@@ -59,3 +59,11 @@ typings/
 
 # next.js build output
 .next
+
+# omit yarn.lock because it won't be used by platform builds so CI can warn us
+# about dep issues
+yarn.lock
+
+# Jest stuff
+artifacts
+junit.xml

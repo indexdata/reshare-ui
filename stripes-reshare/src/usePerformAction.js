@@ -25,29 +25,54 @@ export default (hookReqId) => {
     else sendCallout('stripes-reshare.actions.generic.error', 'error', { action: `stripes-reshare.actions.${action}`, errMsg }, ['action']);
   };
 
+  const getErrorMessage = async (err) => {
+    const response = err?.response;
+
+    if (response?.json) {
+      try {
+        const body = await response.clone().json();
+        return body.message || body.error || err.message;
+      } catch (jsonErr) {
+        try {
+          const text = await response.text();
+          return text || err.message;
+        } catch (textErr) {
+          return err.message;
+        }
+      }
+    }
+
+    return err.message;
+  };
+
   const performAction = async (id, action, payload = {}, opts = {}) => {
+    let result;
+
     try {
       const res = await mutateAsync({ id, action, actionParams: payload });
-      const result = await res.json();
-      if (result.outcome !== 'success') {
-        if (opts.display !== 'none') showError(action, opts, result.message || result.result);
-        return result;
-      }
-      if (opts.display !== 'none') {
-        if (opts.success) sendCallout(opts.success, 'success');
-        else sendCallout('stripes-reshare.actions.generic.success', 'success', { action: `stripes-reshare.actions.${action}` }, ['action']);
-      }
-      queryClient.invalidateQueries(`broker/patron_requests/${id}`);
-      queryClient.invalidateQueries(`broker/patron_requests/${id}/actions`);
-      queryClient.invalidateQueries('broker/patron_requests');
-      return result;
+      result = await res.json();
     } catch (err) {
-      if (opts.display !== 'none') {
-        if (err?.response?.json) err.response.json().then(r => showError(action, opts, r.message));
-        else showError(action, opts, err.message);
-      }
-      return err;
+      const errMsg = await getErrorMessage(err);
+      if (opts.display !== 'none') showError(action, opts, errMsg);
+      throw err;
     }
+
+    if (result.outcome !== 'success') {
+      if (opts.display !== 'none') showError(action, opts, result.message || result.result);
+      const actionError = new Error(result.message || result.result || `Action ${action} failed`);
+      actionError.action = action;
+      actionError.result = result;
+      throw actionError;
+    }
+
+    if (opts.display !== 'none') {
+      if (opts.success) sendCallout(opts.success, 'success');
+      else sendCallout('stripes-reshare.actions.generic.success', 'success', { action: `stripes-reshare.actions.${action}` }, ['action']);
+    }
+    queryClient.invalidateQueries(`broker/patron_requests/${id}`);
+    queryClient.invalidateQueries(`broker/patron_requests/${id}/actions`);
+    queryClient.invalidateQueries('broker/patron_requests');
+    return result;
   };
 
   return hookReqId
