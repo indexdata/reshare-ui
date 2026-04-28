@@ -15,7 +15,12 @@ const ScanConfirmAction = ({ performAction, request, action, prompt, error, succ
       sendCallout('ui-rs.actions.wrongId', 'error');
       return false;
     }
-    return performAction(action, { note: values.note }, { success, error });
+    try {
+      await performAction(action, { note: values.note }, { success, error });
+      return undefined;
+    } catch (err) {
+      return;
+    }
   };
 
   return (

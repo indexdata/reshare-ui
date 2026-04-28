@@ -14,7 +14,7 @@ const DEFAULT_ICON = 'chevron-double-right';
 const ActionButton = ({ action, disabled, performAction, payload = {}, success = null, error = null, icon = null, label, withNote = false }) => {
   const [noteFieldOpen, setNoteFieldOpen] = useState(false);
   const onSubmitNote = (note) => {
-    performAction(action, { ...payload, note }, { success, error });
+    performAction(action, { ...payload, note }, { success, error }).catch(() => {});
   };
 
   const handleClick = (e) => {
@@ -23,7 +23,7 @@ const ActionButton = ({ action, disabled, performAction, payload = {}, success =
 
     // Stop this event from firing if the notes form is shown.
     if (!noteFieldOpen) {
-      performAction(action, payload, { success, error });
+      performAction(action, payload, { success, error }).catch(() => {});
     }
     // else NOOP.
   };

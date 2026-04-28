@@ -19,7 +19,7 @@ const AddCondition = ({ request, performAction }) => {
   const showCost = stripes.config?.reshare?.showCost
     && Number(request?.illRequest?.billingInfo?.maximumCosts?.monetaryValue) > 0;
 
-  const onSubmit = values => {
+  const onSubmit = async values => {
     const { loanCondition, note, cost } = values;
     const payload = { loanCondition, note };
     const numericCost = !cost?.trim() ? undefined : Number(cost);
@@ -27,16 +27,18 @@ const AddCondition = ({ request, performAction }) => {
       payload.cost = numericCost;
       payload.currency = stripes.currency;
     }
-    return performAction('add-condition', payload, {
-      success: 'ui-rs.actions.add-condition.success',
-      error: 'ui-rs.actions.add-condition.error',
-    })
-      .then(() => {
-        return invalidateNotifications();
-      })
-      .then(() => {
-        setIsOpen(false);
+
+    try {
+      await performAction('add-condition', payload, {
+        success: 'ui-rs.actions.add-condition.success',
+        error: 'ui-rs.actions.add-condition.error',
       });
+      await invalidateNotifications();
+      setIsOpen(false);
+      return undefined;
+    } catch (err) {
+      return;
+    }
   };
 
   const validate = values => {

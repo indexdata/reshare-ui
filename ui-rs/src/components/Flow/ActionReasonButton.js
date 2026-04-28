@@ -13,12 +13,17 @@ const ActionReasonButton = ({ action, reasons, reasonField, reasonTranslationPre
   const actionPending = !!useIsActionPending(request.id);
   const icon = actionMeta[action]?.icon;
 
-  const onSubmit = values => {
-    return performAction(action, values, {
-      success: `ui-rs.actions.${action}.success`,
-      error: `ui-rs.actions.${action}.error`,
-    })
-      .then(() => setIsOpen(false));
+  const onSubmit = async values => {
+    try {
+      await performAction(action, values, {
+        success: `ui-rs.actions.${action}.success`,
+        error: `ui-rs.actions.${action}.error`,
+      });
+      setIsOpen(false);
+      return undefined;
+    } catch (err) {
+      return;
+    }
   };
 
   return (
