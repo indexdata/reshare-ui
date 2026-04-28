@@ -6,7 +6,7 @@ import { Button, Layout, Pane, Spinner, TextArea } from '@folio/stripes/componen
 import { useIntlCallout } from '@projectreshare/stripes-reshare';
 import { ChatMessage } from './components';
 import css from './ChatPane.css';
-import { useNotificationList, useNotificationMutations } from './useNotifications';
+import { useInvalidateNotifications, useNotificationList, useNotificationMutations } from './useNotifications';
 
 const ENTER_KEY = 'Enter';
 const AUTO_MARK_SEEN_DELAY_MS = 1500;
@@ -34,8 +34,10 @@ const ChatPane = ({ onToggle, request }) => {
   const intl = useIntl();
   const sendCallout = useIntlCallout();
 
-  const { data, isLoading } = useNotificationList(request);
-  const { post, markSeen, markSeenMany } = useNotificationMutations(request);
+  const { data, isLoading } = useNotificationList(reqId);
+  const { post, markSeen, markSeenMany } = useNotificationMutations(reqId);
+  const invalidateNotifications = useInvalidateNotifications(reqId);
+  const handleClose = () => { invalidateNotifications(); onToggle(); };
   const markSeenManyMutate = markSeenMany.mutate;
 
   const notifications = useMemo(() => {
@@ -191,7 +193,7 @@ const ChatPane = ({ onToggle, request }) => {
     <Pane
       defaultWidth="30%"
       dismissible
-      onClose={onToggle}
+      onClose={handleClose}
       paneTitle={
         <FormattedMessage
           id="ui-rs.view.chatPane"

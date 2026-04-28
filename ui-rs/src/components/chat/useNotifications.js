@@ -2,13 +2,15 @@ import { useMutation, useQueryClient } from 'react-query';
 import { useOkapiKy } from '@folio/stripes/core';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 
-const useNotificationList = (request) => {
+const notificationListPath = (requestId) => `broker/patron_requests/${requestId}/notifications`;
+
+const useNotificationList = (requestId) => {
   return useOkapiQuery(
-    `broker/patron_requests/${request?.id}/notifications`,
+    notificationListPath(requestId),
     {
-      searchParams: { side: request?.side },
+      searchParams: { limit: 1000 },
       staleTime: 30 * 1000,
-      enabled: Boolean(request?.id && request?.side),
+      enabled: Boolean(requestId),
     }
   );
 };
@@ -17,32 +19,39 @@ const unseenFromItems = (items) => (items || []).filter(
   (n) => n.direction === 'received' && n.receipt !== 'SEEN'
 );
 
-const useUnseenCount = (request) => {
-  const { data } = useNotificationList(request);
+const useUnseenCount = (requestId) => {
+  const { data } = useNotificationList(requestId);
   return unseenFromItems(data?.items).length;
 };
 
-const useNotificationMutations = (request) => {
-  const ky = useOkapiKy();
+const useInvalidateNotifications = (requestId) => {
   const queryClient = useQueryClient();
-  const path = `broker/patron_requests/${request?.id}/notifications`;
 
-  const invalidate = () => queryClient.invalidateQueries(path);
+  return () => {
+    if (!requestId) return Promise.resolve();
+    return queryClient.invalidateQueries(notificationListPath(requestId));
+  };
+};
+
+const useNotificationMutations = (requestId) => {
+  const ky = useOkapiKy();
+  const invalidateNotifications = useInvalidateNotifications(requestId);
+
   const putSeenReceipt = (notificationId) => ky.put(
-    `broker/patron_requests/${request.id}/notifications/${notificationId}/receipt`,
+    `broker/patron_requests/${requestId}/notifications/${notificationId}/receipt`,
     { json: { receipt: 'SEEN' } }
   );
 
   const post = useMutation(async ({ note }) => {
-    await ky.post(`broker/patron_requests/${request.id}/notifications`, {
+    await ky.post(notificationListPath(requestId), {
       json: { note },
     }).json();
-    invalidate();
+    invalidateNotifications();
   });
 
   const markSeen = useMutation(async (notificationId) => {
     await putSeenReceipt(notificationId);
-    invalidate();
+    invalidateNotifications();
   });
 
   const markSeenMany = useMutation(async (notificationIds = []) => {
@@ -54,4 +63,9 @@ const useNotificationMutations = (request) => {
   return { post, markSeen, markSeenMany };
 };
 
-export { useNotificationList, useUnseenCount, useNotificationMutations };
+export {
+  useInvalidateNotifications,
+  useNotificationList,
+  useUnseenCount,
+  useNotificationMutations,
+};

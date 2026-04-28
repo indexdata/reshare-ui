@@ -1,5 +1,5 @@
-export const formatConditionNote = (condition) => {
-  const { note } = condition;
+export const formatConditionNote = (notification) => {
+  const { note } = notification;
 
   if ((note != null) && note.startsWith('#ReShareAddLoanCondition#')) {
     return note.replace(/^#ReShareAddLoanCondition# ?/, '');
@@ -8,14 +8,16 @@ export const formatConditionNote = (condition) => {
   }
 };
 
-export const formatConditionCode = (condition, formatMessage) => {
+export const formatConditionCode = (notification, formatMessage) => {
+  const code = notification.condition;
+  if (!code) return '';
   return formatMessage({
-    id: `ui-rs.settings.customiseListSelect.loanConditions.${condition.code}`,
-    defaultMessage: condition.code,
+    id: `ui-rs.settings.customiseListSelect.loanConditions.${code.toLowerCase()}`,
+    defaultMessage: code,
   });
 };
 
-export const formatConditionCost = (condition) => {
-  if (!condition.cost) return '';
-  return condition.cost + ' ' + condition.costCurrency?.value?.toUpperCase();
+export const formatConditionCost = (notification) => {
+  if (notification.cost == null) return '';
+  return notification.currency ? `${notification.cost} ${notification.currency}` : `${notification.cost}`;
 };

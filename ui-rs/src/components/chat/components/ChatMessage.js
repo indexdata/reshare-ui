@@ -24,13 +24,15 @@ const ChatMessage = React.forwardRef((props, ref) => {
       id: `ui-rs.settings.customiseListSelect.loanConditions.${notification.condition.toLowerCase()}`,
       defaultMessage: notification.condition,
     });
-    return (
-      <div className={css.actionText}>
-        {conditionLabel && <FormattedMessage id="ui-rs.view.chatMessage.conditionSummary" values={{ condition: conditionLabel }} />}
-        {conditionLabel && notification.cost != null && ' · '}
-        {notification.cost != null && `${notification.cost}${notification.currency ? ` ${notification.currency}` : ''}`}
-      </div>
-    );
+    const hasCost = notification.cost != null;
+    if (!conditionLabel && !hasCost) return null;
+    const costStr = hasCost ? `${notification.cost}${notification.currency ? ` ${notification.currency}` : ''}` : null;
+    const label = conditionLabel || costStr;
+    const parts = [
+      intl.formatMessage({ id: 'ui-rs.view.chatMessage.conditionSummary' }, { condition: label }),
+      conditionLabel && costStr,
+    ].filter(Boolean);
+    return <div className={css.actionText}>{parts.join(' · ')}</div>;
   };
 
   return (

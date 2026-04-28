@@ -5,6 +5,7 @@ import { useIsActionPending } from '@projectreshare/stripes-reshare';
 import { useStripes } from '@folio/stripes/core';
 import { Button, Col, Icon, Label, Layout, Modal, ModalFooter, RadioButton, Row, TextArea, TextField } from '@folio/stripes/components';
 
+import { useInvalidateNotifications } from '../../chat/useNotifications';
 import { actionMeta } from '../actionMeta';
 import { LoanCondition } from '../../../constants/iso18626';
 
@@ -12,6 +13,7 @@ const AddCondition = ({ request, performAction }) => {
   const [isOpen, setIsOpen] = useState(false);
   const intl = useIntl();
   const stripes = useStripes();
+  const invalidateNotifications = useInvalidateNotifications(request?.id);
   const actionPending = !!useIsActionPending(request.id);
   const icon = actionMeta['add-condition']?.icon;
   const showCost = stripes.config?.reshare?.showCost
@@ -29,7 +31,12 @@ const AddCondition = ({ request, performAction }) => {
       success: 'ui-rs.actions.add-condition.success',
       error: 'ui-rs.actions.add-condition.error',
     })
-      .then(() => setIsOpen(false));
+      .then(() => {
+        return invalidateNotifications();
+      })
+      .then(() => {
+        setIsOpen(false);
+      });
   };
 
   const validate = values => {

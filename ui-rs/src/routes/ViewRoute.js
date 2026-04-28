@@ -39,7 +39,7 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
   const actions = actionsData?.actions ?? [];
 
   const { AsidePane, toggle, isOpen } = useRequestAside(ASIDE_SLOTS);
-  const unseenCount = useUnseenCount(request);
+  const unseenCount = useUnseenCount(request?.id);
 
   if (!hasRequestLoaded) return null;
 
