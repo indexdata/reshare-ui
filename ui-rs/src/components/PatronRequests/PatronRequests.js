@@ -21,6 +21,8 @@ import {
 } from '@folio/stripes/components';
 import { AppIcon, IfPermission, useStripes } from '@folio/stripes/core';
 import { SearchAndSortQuery, PersistedPaneset } from '@folio/stripes/smart-components';
+import { useIntlCallout } from '@projectreshare/stripes-reshare';
+import { MAX_RECORDS_PER_PDF } from '../../util/buildPatronRequestsCql';
 import AppNameContext from '../../AppNameContext';
 import Filters from './Filters';
 import Search from './Search';
@@ -63,6 +65,7 @@ const PatronRequests = ({ requestsQuery, perPage, filterOptions, children }) => 
   const location = useLocation();
   const match = useRouteMatch();
   const stripes = useStripes();
+  const sendCallout = useIntlCallout();
   const [offset, setOffset] = useState(0);
 
   const pageData = requestsQuery?.data?.pages?.[offset / perPage];
@@ -136,6 +139,33 @@ const PatronRequests = ({ requestsQuery, perPage, filterOptions, children }) => 
                         </PaneMenu>
                       }
                     </>
+                  )}
+                  actionMenu={({ onToggle }) => (
+                    <Button
+                      buttonStyle="dropdownItem"
+                      id="clickable-print-all-pull-slips"
+                      disabled={!totalCount}
+                      onClick={(e) => {
+                        onToggle(e);
+                        if (totalCount > MAX_RECORDS_PER_PDF) {
+                          sendCallout(
+                            'ui-rs.pullSlip.capExceeded',
+                            'warning',
+                            { count: totalCount, cap: MAX_RECORDS_PER_PDF }
+                          );
+                          return;
+                        }
+                        history.push({
+                          pathname: `${match.url}/pullslips`,
+                          search: location.search,
+                          state: { direct: true },
+                        });
+                      }}
+                    >
+                      <Icon icon="print">
+                        <FormattedMessage id="ui-rs.printPullSlips" />
+                      </Icon>
+                    </Button>
                   )}
                   lastMenu={(
                     <PaneMenu>

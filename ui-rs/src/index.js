@@ -9,6 +9,7 @@ import CreateEditRoute from './routes/CreateEditRoute';
 import LocalNoteRoute from './routes/LocalNoteRoute';
 import PatronRequestsRoute from './routes/PatronRequestsRoute';
 import PullSlipRoute from './routes/PullSlipRoute';
+import PullSlipsRoute from './routes/PullSlipsRoute';
 import ViewRoute from './routes/ViewRoute';
 
 const ResourceSharing = (props) => {
@@ -62,8 +63,8 @@ const ResourceSharing = (props) => {
           <Route path={`${path}/requests/:id/edit`} component={CreateEditRoute} />
         }
         <Route path={`${path}/requests/:id/localnote`} component={LocalNoteRoute} />
+        <Route path={`${path}/requests/pullslips`} component={PullSlipsRoute} />
         <Route path={`${path}/requests/:id/pullslip`} component={PullSlipRoute} />
-        <Route path={`${path}/requests/batch/:batchId/pullslip`} component={PullSlipRoute} />
         {appName === 'request' &&
           <Route path={`${path}/requests/:id/rerequest`} component={CreateEditRoute} />
         }

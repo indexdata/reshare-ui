@@ -2,26 +2,13 @@ import React from 'react';
 import { useInfiniteQuery } from 'react-query';
 import { useIntl } from 'react-intl';
 import { useLocation } from 'react-router-dom';
-import queryString from 'query-string';
 import { useOkapiKy } from '@folio/stripes/core';
-import { makeQueryFunction } from '@folio/stripes/smart-components';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 import PatronRequests from '../components/PatronRequests';
 import { ServiceType, ServiceLevel } from '../constants/iso18626';
+import { buildPatronRequestsCql } from '../util/buildPatronRequestsCql';
 
 const PER_PAGE = 100;
-
-const filterConfig = [
-  { name: 'state', cql: 'state', values: [] },
-  { name: 'needsAttention', cql: 'needs_attention', operator: '=', values: [] },
-  { name: 'hasCost', cql: 'has_cost', operator: '=', values: [] },
-  { name: 'hasUnread', cql: 'has_unread_notification', operator: '=', values: [] },
-  { name: 'terminal', cql: 'terminal_state', operator: '=', values: [] },
-  { name: 'serviceType', cql: 'service_type', operator: '=', values: [] },
-  { name: 'serviceLevel', cql: 'service_level', operator: '=', values: [] },
-  { name: 'createdAt', cql: 'created_at', parse: (values) => values.join(' and '), values: [] },
-  { name: 'neededAt', cql: 'needed_at', parse: (values) => values.join(' and '), values: [] },
-];
 
 const PatronRequestsRoute = ({ appName, children }) => {
   const intl = useIntl();
@@ -30,38 +17,7 @@ const PatronRequestsRoute = ({ appName, children }) => {
   const side = appName === 'supply' ? 'lending' : 'borrowing';
   const stateSide = appName === 'supply' ? 'SUPPLIER' : 'REQUESTER';
 
-  // Read query params from URL
-  const urlParams = queryString.parse(location.search);
-  const queryParams = {
-    query: urlParams.query || '',
-    qindex: urlParams.qindex || '',
-    filters: urlParams.filters || '',
-    sort: urlParams.sort || '',
-  };
-
-  const sortMap = {
-    dateCreated: 'created_at',
-    lastUpdated: 'updated_at',
-    neededAt: 'needed_at',
-    title: 'title',
-    patron: 'patron',
-    state: 'state',
-    serviceType: 'service_type',
-    requesterSymbol: 'requester_symbol',
-    supplierSymbol: 'supplier_symbol',
-    hrid: 'requester_req_id',
-  };
-
-  const getCQL = makeQueryFunction(
-    'cql.allRecords=1',
-    'cql.serverChoice="%{query.query}"',
-    sortMap,
-    filterConfig,
-    0,
-    undefined,
-    { rightTrunc: false, escape: true },
-  );
-  const cql = getCQL(queryParams, {}, { query: queryParams }, console);
+  const cql = buildPatronRequestsCql(location);
 
   const prQuery = useInfiniteQuery(
     {

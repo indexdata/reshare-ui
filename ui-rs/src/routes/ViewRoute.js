@@ -2,7 +2,7 @@ import React from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { Route, Switch } from 'react-router-dom';
 import { Button, ButtonGroup, IconButton, Icon, Layout, Pane, PaneMenu, Paneset, Tooltip } from '@folio/stripes/components';
-import { upNLevels, useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { DirectLink, upNLevels, useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
 
 import FlowRoute from './FlowRoute';
 import ViewPatronRequest from '../components/ViewPatronRequest';
@@ -57,6 +57,19 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
         padContent={false}
         onClose={close}
         dismissible
+        actionMenu={({ onToggle }) => (
+          <Button
+            buttonStyle="dropdownItem"
+            onClick={onToggle}
+            to={`${match.url}/pullslip`}
+            as={DirectLink}
+            preserveSearch
+          >
+            <Icon icon="print">
+              <FormattedMessage id="ui-rs.pullSlip" />
+            </Icon>
+          </Button>
+        )}
         lastMenu={(
           <PaneMenu>
             {patronNote &&

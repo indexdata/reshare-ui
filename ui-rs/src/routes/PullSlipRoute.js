@@ -1,81 +1,26 @@
-import React, { useEffect, useState } from 'react';
-import { useQuery, useQueryClient } from 'react-query';
-import { FormattedMessage, useIntl } from 'react-intl';
+import React from 'react';
+import { useQuery } from 'react-query';
+import { useIntl } from 'react-intl';
 import { useOkapiKy } from '@folio/stripes/core';
-import { Button, Pane, Paneset } from '@folio/stripes/components';
-import {
-  useIntlCallout,
-  useOkapiQuery,
-  usePerformAction,
-  useCloseDirect
-} from '@projectreshare/stripes-reshare';
+import PdfPane from '../components/PdfPane';
 
 const PullSlipRoute = ({ match }) => {
   const requestId = match.params?.id;
-  const batchId = match.params?.batchId;
-  const [pdfUrl, setPdfUrl] = useState();
   const intl = useIntl();
   const okapiKy = useOkapiKy();
-  const queryClient = useQueryClient();
-  const sendCallout = useIntlCallout();
-  const performAction = usePerformAction(requestId);
-  const title = intl.formatMessage({ id: requestId ? 'ui-rs.pullSlip' : 'ui-rs.pullSlips' });
-  const close = useCloseDirect();
 
-  const reqQuery = useOkapiQuery(`rs/patronrequests/${requestId}`, {
-    enabled: !!requestId,
-  });
-  const markableAction = reqQuery?.data?.validActions?.find(element => element.actionCode.endsWith('PrintPullSlip'));
-
-  const fetchPath = 'rs/report/generatePicklist';
-  const fetchParams = requestId ? { requestId } : { batchId };
   const pdfQuery = useQuery({
-    queryKey: [fetchPath, fetchParams],
-    queryFn: () => okapiKy(fetchPath, { searchParams: fetchParams }).blob(),
+    queryKey: ['broker/pullslips', requestId],
+    queryFn: () => okapiKy.post('broker/pullslips', { json: { illTransactionIds: [requestId] } }).blob(),
+    enabled: !!requestId,
+    retry: false,
   });
-
-  useEffect(() => {
-    if (pdfQuery.isSuccess && !pdfUrl) {
-      setPdfUrl(URL.createObjectURL(pdfQuery.data));
-    }
-  }, [pdfQuery.isSuccess, pdfQuery.data, pdfUrl]);
-
-  if (!pdfUrl) return null;
-
-  const markPrinted = () => {
-    if (requestId && markableAction) {
-      performAction(markableAction.actionCode);
-    } else if (batchId) {
-      okapiKy('rs/patronrequests/markBatchAsPrinted', { searchParams: { batchId } }).then(() => {
-        queryClient.invalidateQueries('rs/patronrequests');
-        sendCallout('ui-rs.pullSlip.mark.success');
-      }).catch(async e => {
-        sendCallout('ui-rs.pullSlip.mark.error', 'error', { errMsg: e.message ?? '' });
-      });
-    }
-  };
 
   return (
-    <Paneset>
-      <Pane
-        defaultWidth="100%"
-        onClose={close}
-        dismissible
-        paneTitle={title}
-        lastMenu={
-          <Button
-            buttonStyle="primary"
-            marginBottom0
-            disabled={(requestId && !reqQuery.isSuccess) || (reqQuery.isSuccess && !markableAction)}
-            onClick={markPrinted}
-          >
-            <FormattedMessage id="ui-rs.pullSlip.mark" />
-          </Button>
-        }
-      >
-        <iframe src={pdfUrl} width="100%" height="100%" title={title} />
-      </Pane>
-    </Paneset>
+    <PdfPane
+      pdfQuery={pdfQuery}
+      paneTitle={intl.formatMessage({ id: 'ui-rs.pullSlip' })}
+    />
   );
 };
 

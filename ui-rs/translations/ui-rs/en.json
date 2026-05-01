@@ -313,6 +313,8 @@
   "printPullSlips": "Print pull slips",
   "printAllPullSlips": "Print pull slips for all records in list",
   "pullSlip.error": "Error generating pull slip(s). {errMsg}",
+  "pullSlip.capExceeded": "Result set has {count} requests, which exceeds the {cap}-slip limit. Refine your filters and try again.",
+  "pullSlip.noFilter": "Apply a filter or search before printing pull slips. Printing every request at once is not supported.",
   "pullSlip.mark": "Mark pull slip(s) as printed",
   "pullSlip.mark.success": "Successfully marked pull slip(s) as printed",
   "pullSlip.mark.error": "Error marking pull slip(s) printed. {errMsg}",
