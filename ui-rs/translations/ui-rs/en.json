@@ -585,6 +585,7 @@
   "filter.serviceType": "Service type",
   "hideComplete": "Hide completed",
   "unread": "Unread messages",
+  "unreadCount": "{count, plural, one {# unread message} other {# unread messages}}",
   "needsAttention": "Needs attention",
   "hasCost": "Has cost",
   "index.allFields": "All fields",

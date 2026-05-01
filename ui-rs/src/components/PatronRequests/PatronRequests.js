@@ -191,6 +191,24 @@ const PatronRequests = ({ requestsQuery, perPage, filterOptions, children }) => 
                     contentData={requests}
                     pagingOffset={offset}
                     formatter={{
+                      flags: a => {
+                        const attn = a?.needsAttention;
+                        const msgs = a?.unreadNotificationsCount ?? 0;
+                        const cost = a?.hasCost;
+                        if (!(attn || msgs > 0 || cost)) return '';
+                        const str = (msgs > 0 ? msgs : '') + (attn ? '!' : '') + (cost ? '$' : '');
+                        const color = attn ? 'red' : (msgs > 0 ? 'primary' : 'default');
+                        const ariaLabel = [
+                          ...(attn ? [intl.formatMessage({ id: 'ui-rs.needsAttention' })] : []),
+                          ...(msgs > 0 ? [intl.formatMessage({ id: 'ui-rs.unreadCount' }, { count: msgs })] : []),
+                          ...(cost ? [intl.formatMessage({ id: 'ui-rs.hasCost' })] : []),
+                        ].join(' ');
+                        return (
+                          <span role="img" aria-label={ariaLabel}>
+                            <Badge color={color}>{str}</Badge>
+                          </span>
+                        );
+                      },
                       hrid: a => a.requesterRequestId ?? a.id,
                       dateCreated: a => (new Date(a.createdAt).toLocaleDateString() === new Date().toLocaleDateString()
                         ? <FormattedTime value={a.createdAt} />
