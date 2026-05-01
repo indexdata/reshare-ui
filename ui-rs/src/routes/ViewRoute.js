@@ -7,7 +7,7 @@ import { upNLevels, useCloseDirect, useOkapiQuery } from '@projectreshare/stripe
 import FlowRoute from './FlowRoute';
 import ViewPatronRequest from '../components/ViewPatronRequest';
 import { ChatPane } from '../components/chat';
-import { useUnseenCount } from '../components/chat/useNotifications';
+import { useNotificationCounts } from '../components/chat/useNotifications';
 import { useRequestAside } from '../components/RequestAside';
 import css from './ViewRoute.css';
 
@@ -39,7 +39,9 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
   const actions = actionsData?.actions ?? [];
 
   const { AsidePane, toggle, isOpen } = useRequestAside(ASIDE_SLOTS);
-  const unseenCount = useUnseenCount(request?.id);
+  const { isSuccess: countsLoaded, unseen, total } = useNotificationCounts(request?.id);
+  const badgeCount = countsLoaded ? (unseen > 0 ? unseen : total) : undefined;
+  const badgeColor = countsLoaded && unseen > 0 ? 'primary' : 'default';
 
   if (!hasRequestLoaded) return null;
 
@@ -79,7 +81,8 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
                 <IconButton
                   icon="comment"
                   id="clickable-show-chat"
-                  badgeCount={unseenCount}
+                  badgeCount={badgeCount}
+                  badgeColor={badgeColor}
                   onClick={() => toggle('chat')}
                   aria-labelledby={ariaIds.text}
                   aria-pressed={isOpen('chat')}

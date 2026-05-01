@@ -19,9 +19,15 @@ const unseenFromItems = (items) => (items || []).filter(
   (n) => n.direction === 'received' && n.receipt !== 'SEEN'
 );
 
-const useUnseenCount = (requestId) => {
-  const { data } = useNotificationList(requestId);
-  return unseenFromItems(data?.items).length;
+const useNotificationCounts = (requestId) => {
+  const { data, isSuccess } = useNotificationList(requestId);
+  const notifications = data?.items || [];
+
+  return {
+    isSuccess: Boolean(requestId && isSuccess),
+    unseen: unseenFromItems(notifications).length,
+    total: notifications.length,
+  };
 };
 
 const useInvalidateNotifications = (requestId) => {
@@ -66,6 +72,6 @@ const useNotificationMutations = (requestId) => {
 export {
   useInvalidateNotifications,
   useNotificationList,
-  useUnseenCount,
+  useNotificationCounts,
   useNotificationMutations,
 };
