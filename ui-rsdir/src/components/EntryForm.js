@@ -10,12 +10,11 @@ import {
   TextField,
 } from '@folio/stripes/components';
 import SymbolsField from './SymbolsField';
-import NetworksField from './NetworksField';
 import { required } from '../util/validators';
 import AddressesField from './AddressesField';
 
 const types = [
-  { 
+  {
     label: 'Institution',
     value: 'Institution'
   },
@@ -59,7 +58,6 @@ const EntryForm = () => {
               name="description"
               component={TextField}
               label={<FormattedMessage id="ui-rsdir.entry.description" />}
-              validate={required}
             />
           </Col>
         </Row>
@@ -69,7 +67,6 @@ const EntryForm = () => {
               name="organizationId"
               component={TextField}
               label={<FormattedMessage id="ui-rsdir.entry.organizationId" />}
-              validate={required}
             />
           </Col>
           <Col>
@@ -77,7 +74,6 @@ const EntryForm = () => {
               name="contactName"
               component={TextField}
               label={<FormattedMessage id="ui-rsdir.entry.contactName" />}
-              validate={required}
             />
           </Col>
         </Row>
@@ -87,7 +83,6 @@ const EntryForm = () => {
               name="email"
               component={TextField}
               label={<FormattedMessage id="ui-rsdir.entry.email" />}
-              validate={required}
             />
           </Col>
           <Col>
@@ -95,7 +90,6 @@ const EntryForm = () => {
               name="phoneNumber"
               component={TextField}
               label={<FormattedMessage id="ui-rsdir.entry.phoneNumber" />}
-              validate={required}
             />
           </Col>
         </Row>
