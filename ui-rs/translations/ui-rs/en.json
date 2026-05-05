@@ -118,6 +118,8 @@
   "eventHistory.summary.supplierMessageConfirmation": "Supplier message confirmation",
   "eventHistory.summary.patronRequestMessage": "Patron request message",
   "eventHistory.summary.eventRecorded": "Event recorded",
+  "eventHistory.summary.byActor": "by {actor}",
+  "eventHistory.actor": "Actor",
   "eventHistory.rawEvent": "Raw event data",
   "information.heading.partDetails": "Part details",
   "information.heading.publicationDetails": "Publication details",
