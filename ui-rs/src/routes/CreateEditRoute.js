@@ -345,14 +345,18 @@ const CreateEditRoute = props => {
 
   const submit = async submittedRecord => {
     if (op === CREATE) {
-      // Transform identifiers object to bibliographicItemId array
+      // Transform form identifier fields to ISO18626 identifier arrays.
       const identifiers = submittedRecord.identifiers || {};
-      const bibliographicItemId = Object.entries(identifiers)
-        .filter(([_, value]) => value)
-        .map(([code, value]) => ({
-          bibliographicItemIdentifier: value,
-          bibliographicItemIdentifierCode: { text: code }
+      const bibliographicItemId = ['ISBN', 'ISSN']
+        .filter(code => identifiers[code])
+        .map(code => ({
+          bibliographicItemIdentifier: identifiers[code],
+          bibliographicItemIdentifierCode: { '#text': code }
         }));
+      const bibliographicRecordId = identifiers.OCLC ? [{
+        bibliographicRecordIdentifier: identifiers.OCLC,
+        bibliographicRecordIdentifierCode: { '#text': 'OCLC' }
+      }] : [];
 
       const newRecord = {
         patron: submittedRecord?.patronInfo?.patronId,
@@ -361,6 +365,7 @@ const CreateEditRoute = props => {
           bibliographicInfo: {
             ...submittedRecord.bibliographicInfo,
             ...(bibliographicItemId.length > 0 && { bibliographicItemId }),
+            ...(bibliographicRecordId.length > 0 && { bibliographicRecordId }),
             supplierUniqueRecordId: submittedRecord.systemInstanceIdentifier,
           },
         },

@@ -11,6 +11,8 @@ const Search = ({ resetAll, searchHandlers, searchValue, searchChanged, filterCh
     { label: 'hrid', value: 'requester_req_id' },
     { label: 'title', value: 'title' },
     { label: 'author', value: 'author' },
+    { label: 'isbn', value: 'isbn' },
+    { label: 'issn', value: 'issn' },
     { label: 'requesterIdentifier', value: 'patron' },
   ].map(x => ({
     label: intl.formatMessage({ id: `ui-rs.index.${x.label}` }),
