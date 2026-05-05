@@ -7,9 +7,7 @@ import { useGetSIURL } from '@projectreshare/stripes-reshare';
 import css from './Flow.css';
 
 const TitleAndSILink = ({ request }) => {
-  const systemInstanceIdentifier = request?.illRequest?.bibliographicInfo?.bibliographicRecordId?.find(
-    id => id?.bibliographicRecordIdentifierCode?.text === 'systemInstanceIdentifier'
-  )?.bibliographicRecordIdentifier;
+  const systemInstanceIdentifier = request?.illRequest?.bibliographicInfo?.supplierUniqueRecordId;
   const getSIURL = useGetSIURL();
   const siURL = systemInstanceIdentifier ? getSIURL(systemInstanceIdentifier) : null;
   const inventoryLink = siURL ? (
