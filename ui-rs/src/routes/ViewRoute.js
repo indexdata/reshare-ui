@@ -58,17 +58,17 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
         onClose={close}
         dismissible
         actionMenu={({ onToggle }) => (
-          <Button
+          <DirectLink
+            component={Button}
             buttonStyle="dropdownItem"
             onClick={onToggle}
             to={`${match.url}/pullslip`}
-            as={DirectLink}
             preserveSearch
           >
             <Icon icon="print">
               <FormattedMessage id="ui-rs.pullSlip" />
             </Icon>
-          </Button>
+          </DirectLink>
         )}
         lastMenu={(
           <PaneMenu>
