@@ -6,7 +6,12 @@ import { Button, Layout, Pane, Spinner, TextArea } from '@folio/stripes/componen
 import { useIntlCallout } from '@projectreshare/stripes-reshare';
 import { ChatMessage } from './components';
 import css from './ChatPane.css';
-import { useInvalidateNotifications, useNotificationList, useNotificationMutations } from './useNotifications';
+import {
+  isNotificationRead,
+  useInvalidateNotifications,
+  useNotificationList,
+  useNotificationMutations,
+} from './useNotifications';
 
 const ENTER_KEY = 'Enter';
 const AUTO_MARK_SEEN_DELAY_MS = 1500;
@@ -16,7 +21,7 @@ const normalise = (n) => ({
   messageContent: n.note ?? '',
   timestamp: n.createdAt ? new Date(n.createdAt).getTime() : 0,
   isSender: n.direction === 'sent',
-  seen: n.direction === 'sent' ? true : n.receipt === 'SEEN',
+  seen: isNotificationRead(n),
   sendFailed: n.receipt === 'FAILED_TO_SEND',
   senderSymbol: n.fromSymbol,
   receiverSymbol: n.toSymbol,

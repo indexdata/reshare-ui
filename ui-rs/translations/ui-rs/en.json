@@ -211,6 +211,7 @@
   "flow.loanConditions.status": "Status",
   "flow.loanConditions.status.pending": "Pending",
   "flow.loanConditions.status.accepted": "Accepted",
+  "flow.loanConditions.status.rejected": "Rejected",
   "flow.volumes.label": "Label",
   "flow.volumes.itemBarcode": "Item barcode",
   "flow.volumes.status": "Status",

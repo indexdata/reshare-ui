@@ -5,6 +5,7 @@ import { Button, ButtonGroup, IconButton, Icon, Layout, Pane, PaneMenu, Paneset,
 import { DirectLink, upNLevels, useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
 
 import FlowRoute from './FlowRoute';
+import ViewMessageBanners from '../components/ViewMessageBanners';
 import ViewPatronRequest from '../components/ViewPatronRequest';
 import { ChatPane } from '../components/chat';
 import { useNotificationCounts } from '../components/chat/useNotifications';
@@ -131,6 +132,7 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
           </Layout>
         )}
       >
+        {request && <ViewMessageBanners request={request} />}
         <Switch>
           <Route path={`${match.path}/details`} render={() => <ViewPatronRequest record={request} actions={actions} />} />
           <Route path={`${match.path}/flow`} render={() => <FlowRoute request={request} actions={actions} />} />

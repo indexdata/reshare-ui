@@ -3,6 +3,13 @@ import { useOkapiKy } from '@folio/stripes/core';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 
 const notificationListPath = (requestId) => `broker/patron_requests/${requestId}/notifications`;
+const READ_RECEIPTS = new Set(['SEEN', 'ACCEPTED', 'REJECTED']);
+
+const isNotificationRead = (notification) => (
+  notification?.direction === 'sent' ||
+  Boolean(notification?.acknowledgedAt) ||
+  READ_RECEIPTS.has(notification?.receipt)
+);
 
 const useNotificationList = (requestId) => {
   return useOkapiQuery(
@@ -16,7 +23,7 @@ const useNotificationList = (requestId) => {
 };
 
 const unseenFromItems = (items) => (items || []).filter(
-  (n) => n.direction === 'received' && n.receipt !== 'SEEN'
+  (n) => n.direction === 'received' && !isNotificationRead(n)
 );
 
 const useNotificationCounts = (requestId) => {
@@ -70,6 +77,7 @@ const useNotificationMutations = (requestId) => {
 };
 
 export {
+  isNotificationRead,
   useInvalidateNotifications,
   useNotificationList,
   useNotificationCounts,
