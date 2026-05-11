@@ -3,6 +3,7 @@ import { Route } from '@folio/stripes/core';
 import EntriesRoute from './routes/EntriesRoute';
 import ViewEntryRoute from './routes/ViewEntryRoute';
 import EditEntryRoute from './routes/EditEntryRoute';
+import EditLMSConfigRoute from './routes/EditLMSConfigRoute';
 
 const RSDir = (props) => {
   const {
@@ -24,6 +25,7 @@ const RSDir = (props) => {
         <Route path={`${path}/entries/create`} component={EditEntryRoute} />
         <Route path={`${path}/entries/view/:id`} component={ViewEntryRoute} />
         <Route path={`${path}/entries/edit/:id`} component={EditEntryRoute} />
+        <Route path={`${path}/entries/lmsconfig/edit/:id`} component={EditLMSConfigRoute} />
       </Route>
     </Switch>
   );
