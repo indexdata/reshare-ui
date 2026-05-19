@@ -43,6 +43,13 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
   const { isSuccess: countsLoaded, unseen, total } = useNotificationCounts(request?.id);
   const badgeCount = countsLoaded ? (unseen > 0 ? unseen : total) : undefined;
   const badgeColor = countsLoaded && unseen > 0 ? 'primary' : 'default';
+  const chatLabel = intl.formatMessage(
+    { id: 'ui-rs.view.showChat' },
+    {
+      count: badgeCount ?? 0,
+      countType: countsLoaded ? (unseen > 0 ? 'unread' : 'total') : 'none',
+    }
+  );
 
   if (!hasRequestLoaded) return null;
 
@@ -89,7 +96,7 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
             }
             <Tooltip
               id="rs-chat-tooltip"
-              text={<FormattedMessage id="ui-rs.view.showChat" />}
+              text={chatLabel}
             >
               {({ ref, ariaIds }) => (
                 <IconButton
