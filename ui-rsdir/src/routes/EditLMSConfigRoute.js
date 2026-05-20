@@ -1,5 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { Pane } from '@folio/stripes/components';
+import { FormattedMessage } from 'react-intl';
 import { useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import LMSConfigEditor from '../components/LMSConfigEditor';
 
@@ -92,7 +93,7 @@ const EditLMSConfigRoute = () => {
   return (
     <Pane
       defaultWidth="fill"
-      paneTitle="edit lms info"
+      paneTitle={<FormattedMessage id="ui-rsdir.lmsConfig.edit" />}
       onClose={close}
       dismissible
     >
