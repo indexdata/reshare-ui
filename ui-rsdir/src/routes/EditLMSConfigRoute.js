@@ -58,6 +58,10 @@ const fieldMap = [
     valueType: 'boolean',
   },
   {
+    fieldName: 'requestItemBibIdCode',
+    valueType: 'string',
+  },
+  {
     fieldName: 'requesterPickupLocation',
     valueType: 'string',
   },
@@ -67,7 +71,7 @@ const fieldMap = [
   },
   {
     fieldName: 'requesterPatronPattern',
-    valuetype: 'string'
+    valueType: 'string'
   }
 ];
 

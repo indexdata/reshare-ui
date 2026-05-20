@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
+import { useQueryClient } from 'react-query';
 import { useOkapiKy } from '@folio/stripes/core';
 import {
   Button,
@@ -27,6 +28,9 @@ const valueForPatch = (value, valueType) => {
   const type = normalizedValueType(valueType);
 
   if (type === 'boolean') {
+    if (value === '') {
+      return null;
+    }
     return value === 'true';
   }
 
@@ -60,6 +64,7 @@ const valuesFromEntry = (entry, fieldMapping) => fieldMapping.reduce((acc, field
 const LMSConfigEditor = ({ id, entry: initialEntry, fieldMapping = [] }) => {
   const ky = useOkapiKy();
   const intl = useIntl();
+  const queryClient = useQueryClient();
   const [entry, setEntry] = useState(initialEntry);
   const [values, setValues] = useState(() => valuesFromEntry(initialEntry, fieldMapping));
   const [savingFields, setSavingFields] = useState({});
@@ -109,13 +114,18 @@ const LMSConfigEditor = ({ id, entry: initialEntry, fieldMapping = [] }) => {
     })
       .then(parseJsonResponse)
       .then(updatedEntry => {
-        setEntry(current => updatedEntry || {
-          ...current,
+        const currentEntry = queryClient.getQueryData(entryPath(id)) || entry;
+        const nextEntry = updatedEntry || {
+          ...currentEntry,
           lmsConfig: {
-            ...current?.lmsConfig,
+            ...currentEntry?.lmsConfig,
             [fieldName]: patchValue,
           },
-        });
+        };
+
+        setEntry(nextEntry);
+        queryClient.setQueryData(entryPath(id), nextEntry);
+        queryClient.invalidateQueries(entryPath(id));
       })
       .catch(error => {
         setFieldErrors(current => ({

@@ -142,8 +142,16 @@ const ViewEntry = ({ entry }) => {
         <Row>
           <Col xs={3}>
             <KeyValue
-              label={<FormattedMessage id="ui-rsdir.lmsConfig.pickupLocationEnabled" />}
-              value={displayTF(lmsConfig.pickupLocationEnabled)}
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.lookupUserEnabled" />}
+              value={displayTF(lmsConfig.lookupUserEnabled)}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.requestItemPickupLocationEnabled" />}
+              value={displayTF(lmsConfig.requestItemPickupLocationEnabled)}
             />
           </Col>
           <Col xs={3}>
@@ -170,6 +178,12 @@ const ViewEntry = ({ entry }) => {
             <KeyValue
               label={<FormattedMessage id="ui-rsdir.lmsConfig.requesterPatronPattern" />}
               value={lmsConfig.requesterPatronPattern}
+            />
+          </Col>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.requestItemRequestType" />}
+              value={lmsConfig.requestItemRequestType}
             />
           </Col>
         </Row>
