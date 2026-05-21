@@ -21,6 +21,14 @@ const ViewEntry = ({ entry }) => {
   const intl = useIntl();
   const close = useCloseDirect(upNLevels(location, 2));
 
+  const handleEdit = () => {
+    history.push(`/rsdir/entries/edit/${entry.id}`);
+  };
+
+  const handleLMSEdit = () => {
+    history.push(`/rsdir/entries/lmsconfig/edit/${entry.id}`);
+  };
+
   const formatSymbols = (symbols) => {
     if (!symbols || symbols.length === 0) return '';
     return symbols
@@ -42,10 +50,31 @@ const ViewEntry = ({ entry }) => {
       .join(', ');
   };
 
+  const displayTF = (val) => {
+    if (val === true || val === false) {
+      return val.toString();
+    }
+    return '-';
+  };
+
   const formatLMSConfig = (lmsConfig) => {
     return (
       <Card
-        headerStart={<Headline margin="none"><FormattedMessage id="ui-rsdir.lmsConfig.header" /></Headline>}
+        headerStart={
+          <Headline margin="none">
+            <FormattedMessage id="ui-rsdir.lmsConfig.header" />
+          </Headline>
+        }
+        headerEnd={
+          <Button
+            id="clickable-edit-entry-lmsconfig"
+            onClick={handleLMSEdit}
+            buttonStyle="primary paneHeaderNewButton"
+            marginBottom0
+          >
+            <FormattedMessage id="ui-rsdir.edit" />
+          </Button>
+        }
         cardStyle="positive"
         roundedBorder
         marginBottom0
@@ -94,27 +123,35 @@ const ViewEntry = ({ entry }) => {
           <Col xs={3}>
             <KeyValue
               label={<FormattedMessage id="ui-rsdir.lmsConfig.acceptItemEnabled" />}
-              value={lmsConfig.acceptItemEnabled}
+              value={displayTF(lmsConfig.acceptItemEnabled)}
             />
           </Col>
           <Col xs={3}>
             <KeyValue
               label={<FormattedMessage id="ui-rsdir.lmsConfig.checkInItemEnabled" />}
-              value={lmsConfig.checkInItemEnabled}
+              value={displayTF(lmsConfig.checkInItemEnabled)}
             />
           </Col>
           <Col xs={3}>
             <KeyValue
               label={<FormattedMessage id="ui-rsdir.lmsConfig.checkOutItemEnabled" />}
-              value={lmsConfig.checkOutItemEnabled}
+              value={displayTF(lmsConfig.checkOutItemEnabled)}
             />
           </Col>
         </Row>
         <Row>
           <Col xs={3}>
             <KeyValue
-              label={<FormattedMessage id="ui-rsdir.lmsConfig.pickupLocationEnabled" />}
-              value={lmsConfig.pickupLocationEnabled}
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.lookupUserEnabled" />}
+              value={displayTF(lmsConfig.lookupUserEnabled)}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.requestItemPickupLocationEnabled" />}
+              value={displayTF(lmsConfig.requestItemPickupLocationEnabled)}
             />
           </Col>
           <Col xs={3}>
@@ -141,6 +178,12 @@ const ViewEntry = ({ entry }) => {
             <KeyValue
               label={<FormattedMessage id="ui-rsdir.lmsConfig.requesterPatronPattern" />}
               value={lmsConfig.requesterPatronPattern}
+            />
+          </Col>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.lmsConfig.requestItemRequestType" />}
+              value={lmsConfig.requestItemRequestType}
             />
           </Col>
         </Row>
@@ -226,10 +269,6 @@ const ViewEntry = ({ entry }) => {
         })}
       </Card>
     );
-  };
-
-  const handleEdit = () => {
-    history.push(`/rsdir/entries/edit/${entry.id}`);
   };
 
   return (
