@@ -1,13 +1,11 @@
 import React from 'react';
-import { IntlProvider } from 'react-intl';
-import { MemoryRouter } from 'react-router-dom';
 import {
   fireEvent,
-  render,
   screen,
   within,
 } from '@folio/jest-config-stripes/testing-library/react';
 
+import { renderWithRs } from '../test/renderWithRs';
 import { useNotificationList } from '../components/chat/useNotifications';
 import FlowRoute from './FlowRoute';
 
@@ -17,17 +15,7 @@ jest.mock('../components/chat/useNotifications', () => ({
   useNotificationList: jest.fn(),
 }));
 
-// Stripes Icon hits an icon registry that isn't set up under jest, producing
-// console noise. Tiny API surface, so swap it for a pass-through. Mock the
-// deep module path because internal stripes-components imports go directly to
-// it, bypassing the @folio/stripes/components barrel.
-jest.mock('@folio/stripes-components/lib/Icon', () => {
-  return ({ children, icon, id }) => (
-    <span data-test-icon={icon} id={id}>
-      {children}
-    </span>
-  );
-});
+jest.mock('@folio/stripes-components/lib/Icon', () => require('../test/iconMock').default);
 
 jest.mock('@projectreshare/stripes-reshare', () => ({
   ...jest.requireActual('@projectreshare/stripes-reshare'),
@@ -35,23 +23,9 @@ jest.mock('@projectreshare/stripes-reshare', () => ({
   useIsActionPending: () => false,
 }));
 
-// Real @folio/stripes/core transitively requires the virtual `stripes-config`
-// module, which only exists when the app is running. Provide a minimal mock
-// covering only the named exports our test path touches.
-jest.mock('@folio/stripes/core', () => ({
-  useStripes: () => ({
-    currency: 'USD',
-    config: {
-      reshare: {
-        showCost: true,
-        useTiers: true,
-        sharedIndex: { type: 'folio', ui: 'https://shared-index.example' },
-      },
-    },
-  }),
-  useOkapiKy: () => ({}),
-  CalloutContext: require('react').createContext(null),
-}));
+// FlowRoute receives request/actions as props, so it never queries; only
+// useStripes (reshare flags) and CalloutContext are touched here.
+jest.mock('@folio/stripes/core', () => require('../test/stripesCore').makeStripesCoreMock(() => ({})));
 
 const conditionNotifications = [
   {
@@ -137,19 +111,9 @@ const messages = {
   'stripes-reshare.actions.someAction.error': 'stripes-reshare.actions.someAction.error',
 };
 
-const renderFlowRoute = () => render(
-  <MemoryRouter initialEntries={['/requests/pr-1/flow']}>
-    <IntlProvider
-      locale="en"
-      messages={messages}
-      onError={(err) => {
-        if (err.code === 'MISSING_TRANSLATION') return;
-        throw err;
-      }}
-    >
-      <FlowRoute request={requestFixture} actions={actionsFixture} />
-    </IntlProvider>
-  </MemoryRouter>
+const renderFlowRoute = () => renderWithRs(
+  <FlowRoute request={requestFixture} actions={actionsFixture} />,
+  { initialEntries: ['/requests/pr-1/flow'], messages }
 );
 
 const rowContaining = (text) => {
