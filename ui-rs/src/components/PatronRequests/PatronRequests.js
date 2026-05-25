@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
   FormattedDate,
   FormattedMessage,
@@ -79,7 +79,13 @@ const PatronRequests = ({ requestsQuery, perPage, filterOptions, children }) => 
     requestsQuery.fetchNextPage({ pageParam: index });
     setOffset(index);
   };
-  const initialSearch = '?sort=-dateCreated';
+  const initialSearch = '?filters=terminal.false&sort=-dateCreated';
+
+  useEffect(() => {
+    if (!location.search || location.search === '') {
+      history.push(location.pathname + initialSearch);
+    }
+  });
 
 
   const { title, visibleColumns, createPerm } = appDetails[appName];
