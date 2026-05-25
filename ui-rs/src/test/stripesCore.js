@@ -17,10 +17,15 @@ const reshareConfigStub = {
 const makeStripesCoreMock = (getOkapiKy, { config = reshareConfigStub } = {}) => ({
   useStripes: () => ({
     currency: 'USD',
+    hasPerm: () => true,
     config: { reshare: config },
   }),
   useOkapiKy: () => getOkapiKy(),
   CalloutContext: React.createContext(null),
+  // Permission gate → always render children (test grants all perms).
+  IfPermission: ({ children }) => children,
+  // AppIcon reaches a webpack asset registry that jest doesn't provide; stub it out.
+  AppIcon: () => null,
 });
 
 export { reshareConfigStub, makeStripesCoreMock };
