@@ -26,6 +26,10 @@ const makeStripesCoreMock = (getOkapiKy, { config = reshareConfigStub } = {}) =>
   IfPermission: ({ children }) => children,
   // AppIcon reaches a webpack asset registry that jest doesn't provide; stub it out.
   AppIcon: () => null,
+  // Pluggable renders registered UI plugins via a webpack-time module registry the
+  // app build provides; jest has none, so render nothing. PatronRequestForm mounts
+  // a `<Pluggable type="rs-siquery">` (shared-index search) that's inert in tests.
+  Pluggable: () => null,
 });
 
 export { reshareConfigStub, makeStripesCoreMock };
