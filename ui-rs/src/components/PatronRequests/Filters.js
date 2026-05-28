@@ -39,6 +39,12 @@ const Filters = ({ activeFilters, filterHandlers, options }) => {
         onChange={onChangeHandler}
       />
       <CheckboxFilter
+        name="hasInternalNote"
+        dataOptions={options.hasInternalNote}
+        selectedValues={activeFilters?.hasInternalNote}
+        onChange={onChangeHandler}
+      />
+      <CheckboxFilter
         name="hasUnread"
         dataOptions={options.hasUnread}
         selectedValues={activeFilters?.hasUnread}

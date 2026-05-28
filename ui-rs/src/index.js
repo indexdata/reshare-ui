@@ -6,7 +6,6 @@ import Settings from './settings';
 import AppNameContext from './AppNameContext';
 
 import CreateEditRoute from './routes/CreateEditRoute';
-import LocalNoteRoute from './routes/LocalNoteRoute';
 import PatronRequestsRoute from './routes/PatronRequestsRoute';
 import PullSlipRoute from './routes/PullSlipRoute';
 import PullSlipsRoute from './routes/PullSlipsRoute';
@@ -62,7 +61,6 @@ const ResourceSharing = (props) => {
         {appName === 'request' &&
           <Route path={`${path}/requests/:id/edit`} component={CreateEditRoute} />
         }
-        <Route path={`${path}/requests/:id/localnote`} component={LocalNoteRoute} />
         <Route path={`${path}/requests/pullslips`} component={PullSlipsRoute} />
         <Route path={`${path}/requests/:id/pullslip`} component={PullSlipRoute} />
         {appName === 'request' &&

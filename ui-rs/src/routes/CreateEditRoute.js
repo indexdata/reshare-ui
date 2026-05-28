@@ -345,8 +345,14 @@ const CreateEditRoute = props => {
 
   const submit = async submittedRecord => {
     if (op === CREATE) {
-      // Transform form identifier fields to ISO18626 identifier arrays.
-      const identifiers = submittedRecord.identifiers || {};
+      // Separate top-level broker fields and ISO18626 transform inputs from the
+      // fields that flow directly into illRequest.
+      const {
+        internalNote,
+        identifiers = {},
+        systemInstanceIdentifier,
+        ...illRequestFields
+      } = submittedRecord;
       const bibliographicItemId = ['ISBN', 'ISSN']
         .filter(code => identifiers[code])
         .map(code => ({
@@ -359,14 +365,15 @@ const CreateEditRoute = props => {
       }] : [];
 
       const newRecord = {
-        patron: submittedRecord?.patronInfo?.patronId,
+        patron: illRequestFields?.patronInfo?.patronId,
+        ...(internalNote && { internalNote }),
         illRequest: {
-          ...omit(submittedRecord, ['identifiers', 'systemInstanceIdentifier']),
+          ...illRequestFields,
           bibliographicInfo: {
-            ...submittedRecord.bibliographicInfo,
+            ...illRequestFields.bibliographicInfo,
             ...(bibliographicItemId.length > 0 && { bibliographicItemId }),
             ...(bibliographicRecordId.length > 0 && { bibliographicRecordId }),
-            supplierUniqueRecordId: submittedRecord.systemInstanceIdentifier,
+            supplierUniqueRecordId: systemInstanceIdentifier,
           },
         },
       };

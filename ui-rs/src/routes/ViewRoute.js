@@ -10,6 +10,7 @@ import ViewPatronRequest from '../components/ViewPatronRequest';
 import { ChatPane } from '../components/chat';
 import { useNotificationCounts } from '../components/chat/useNotifications';
 import { useRequestAside } from '../components/RequestAside';
+import EditInternalNote from '../components/EditInternalNote';
 import css from './ViewRoute.css';
 
 const ASIDE_SLOTS = { chat: ChatPane };
@@ -55,6 +56,7 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
 
   const paneId = request.requesterRequestId || request.id;
   const patronNote = request?.illRequest?.serviceInfo?.note;
+  const internalNote = request?.internalNote;
 
   return (
     <Paneset>
@@ -66,20 +68,37 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
         onClose={close}
         dismissible
         actionMenu={({ onToggle }) => (
-          <DirectLink
-            component={Button}
-            buttonStyle="dropdownItem"
-            onClick={onToggle}
-            to={`${match.url}/pullslip`}
-            preserveSearch
-          >
-            <Icon icon="print">
-              <FormattedMessage id="ui-rs.pullSlip" />
-            </Icon>
-          </DirectLink>
+          <>
+            <EditInternalNote request={request} />
+            <DirectLink
+              component={Button}
+              buttonStyle="dropdownItem"
+              onClick={onToggle}
+              to={`${match.url}/pullslip`}
+              preserveSearch
+            >
+              <Icon icon="print">
+                <FormattedMessage id="ui-rs.pullSlip" />
+              </Icon>
+            </DirectLink>
+          </>
         )}
         lastMenu={(
           <PaneMenu>
+            {internalNote &&
+              <Tooltip
+                id="rs-internal-note-tooltip"
+                text={<FormattedMessage id="stripes-reshare.hasLocalNote" />}
+              >
+                {({ ref, ariaIds }) => (
+                  <Icon
+                    icon="report"
+                    aria-labelledby={ariaIds.text}
+                    ref={ref}
+                  />
+                )}
+              </Tooltip>
+            }
             {patronNote &&
               <Tooltip
                 id="rs-patron-note-tooltip"

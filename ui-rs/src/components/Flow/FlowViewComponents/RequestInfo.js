@@ -60,6 +60,14 @@ const RequestInfo = ({ request }) => {
               />
             </Col>
           }
+          {request.internalNote &&
+            <Col xs={6}>
+              <KeyValue
+                label={<FormattedMessage id="ui-rs.information.internalNote" />}
+                value={request.internalNote}
+              />
+            </Col>
+          }
         </Row>
       </Layout>
     </Accordion>

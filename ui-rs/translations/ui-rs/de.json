@@ -70,7 +70,7 @@
   "information.pickupURL": "Abhol-URL",
   "information.requestingInstitution": "Nehmende Bibliothek",
   "information.notes": "Anmerkungen",
-  "information.localNote": "Interne Anmerkungen",
+  "information.internalNote": "Interne Anmerkungen",
   "information.requestingUser": "Bestellung für",
   "information.dateSubmitted": "Erstellt am",
   "information.dateNeeded": "Benötigt bis",

@@ -57,6 +57,7 @@ describe('CreateEditRoute (create)', () => {
     setField('edit-patron-request-author', 'Some Author');
     setField('edit-patron-request-isbn', '9781234567890');
     setField('edit-request-metadata-serviceLevel', 'Standard');
+    setField('edit-request-metadata-internalNote', 'Staff only note');
 
     fireEvent.click(document.getElementById('clickable-create-rs-entry'));
 
@@ -77,6 +78,10 @@ describe('CreateEditRoute (create)', () => {
       .toBe('9781234567890');
     expect(illRequest.bibliographicInfo.bibliographicItemId[0].bibliographicItemIdentifierCode)
       .toEqual({ '#text': 'ISBN' });
+
+    // internalNote is hoisted to the top level, not buried in illRequest.
+    expect(opts.json.internalNote).toBe('Staff only note');
+    expect(illRequest.internalNote).toBeUndefined();
 
     // No error callout on the happy path.
     expect(sendCallout).not.toHaveBeenCalled();

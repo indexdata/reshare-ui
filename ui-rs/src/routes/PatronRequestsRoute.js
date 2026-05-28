@@ -44,6 +44,7 @@ const PatronRequestsRoute = ({ appName, children }) => {
   const filterOptions = {
     needsAttention: [{ label: intl.formatMessage({ id: 'ui-rs.needsAttention' }), value: 'true' }],
     hasCost: [{ label: intl.formatMessage({ id: 'ui-rs.hasCost' }), value: 'true' }],
+    hasInternalNote: [{ label: intl.formatMessage({ id: 'ui-rs.hasInternalNote' }), value: 'true' }],
     hasUnread: [{ label: intl.formatMessage({ id: 'ui-rs.unread' }), value: 'true' }],
     terminal: [{ label: intl.formatMessage({ id: 'ui-rs.hideComplete' }), value: 'false' }],
     serviceType: ServiceType.map(v => ({ label: intl.formatMessage({ id: `ui-rs.information.serviceType.${v}` }), value: v })),

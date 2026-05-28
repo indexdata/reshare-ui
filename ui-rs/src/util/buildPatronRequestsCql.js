@@ -7,6 +7,7 @@ export const filterConfig = [
   { name: 'state', cql: 'state', values: [] },
   { name: 'needsAttention', cql: 'needs_attention', operator: '=', values: [] },
   { name: 'hasCost', cql: 'has_cost', operator: '=', values: [] },
+  { name: 'hasInternalNote', cql: 'has_internal_note', operator: '=', values: [] },
   { name: 'hasUnread', cql: 'has_unread_notification', operator: '=', values: [] },
   { name: 'terminal', cql: 'terminal_state', operator: '=', values: [] },
   { name: 'serviceType', cql: 'service_type', operator: '=', values: [] },

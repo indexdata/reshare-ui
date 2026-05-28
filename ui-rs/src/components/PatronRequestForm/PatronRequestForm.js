@@ -231,9 +231,9 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
         </Col>
         <Col xs={3}>
           <Field
-            id="edit-request-metadata-localNote"
-            name="localNote"
-            label={<FormattedMessage id="ui-rs.information.localNote" />}
+            id="edit-request-metadata-internalNote"
+            name="internalNote"
+            label={<FormattedMessage id="ui-rs.information.internalNote" />}
             component={TextArea}
             rows={5}
           />
