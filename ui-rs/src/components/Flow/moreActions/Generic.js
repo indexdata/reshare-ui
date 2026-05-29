@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { injectIntl } from 'react-intl';
 import { actionMeta } from '../actionMeta';
 import ActionButton from '../ActionButton';
@@ -28,12 +27,6 @@ const Generic = props => {
     withNote={withNote}
     {...props}
   />;
-};
-
-Generic.propTypes = {
-  name: PropTypes.string.isRequired,
-  actions: PropTypes.arrayOf(PropTypes.object),
-  intl: PropTypes.object.isRequired,
 };
 
 export default injectIntl(Generic);

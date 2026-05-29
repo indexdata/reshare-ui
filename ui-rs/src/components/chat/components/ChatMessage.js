@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { FormattedMessage, useIntl } from 'react-intl';
 import classNames from 'classnames';
 
@@ -74,23 +73,5 @@ const ChatMessage = React.forwardRef((props, ref) => {
     </div>
   );
 });
-
-ChatMessage.propTypes = {
-  notification: PropTypes.shape({
-    id: PropTypes.string,
-    messageContent: PropTypes.string,
-    timestamp: PropTypes.number,
-    seen: PropTypes.bool,
-    isSender: PropTypes.bool,
-    sendFailed: PropTypes.bool,
-    senderSymbol: PropTypes.string,
-    receiverSymbol: PropTypes.string,
-    kind: PropTypes.string,
-    condition: PropTypes.string,
-    cost: PropTypes.number,
-    currency: PropTypes.string,
-  }),
-  handleMessageRead: PropTypes.func,
-};
 
 export default ChatMessage;

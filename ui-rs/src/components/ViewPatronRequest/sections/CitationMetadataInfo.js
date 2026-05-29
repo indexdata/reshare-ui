@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { FormattedMessage } from 'react-intl';
 import {
   Card,
@@ -11,11 +10,6 @@ import {
 import css from './CitationMetadata.css';
 
 class CitationMetadataInfo extends React.Component {
-  static propTypes = {
-    record: PropTypes.object,
-    id: PropTypes.string,
-  };
-
   render() {
     const { record } = this.props;
     let summary = record.title || '[UNKNOWN]';

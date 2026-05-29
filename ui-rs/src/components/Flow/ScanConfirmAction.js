@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { FormattedMessage } from 'react-intl';
 import { Form, Field } from 'react-final-form';
 import { Button, Row, Col, TextField } from '@folio/stripes/components';
@@ -19,7 +18,7 @@ const ScanConfirmAction = ({ performAction, request, action, prompt, error, succ
       await performAction(action, { note: values.note }, { success, error });
       return undefined;
     } catch (err) {
-      return;
+      return undefined;
     }
   };
 
@@ -49,13 +48,5 @@ const ScanConfirmAction = ({ performAction, request, action, prompt, error, succ
       )}
     />
   );
-};
-ScanConfirmAction.propTypes = {
-  performAction: PropTypes.func.isRequired,
-  request: PropTypes.object.isRequired,
-  action: PropTypes.string.isRequired,
-  prompt: PropTypes.string,
-  error: PropTypes.string,
-  success: PropTypes.string,
 };
 export default ScanConfirmAction;

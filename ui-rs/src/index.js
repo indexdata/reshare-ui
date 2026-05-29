@@ -1,7 +1,5 @@
 import React from 'react';
 import { Redirect, Route, Switch } from 'react-router-dom';
-import { useIntlKeyStore } from '@k-int/stripes-kint-components';
-import { EditPullslipNotification } from './settings/pullslipNotifications';
 import Settings from './settings';
 import AppNameContext from './AppNameContext';
 
@@ -20,10 +18,6 @@ const ResourceSharing = (props) => {
 
   const appName = path.substring(1).replace(/\/.*/, '');
   props.stripes.logger.log('appName', `us-rs: path='${path}', appName='${appName}'`);
-
-  // stripes-kint-components no longer contains translations for its strings and needs to know where to look
-  const addKey = useIntlKeyStore(state => state.addKey);
-  addKey('stripes-reshare');
 
   if (actAs === 'settings') {
     return <Settings {...props} appName={appName} />;
@@ -82,7 +76,6 @@ const ResourceSharing = (props) => {
           path={`${path}/requests/:action?`}
           render={(p) => <PatronRequestsRoute {...p} appName={appName} />}
         />
-        <Route path={`${path}/pullslip-notifications/:id/edit`} component={EditPullslipNotification} />
       </Switch>
     </AppNameContext.Provider>
   );

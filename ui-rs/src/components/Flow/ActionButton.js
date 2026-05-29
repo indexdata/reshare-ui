@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import PropTypes from 'prop-types';
 import { FormattedMessage } from 'react-intl';
 import classNames from 'classnames';
 import { Button, Icon } from '@folio/stripes/components';
@@ -57,17 +56,6 @@ const ActionButton = ({ action, disabled, performAction, payload = {}, success =
       </span>
     );
   }
-};
-
-ActionButton.propTypes = {
-  label: PropTypes.string.isRequired,
-  icon: PropTypes.string,
-  action: PropTypes.string.isRequired,
-  payload: PropTypes.object,
-  success: PropTypes.string,
-  error: PropTypes.string,
-  performAction: PropTypes.func.isRequired,
-  withNote: PropTypes.bool,
 };
 
 export default ActionButton;

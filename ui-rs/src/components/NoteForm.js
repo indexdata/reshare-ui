@@ -1,20 +1,11 @@
 import React from 'react';
 import { Form, Field } from 'react-final-form';
-import PropTypes from 'prop-types';
 import { Button, TextField } from '@folio/stripes/components';
 import { FormattedMessage } from 'react-intl';
 
 import css from './NoteForm.css';
 
 class AddNoteForm extends React.Component {
-  static propTypes = {
-    onSend: PropTypes.func.isRequired,
-    setVisibility: PropTypes.func.isRequired,
-    visibility: PropTypes.bool.isRequired,
-    className: PropTypes.string,
-    disabled: PropTypes.bool,
-  };
-
   constructor(props) {
     super(props);
     this.state = { noteValue: null };

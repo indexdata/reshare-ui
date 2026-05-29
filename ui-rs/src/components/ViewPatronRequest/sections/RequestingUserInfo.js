@@ -1,15 +1,9 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import UserCard from '../../cards/user/UserCard';
 
 import css from './RequestingUserInfo.css';
 
 class RequestingUserInfo extends React.Component {
-  static propTypes = {
-    record: PropTypes.object,
-    id: PropTypes.string,
-  };
-
   render() {
     const { record } = this.props;
 

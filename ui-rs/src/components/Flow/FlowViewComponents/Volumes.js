@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { FormattedMessage } from 'react-intl';
 import { Accordion, Icon, MultiColumnList } from '@folio/stripes/components';
 import volumeStateStatus from '../../../util/volumeStateStatus';
@@ -47,22 +46,6 @@ const Volumes = ({
     );
   }
   return null;
-};
-
-Volumes.propTypes = {
-  request: PropTypes.shape({
-    volumes: PropTypes.arrayOf(
-      PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        name: PropTypes.string.isRequired,
-        itemId: PropTypes.string.isRequired,
-        status: PropTypes.shape({
-          label: PropTypes.string.isRequired,
-          value: PropTypes.string.isRequired
-        }).isRequired
-      }),
-    ),
-  }).isRequired,
 };
 
 export default Volumes;

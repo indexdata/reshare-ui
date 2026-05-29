@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { injectIntl } from 'react-intl';
 import ScanConfirmAction from '../ScanConfirmAction';
 
@@ -21,11 +20,6 @@ const Generic = props => {
     action={action}
     {...props}
   />;
-};
-
-Generic.propTypes = {
-  name: PropTypes.string.isRequired,
-  intl: PropTypes.object.isRequired,
 };
 
 export default injectIntl(Generic);

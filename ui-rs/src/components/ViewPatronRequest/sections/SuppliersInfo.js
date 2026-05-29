@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import { FormattedMessage } from 'react-intl';
 import {
@@ -11,11 +10,6 @@ import {
 import css from './SuppliersInfo.css';
 
 class SuppliersInfo extends React.Component {
-  static propTypes = {
-    record: PropTypes.object,
-    id: PropTypes.string,
-  };
-
   render() {
     const { record } = this.props;
 

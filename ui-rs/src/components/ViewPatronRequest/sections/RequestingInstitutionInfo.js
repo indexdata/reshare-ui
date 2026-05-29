@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { FormattedMessage } from 'react-intl';
 import { Link } from 'react-router-dom';
 import stringify from 'json-stable-stringify';
@@ -16,21 +15,6 @@ import {
 import css from './RequestingInstitutionInfo.css';
 
 class RequestingInstitutionInfo extends React.Component {
-  static propTypes = {
-    record: PropTypes.shape({
-      resolvedRequester: PropTypes.shape({
-        owner: PropTypes.shape({
-          id: PropTypes.string.isRequired,
-        }).isRequired,
-      }),
-    }),
-    stripes: PropTypes.shape({
-      config: PropTypes.shape({
-        showDevInfo: PropTypes.bool,
-      }).isRequired,
-    }).isRequired,
-  };
-
   render() {
     const { record, stripes } = this.props;
     let institution = get(record, 'resolvedRequester.owner');

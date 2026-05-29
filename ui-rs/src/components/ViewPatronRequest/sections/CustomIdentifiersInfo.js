@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import {
   Card,
   Col,
@@ -10,11 +9,6 @@ import {
 import css from './CustomIdentifiers.css';
 
 class CustomIdentifiersInfo extends React.Component {
-  static propTypes = {
-    record: PropTypes.object,
-    id: PropTypes.string,
-  };
-
   render() {
     const { record } = this.props;
     let identifiers = [];

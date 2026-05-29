@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { FormattedMessage } from 'react-intl';
 import stringify from 'json-stable-stringify';
 import { Link } from 'react-router-dom';
@@ -13,18 +12,6 @@ import {
 } from '@folio/stripes/components';
 
 class UserCard extends React.Component {
-  static propTypes = {
-    user: PropTypes.shape({
-      id: PropTypes.string,
-      // Maybe other properties
-    }),
-    stripes: PropTypes.shape({
-      config: PropTypes.shape({
-        showDevInfo: PropTypes.bool,
-      }).isRequired,
-    }).isRequired,
-  };
-
   render() {
     const props = { ...this.props };
     const patronURLTemplate = props.stripes?.config?.reshare?.patronURL;
