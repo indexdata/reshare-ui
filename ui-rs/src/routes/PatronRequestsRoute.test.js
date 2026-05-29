@@ -1,6 +1,6 @@
 import React from 'react';
-import { Route } from 'react-router-dom';
-import { screen, within, waitFor } from '@folio/jest-config-stripes/testing-library/react';
+import { Route, useLocation } from 'react-router-dom';
+import { fireEvent, screen, within, waitFor } from '@folio/jest-config-stripes/testing-library/react';
 
 import { renderWithRs } from '../test/renderWithRs';
 import { makeOkapiKyMock } from '../test/okapiKyMock';
@@ -35,10 +35,21 @@ const responses = {
 
 const renderList = (initialEntries = ['/requests']) => renderWithRs(
   <AppNameContext.Provider value="request">
-    <Route path="/requests" render={() => <PatronRequestsRoute appName="request" />} />
+    <Route path="/requests" render={() => (
+      <>
+        <PatronRequestsRoute appName="request" />
+        <LocationSearch />
+      </>
+    )}
+    />
   </AppNameContext.Provider>,
   { initialEntries }
 );
+
+const LocationSearch = () => {
+  const location = useLocation();
+  return <output data-testid="location-search">{location.search}</output>;
+};
 
 const patronRequestUrls = () => mockOkapi.mock.calls
   .map(([url]) => decodeURIComponent(url))
@@ -76,6 +87,25 @@ describe('PatronRequestsRoute', () => {
     expect(r.getByText('fixture-title')).toBeInTheDocument();
     expect(r.getByText('ISIL:SUP')).toBeInTheDocument();
     expect(screen.getByText('ui-rs.patronrequests.found')).toBeInTheDocument();
+  });
+
+  it('keeps the selected qindex in the URL and search dropdown after submit', async () => {
+    renderList(['/requests?sort=-dateCreated']);
+    await screen.findByText('REQ-101');
+
+    fireEvent.change(document.querySelector('select[name="qindex"]'), {
+      target: { name: 'qindex', value: 'title' },
+    });
+    fireEvent.change(document.querySelector('input[name="query"]'), {
+      target: { name: 'query', value: 'fixture-title' },
+    });
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toContain('qindex=title');
+    });
+    expect(document.querySelector('select[name="qindex"]').value).toBe('title');
+    expect(patronRequestUrls().at(-1)).toContain('title="fixture-title"');
   });
 
   // No filter-interaction test here on purpose: behaviour #1 already proves a real

@@ -1,11 +1,9 @@
 import React from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { useQIndex } from '@k-int/stripes-kint-components';
 import { Button, Icon, SearchField } from '@folio/stripes/components';
 
 const Search = ({ resetAll, searchHandlers, searchValue, searchChanged, filterChanged }) => {
   const intl = useIntl();
-  const [qIndex, setQIndex] = useQIndex();
   const searchableIndexes = [
     { label: 'allFields', value: '' },
     { label: 'hrid', value: 'requester_req_id' },
@@ -23,12 +21,13 @@ const Search = ({ resetAll, searchHandlers, searchValue, searchChanged, filterCh
     <>
       <SearchField
         autoFocus
+        indexName="qindex"
         name="query"
         onChange={searchHandlers.query}
+        onChangeIndex={searchHandlers.query}
         onClear={searchHandlers.reset}
         searchableIndexes={searchableIndexes}
-        selectedIndex={qIndex}
-        onChangeIndex={e => setQIndex(e?.target?.value)}
+        selectedIndex={searchValue.qindex || ''}
         value={searchValue.query}
       />
       <Button

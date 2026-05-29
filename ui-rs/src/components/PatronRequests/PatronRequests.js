@@ -94,8 +94,12 @@ const PatronRequests = ({ requestsQuery, perPage, filterOptions, children }) => 
   return (
     <SearchAndSortQuery
       initialSearch={initialSearch}
-      initialSearchState={{ query: '' }}
+      initialSearchState={{ query: '', qindex: '' }}
       key={location.search}
+      searchParamsMapping={{
+        query: value => ({ query: value }),
+        qindex: value => ({ qindex: value }),
+      }}
     >
       {
         ({
