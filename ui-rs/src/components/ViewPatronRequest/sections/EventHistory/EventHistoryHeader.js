@@ -17,6 +17,8 @@
 
 import { forwardRef } from 'react';
 import { Headline, Icon } from '@folio/stripes/components';
+// TODO: Inline the needed Accordion header styles locally and remove this private CSS import.
+// eslint-disable-next-line import/no-extraneous-dependencies
 import accordionCss from '@folio/stripes-components/lib/Accordion/Accordion.css';
 import css from './EventHistory.css';
 

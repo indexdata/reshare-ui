@@ -6,7 +6,7 @@ import { useStripes } from '@folio/stripes/core';
 import { Button, Col, Icon, Label, Layout, Modal, ModalFooter, RadioButton, Row, TextArea, TextField } from '@folio/stripes/components';
 
 import { useInvalidateNotifications } from '../../chat/useNotifications';
-import { actionMeta } from '../actionMeta';
+import actionMeta from '../actionMeta';
 import { LoanCondition } from '../../../constants/iso18626';
 
 const AddCondition = ({ request, performAction }) => {
@@ -37,7 +37,7 @@ const AddCondition = ({ request, performAction }) => {
       setIsOpen(false);
       return undefined;
     } catch (err) {
-      return;
+      return undefined;
     }
   };
 

@@ -1,5 +1,5 @@
 // Per-action client-side display metadata not provided by the API
-export const actionMeta = {
+const actionMeta = {
   'ship': { icon: 'archive' },
   'ship-return': { icon: 'archive' },
   'cannot-supply': { icon: 'times-circle-solid' },
@@ -11,3 +11,5 @@ export const actionMeta = {
   'will-supply': { icon: 'check-circle' },
   'add-condition': { icon: 'plus-sign' },
 };
+
+export default actionMeta;

@@ -26,6 +26,7 @@ jest.mock('react-syntax-highlighter/dist/esm/styles/hljs', () => ({ github: { hl
 jest.mock('@folio/stripes/core', () => require('../test/stripesCore').makeStripesCoreMock(() => mockOkapi));
 
 const { CalloutContext } = require('@folio/stripes/core');
+
 const sendCallout = jest.fn();
 
 // @projectreshare/stripes-reshare is intentionally left real so useOkapiQuery,

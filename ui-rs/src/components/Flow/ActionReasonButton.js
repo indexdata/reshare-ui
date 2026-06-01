@@ -5,7 +5,7 @@ import { useIsActionPending } from '@projectreshare/stripes-reshare';
 import { Button, Col, Icon, Layout, Modal, ModalFooter, RadioButton, Row, TextArea } from '@folio/stripes/components';
 import { required } from '@folio/stripes/util';
 
-import { actionMeta } from './actionMeta';
+import actionMeta from './actionMeta';
 
 const ActionReasonButton = ({ action, reasons, reasonField, reasonTranslationPrefix, request, performAction }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,7 +22,7 @@ const ActionReasonButton = ({ action, reasons, reasonField, reasonTranslationPre
       setIsOpen(false);
       return undefined;
     } catch (err) {
-      return;
+      return undefined;
     }
   };
 

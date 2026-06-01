@@ -77,17 +77,18 @@ const getEventSummary = (intl, event) => {
     case 'patron-request-message': {
       const msgs = [eventData.incomingMessage, eventData.outgoingMessage, resultData.incomingMessage, resultData.outgoingMessage];
       for (const msg of msgs) {
-        if (!msg) continue;
-        if (msg.request) return fmt('eventHistory.summary.request');
-        if (msg.requestConfirmation) return fmt('eventHistory.summary.requestConfirmation');
-        if (msg.requestingAgencyMessage) {
-          return fmt('eventHistory.summary.requesterMessage', { action: msg.requestingAgencyMessage.action || '' });
+        if (msg) {
+          if (msg.request) return fmt('eventHistory.summary.request');
+          if (msg.requestConfirmation) return fmt('eventHistory.summary.requestConfirmation');
+          if (msg.requestingAgencyMessage) {
+            return fmt('eventHistory.summary.requesterMessage', { action: msg.requestingAgencyMessage.action || '' });
+          }
+          if (msg.requestingAgencyMessageConfirmation) return fmt('eventHistory.summary.requesterMessageConfirmation');
+          if (msg.supplyingAgencyMessage) {
+            return fmt('eventHistory.summary.supplierMessage', { reason: msg.supplyingAgencyMessage.messageInfo?.reasonForMessage || msg.supplyingAgencyMessage.status || '' });
+          }
+          if (msg.supplyingAgencyMessageConfirmation) return fmt('eventHistory.summary.supplierMessageConfirmation');
         }
-        if (msg.requestingAgencyMessageConfirmation) return fmt('eventHistory.summary.requesterMessageConfirmation');
-        if (msg.supplyingAgencyMessage) {
-          return fmt('eventHistory.summary.supplierMessage', { reason: msg.supplyingAgencyMessage.messageInfo?.reasonForMessage || msg.supplyingAgencyMessage.status || '' });
-        }
-        if (msg.supplyingAgencyMessageConfirmation) return fmt('eventHistory.summary.supplierMessageConfirmation');
       }
       return fmt('eventHistory.summary.patronRequestMessage');
     }

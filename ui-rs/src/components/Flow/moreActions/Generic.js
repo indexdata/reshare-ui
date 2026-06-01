@@ -1,6 +1,6 @@
 import React from 'react';
 import { injectIntl } from 'react-intl';
-import { actionMeta } from '../actionMeta';
+import actionMeta from '../actionMeta';
 import ActionButton from '../ActionButton';
 
 const Generic = props => {

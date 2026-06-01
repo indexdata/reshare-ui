@@ -35,12 +35,14 @@ const responses = {
 
 const renderList = (initialEntries = ['/requests']) => renderWithRs(
   <AppNameContext.Provider value="request">
-    <Route path="/requests" render={() => (
-      <>
-        <PatronRequestsRoute appName="request" />
-        <LocationSearch />
-      </>
-    )}
+    <Route
+      path="/requests"
+      render={() => (
+        <>
+          <PatronRequestsRoute appName="request" />
+          <LocationSearch />
+        </>
+      )}
     />
   </AppNameContext.Provider>,
   { initialEntries }

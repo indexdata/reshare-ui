@@ -9,7 +9,7 @@ import ViewMessageBanners from '../components/ViewMessageBanners';
 import ViewPatronRequest from '../components/ViewPatronRequest';
 import { ChatPane } from '../components/chat';
 import { useNotificationCounts } from '../components/chat/useNotifications';
-import { useRequestAside } from '../components/RequestAside';
+import useRequestAside from '../util/useRequestAside';
 import EditInternalNote from '../components/EditInternalNote';
 import css from './ViewRoute.css';
 
