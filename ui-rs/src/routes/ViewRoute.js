@@ -91,11 +91,13 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
                 text={<FormattedMessage id="stripes-reshare.hasLocalNote" />}
               >
                 {({ ref, ariaIds }) => (
-                  <Icon
-                    icon="report"
-                    aria-labelledby={ariaIds.text}
+                  <span
                     ref={ref}
-                  />
+                    role="img"
+                    aria-labelledby={ariaIds.text}
+                  >
+                    <Icon icon="report" />
+                  </span>
                 )}
               </Tooltip>
             }
@@ -105,11 +107,13 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
                 text={<FormattedMessage id="stripes-reshare.hasPatronNote" />}
               >
                 {({ ref, ariaIds }) => (
-                  <Icon
-                    icon="profile"
-                    aria-labelledby={ariaIds.text}
+                  <span
                     ref={ref}
-                  />
+                    role="img"
+                    aria-labelledby={ariaIds.text}
+                  >
+                    <Icon icon="profile" />
+                  </span>
                 )}
               </Tooltip>
             }
