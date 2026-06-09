@@ -1,0 +1,14 @@
+/* Small clarifying caption under a form field. Stripes form components have no
+   help-text/sub-label slot, so we render our own. It deliberately reads as
+   secondary next to the validation feedback: smaller and muted, where stripes'
+   feedbackError is full-size (--font-size-medium) and red. Shares stripes' left
+   edge (--input-vertical-padding) and bottom rhythm (--control-margin-bottom);
+   marginBottom0 on the field above tucks the caption under the input, and the
+   caption owns the gap to the next field. */
+.help {
+  padding: 0 var(--input-vertical-padding);
+  color: var(--color-text-p2);
+  font-size: 0.8125rem;
+  margin-top: 0.25rem;
+  margin-bottom: var(--control-margin-bottom);
+}

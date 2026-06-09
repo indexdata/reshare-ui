@@ -1,16 +1,17 @@
 import React from 'react';
+import { FormattedMessage } from 'react-intl';
 import { Settings } from '@folio/stripes/smart-components';
 
-import ScheduledActionsSettings from './ScheduledActionsSettings';
+import ScheduledActions from './scheduledActions';
 
 const sections = [
   {
-    label: 'Resource Sharing',
+    label: <FormattedMessage id="ui-rs.meta.title" />,
     pages: [
       {
         route: 'scheduled-actions',
-        label: 'Scheduled Actions',
-        component: ScheduledActionsSettings,
+        label: <FormattedMessage id="ui-rs.settings.scheduledActions.heading" />,
+        component: ScheduledActions,
       },
     ],
   },
