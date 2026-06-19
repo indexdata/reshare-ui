@@ -31,7 +31,7 @@
   "states.COMPLETED": "Completed",
   "states.CONDITION_ACCEPTED": "Condition Accepted",
   "states.CONDITION_PENDING": "Condition Pending",
-  "states.MANUAL_CLOSE": "Manually Closed",
+  "states.MANUALLY_CLOSED": "Manually Closed",
   "states.NEW": "New",
   "states.RECEIVED": "Received",
   "states.SENT": "Sent",
