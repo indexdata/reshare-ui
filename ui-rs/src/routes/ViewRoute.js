@@ -11,6 +11,7 @@ import { ChatPane } from '../components/chat';
 import { useNotificationCounts } from '../components/chat/useNotifications';
 import useRequestAside from '../util/useRequestAside';
 import EditInternalNote from '../components/EditInternalNote';
+import ManualClose from '../components/ManualClose';
 import css from './ViewRoute.css';
 
 const ASIDE_SLOTS = { chat: ChatPane };
@@ -70,6 +71,7 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
         actionMenu={({ onToggle }) => (
           <>
             <EditInternalNote request={request} />
+            <ManualClose request={request} />
             <DirectLink
               component={Button}
               buttonStyle="dropdownItem"

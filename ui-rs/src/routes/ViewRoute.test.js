@@ -130,6 +130,26 @@ describe('ViewRoute', () => {
     expect(opts.json).toEqual({ internalNote: 'updated note' });
   });
 
+  it('terminates the request and closes the modal when manual close is confirmed', async () => {
+    mockOkapi.post.mockResolvedValueOnce({});
+    renderWithRs(
+      <CalloutContext.Provider value={{ sendCallout }}>
+        <Route path="/requests/:id" component={ViewRoute} />
+      </CalloutContext.Provider>,
+      { initialEntries: ['/requests/pr-1/details?sort=-dateCreated'], messages: messagesWithActions }
+    );
+    await screen.findByText('Request REQ-101');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rs.manualClose' }));
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rs.manualClose.confirm.confirmLabel' }));
+
+    // Confirmation hits the terminate endpoint and the modal closes on success.
+    await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledWith('broker/patron_requests/pr-1/terminate'));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
   it('fetches request, actions, notifications, and events — and nothing else', async () => {
     renderViewRoute();
     await screen.findByText('Request REQ-101');
