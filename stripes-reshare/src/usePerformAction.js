@@ -4,7 +4,7 @@
  */
 
 import { useMutation, useQueryClient } from 'react-query';
-import { useOkapiKy } from '@folio/stripes/core';
+import useOkapiKy from './useOkapiKy';
 import useIntlCallout from './useIntlCallout';
 
 export default (hookReqId) => {
@@ -25,26 +25,6 @@ export default (hookReqId) => {
     else sendCallout('stripes-reshare.actions.generic.error', 'error', { action: `stripes-reshare.actions.${action}`, errMsg }, ['action']);
   };
 
-  const getErrorMessage = async (err) => {
-    const response = err?.response;
-
-    if (response?.json) {
-      try {
-        const body = await response.clone().json();
-        return body.message || body.error || err.message;
-      } catch (jsonErr) {
-        try {
-          const text = await response.text();
-          return text || err.message;
-        } catch (textErr) {
-          return err.message;
-        }
-      }
-    }
-
-    return err.message;
-  };
-
   const performAction = async (id, action, payload = {}, opts = {}) => {
     let result;
 
@@ -52,8 +32,9 @@ export default (hookReqId) => {
       const res = await mutateAsync({ id, action, actionParams: payload });
       result = await res.json();
     } catch (err) {
-      const errMsg = await getErrorMessage(err);
-      if (opts.display !== 'none') showError(action, opts, errMsg);
+      // okapiKy populates err.message (broker message for HTTP errors, ky's own
+      // for timeout/network), so just surface it.
+      if (opts.display !== 'none') showError(action, opts, err.message);
       throw err;
     }
 

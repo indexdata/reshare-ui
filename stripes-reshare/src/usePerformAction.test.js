@@ -6,11 +6,9 @@ import usePerformAction from './usePerformAction';
 const mockPost = jest.fn();
 const mockSendCallout = jest.fn();
 
-jest.mock('@folio/stripes/core', () => ({
-  useOkapiKy: jest.fn(() => ({
-    post: mockPost,
-  })),
-}), { virtual: true });
+// The real wrapper's error normalization is covered by useOkapiKy.test.js;
+// here we just need ky.post.
+jest.mock('./useOkapiKy', () => () => ({ post: mockPost }));
 
 jest.mock('./useIntlCallout', () => jest.fn(() => mockSendCallout));
 
@@ -101,14 +99,11 @@ describe('usePerformAction', () => {
     expect(invalidateQueriesSpy).not.toHaveBeenCalled();
   });
 
-  it('rethrows HTTP errors after showing the JSON response message', async () => {
-    const error = new Error('Request failed');
-    const responseJson = jest.fn().mockResolvedValue({ message: 'Backend message' });
-    error.response = {
-      clone: jest.fn(() => ({ json: responseJson })),
-      json: jest.fn(),
-      text: jest.fn(),
-    };
+  it('rethrows transport errors after surfacing the normalized message in the callout', async () => {
+    // okapiKy's afterResponse hook has already normalized this into a readable
+    // error before usePerformAction sees it (parsing is covered in
+    // readErrorBody.test.js / useOkapiKy.test.js).
+    const error = Object.assign(new Error('Backend message'), { status: 500 });
     mockPost.mockRejectedValue(error);
 
     const { result: hookResult } = renderUsePerformAction('request-123');
@@ -123,36 +118,8 @@ describe('usePerformAction', () => {
     });
 
     expect(thrown).toBe(error);
-    expect(error.response.clone).toHaveBeenCalled();
-    expect(responseJson).toHaveBeenCalled();
-    expect(error.response.text).not.toHaveBeenCalled();
     expect(mockSendCallout).toHaveBeenCalledWith('ship.error', 'error', { errMsg: 'Backend message' });
     expect(invalidateQueriesSpy).not.toHaveBeenCalled();
-  });
-
-  it('falls back to text response bodies when an HTTP error is not JSON', async () => {
-    const error = new Error('Request failed');
-    error.response = {
-      clone: jest.fn(() => ({ json: jest.fn().mockRejectedValue(new Error('Not JSON')) })),
-      json: jest.fn(),
-      text: jest.fn().mockResolvedValue('Plain text failure'),
-    };
-    mockPost.mockRejectedValue(error);
-
-    const { result: hookResult } = renderUsePerformAction('request-123');
-
-    let thrown;
-    await act(async () => {
-      try {
-        await hookResult.current('ship', {}, { error: 'ship.error' });
-      } catch (err) {
-        thrown = err;
-      }
-    });
-
-    expect(thrown).toBe(error);
-    expect(error.response.text).toHaveBeenCalled();
-    expect(mockSendCallout).toHaveBeenCalledWith('ship.error', 'error', { errMsg: 'Plain text failure' });
   });
 
   it('keeps rejection semantics but suppresses callouts when display is none', async () => {

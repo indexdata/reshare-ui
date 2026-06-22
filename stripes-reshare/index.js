@@ -14,6 +14,7 @@ export { default as RefdataButtons } from './src/RefdataButtons/RefdataButtons';
 export { default as useGetSIURL } from './src/useGetSIURL';
 export { default as useIntlCallout } from './src/useIntlCallout';
 export { default as useIsActionPending } from './src/useIsActionPending';
+export { default as useOkapiKy } from './src/useOkapiKy';
 export { useOkapiQuery, useOkapiQueryConfig } from './src/useOkapiQuery';
 export { default as usePerformAction } from './src/usePerformAction';
 export { default as useSetting } from './src/useSetting';

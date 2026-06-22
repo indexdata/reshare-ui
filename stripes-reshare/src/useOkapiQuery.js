@@ -1,6 +1,6 @@
 import { useQuery } from 'react-query';
 import { omit } from 'lodash';
-import { useOkapiKy } from '@folio/stripes/core';
+import useOkapiKy from './useOkapiKy';
 
 // I confirmed with a react-query maintainer what the docs imply: you can share
 // the same key between queries that use different values for staleTime and
@@ -28,6 +28,8 @@ const useOkapiQueryConfig = (path, { kyOpt = {}, searchParams = {}, ns = false, 
 
   return {
     queryKey: [path, ...extraKeys, ...keys],
+    // okapiKy rejects with a normalized error (see useOkapiKy), so consumers get
+    // a readable error.message/.status without any async parsing here.
     queryFn: () => okapiKy(path, { searchParams }).json(),
     // reinstating default currently disabled by stripes-core
     refetchOnWindowFocus: true,
