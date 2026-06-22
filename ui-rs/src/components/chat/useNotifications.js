@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from 'react-query';
-import { useOkapiKy } from '@folio/stripes/core';
-import { useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { useOkapiKy, useOkapiQuery } from '@projectreshare/stripes-reshare';
 
 const notificationListPath = (requestId) => `broker/patron_requests/${requestId}/notifications`;
 const READ_RECEIPTS = new Set(['SEEN', 'ACCEPTED', 'REJECTED']);

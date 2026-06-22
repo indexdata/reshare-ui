@@ -3,7 +3,8 @@ import { Form, Field } from 'react-final-form';
 import { FormattedMessage } from 'react-intl';
 import { useQueryClient } from 'react-query';
 import { Button, Icon, Modal, ModalFooter, TextArea } from '@folio/stripes/components';
-import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
+import { CalloutContext } from '@folio/stripes/core';
+import { useOkapiKy } from '@projectreshare/stripes-reshare';
 
 const EditInternalNote = ({ request }) => {
   const [isOpen, setIsOpen] = useState(false);

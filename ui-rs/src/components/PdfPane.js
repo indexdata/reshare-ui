@@ -2,13 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { MessageBanner, Pane, Paneset } from '@folio/stripes/components';
 import { useCloseDirect } from '@projectreshare/stripes-reshare';
-import parseErrRes from '../util/parseErrRes';
 
 const PdfPane = ({ pdfQuery, ...paneProps }) => {
   const intl = useIntl();
   const close = useCloseDirect();
   const [pdfUrl, setPdfUrl] = useState();
-  const [errMsg, setErrMsg] = useState(null);
+
+  const errMsg = pdfQuery.error?.message ?? null;
 
   useEffect(() => {
     setPdfUrl(undefined);
@@ -20,12 +20,6 @@ const PdfPane = ({ pdfQuery, ...paneProps }) => {
     }
     return undefined;
   }, [pdfQuery.isSuccess, pdfQuery.data]);
-
-  useEffect(() => {
-    if (pdfQuery.isError) {
-      parseErrRes(pdfQuery.error).then(setErrMsg);
-    }
-  }, [pdfQuery.isError, pdfQuery.error]);
 
   const iframeTitle = typeof paneProps.paneTitle === 'string'
     ? paneProps.paneTitle

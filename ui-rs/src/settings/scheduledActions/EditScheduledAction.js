@@ -1,8 +1,8 @@
 import React, { useContext } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { useMutation, useQueryClient } from 'react-query';
-import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
-import { useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { CalloutContext } from '@folio/stripes/core';
+import { useOkapiKy, useOkapiQuery } from '@projectreshare/stripes-reshare';
 
 import ScheduledActionForm from './ScheduledActionForm';
 import { buildBatchActionBody, recordToFormValues } from './model';

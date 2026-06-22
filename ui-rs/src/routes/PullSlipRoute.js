@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from 'react-query';
 import { useIntl } from 'react-intl';
-import { useOkapiKy } from '@folio/stripes/core';
+import { useOkapiKy } from '@projectreshare/stripes-reshare';
 import PdfPane from '../components/PdfPane';
 
 const PullSlipRoute = ({ match }) => {

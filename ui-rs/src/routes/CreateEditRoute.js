@@ -5,8 +5,8 @@ import { Form } from 'react-final-form';
 import { useMutation, useQueryClient } from 'react-query';
 import { Prompt, useLocation } from 'react-router-dom';
 import { Button, Pane, Paneset, PaneMenu, KeyValue } from '@folio/stripes/components';
-import { CalloutContext, useOkapiKy, useStripes } from '@folio/stripes/core';
-import { useCloseDirect, useOkapiQuery, usePerformAction, useSetting } from '@projectreshare/stripes-reshare';
+import { CalloutContext, useStripes } from '@folio/stripes/core';
+import { useCloseDirect, useOkapiKy, useOkapiQuery, usePerformAction, useSetting } from '@projectreshare/stripes-reshare';
 import PatronRequestForm from '../components/PatronRequestForm';
 import { CopyrightCompliance, ServiceLevel } from '../constants/iso18626';
 import tiersBySymbol from '../util/tiersBySymbol';
@@ -166,12 +166,12 @@ const CreateEditRoute = props => {
       .put(`broker/patron_requests/${id}`, { json: updated })
       .then((res) => res.data),
     onSuccess: onSuccessfulEdit,
-    onError: async (err) => {
+    onError: (err) => {
       callout.sendCallout({ type: 'error',
         message: (
           <KeyValue
             label={<FormattedMessage id="ui-rs.update.error" />}
-            value={err.response?.statusText || ''}
+            value={err?.message || ''}
           />
         ) });
     },
@@ -192,12 +192,12 @@ const CreateEditRoute = props => {
       // For now, go back to the request list
       close();
     },
-    onError: async (err) => {
+    onError: (err) => {
       callout.sendCallout({ type: 'error',
         message: (
           <KeyValue
             label={<FormattedMessage id="ui-rs.create.error" />}
-            value={err.response?.statusText || ''}
+            value={err?.message || ''}
           />
         ) });
     },

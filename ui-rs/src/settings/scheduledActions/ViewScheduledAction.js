@@ -2,8 +2,8 @@ import React, { useContext, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useMutation, useQueryClient } from 'react-query';
 import { Button, ConfirmationModal, KeyValue, Pane } from '@folio/stripes/components';
-import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
-import { useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { CalloutContext } from '@folio/stripes/core';
+import { useOkapiKy, useOkapiQuery } from '@projectreshare/stripes-reshare';
 
 import { describeSchedule } from './schedule/scheduleExpression';
 

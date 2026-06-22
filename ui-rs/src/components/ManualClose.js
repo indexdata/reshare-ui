@@ -2,7 +2,8 @@ import { useContext, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { useQueryClient } from 'react-query';
 import { Button, ConfirmationModal, Icon } from '@folio/stripes/components';
-import { CalloutContext, IfPermission, useOkapiKy } from '@folio/stripes/core';
+import { CalloutContext, IfPermission } from '@folio/stripes/core';
+import { useOkapiKy } from '@projectreshare/stripes-reshare';
 
 import AppNameContext from '../AppNameContext';
 
@@ -28,7 +29,7 @@ const ManualClose = ({ request }) => {
       callout.sendCallout({ message: <FormattedMessage id="ui-rs.manualClose.success" /> });
       close();
     } catch (err) {
-      const errMsg = err?.message ?? err?.response?.status ?? '';
+      const errMsg = err?.message ?? '';
       callout.sendCallout({ type: 'error', message: <FormattedMessage id="ui-rs.manualClose.error" values={{ errMsg }} /> });
     }
   };
