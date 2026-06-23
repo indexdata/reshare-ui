@@ -3,7 +3,7 @@ import { FormattedMessage } from 'react-intl';
 import { Form } from 'react-final-form';
 import { useMutation, useQueryClient } from 'react-query';
 import { Prompt, useHistory, useLocation } from 'react-router-dom';
-import { Button, Pane, Paneset, PaneMenu, KeyValue } from '@folio/stripes/components';
+import { Button, Pane, Paneset, PaneFooter, KeyValue } from '@folio/stripes/components';
 import { CalloutContext, useStripes } from '@folio/stripes/core';
 import { useCloseDirect, useOkapiKy } from '@projectreshare/stripes-reshare';
 import PatronRequestForm from '../components/PatronRequestForm';
@@ -307,18 +307,30 @@ const CreateRoute = () => {
             centerContent
             onClose={close}
             dismissible
-            lastMenu={
-              <PaneMenu>
-                <Button
-                  type="submit"
-                  disabled={pristine || submitting}
-                  onClick={handleSubmit}
-                  buttonStyle="primary paneHeaderNewButton"
-                  marginBottom0
-                >
-                  <FormattedMessage id="ui-rs.createPatronRequest" />
-                </Button>
-              </PaneMenu>
+            footer={
+              <PaneFooter
+                renderStart={
+                  <Button
+                    id="clickable-cancel-create-request"
+                    buttonStyle="default mega"
+                    marginBottom0
+                    onClick={close}
+                  >
+                    <FormattedMessage id="stripes-core.button.cancel" />
+                  </Button>
+                }
+                renderEnd={
+                  <Button
+                    type="submit"
+                    disabled={pristine || submitting}
+                    onClick={handleSubmit}
+                    buttonStyle="primary mega"
+                    marginBottom0
+                  >
+                    <FormattedMessage id="ui-rs.createPatronRequest" />
+                  </Button>
+                }
+              />
             }
             paneTitle={<FormattedMessage id="ui-rs.createPatronRequest" />}
           >
