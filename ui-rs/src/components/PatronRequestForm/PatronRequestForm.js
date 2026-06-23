@@ -89,7 +89,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
       <Row>
         <Col xs={4}>
           <Field
-            id="edit-request-metadata-requestingUser"
             name="patronInfo.patronId"
             label={<FormattedMessage id="ui-rs.information.requestingUser" />}
             component={TextField}
@@ -99,7 +98,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
         </Col>
         <Col xs={2}>
           <Field
-            id="edit-request-metadata-neededBy"
             name="serviceInfo.needBeforeDate"
             dateFormat="YYYY-MM-DD"
             label={<FormattedMessage id="ui-rs.information.dateNeeded" />}
@@ -109,7 +107,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
         { freePickupLocation.value !== 'yes' &&
         <Col xs={4}>
           <Field
-            id="edit-request-metadata-pickupLocation"
             name={routingAdapterSetting?.value === 'disabled' ? 'pickupLocation' : 'pickupLocationSlug'}
             label={<FormattedMessage id="ui-rs.information.pickupLocation" />}
             placeholder=" "
@@ -121,7 +118,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
         { freePickupLocation.value === 'yes' &&
         <Col xs={4}>
           <Field
-            id="edit-request-metadata-pickupLocation"
             name="pickupLocation"
             label={<FormattedMessage id="ui-rs.information.pickupLocation" />}
             component={TextField}
@@ -154,7 +150,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
       <Row>
         <Col xs={4}>
           <Field
-            id="edit-request-metadata-patronGivenName"
             name="patronInfo.givenName"
             label={<FormattedMessage id="ui-rs.information.patronGivenName" />}
             component={TextField}
@@ -164,7 +159,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
         </Col>
         <Col xs={4}>
           <Field
-            id="edit-request-metadata-patronSurname"
             name="patronInfo.surname"
             label={<FormattedMessage id="ui-rs.information.patronSurname" />}
             component={TextField}
@@ -175,7 +169,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
         {/* TODO: Broker API - patronEmail previously readOnly and populated from institution */}
         {/* <Col xs={4}>
           <Field
-            id="edit-request-metadata-patronEmail"
             name="patronInfo.patronEmail"
             label={<FormattedMessage id="ui-rs.information.patronEmail" />}
             component={TextField}
@@ -190,7 +183,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
         <Row>
           <Col xs={3}>
             <Field
-              id="edit-request-metadata-requestingInstitution"
               name="requesterSymbol"
               label={<FormattedMessage id="ui-rs.information.requestingInstitution" />}
               placeholder=" "
@@ -207,7 +199,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
         <Row>
           <Col xs={3}>
             <Field
-              id="edit-request-metadata-requestingInstitution"
               name="requesterSymbol"
               label={<FormattedMessage id="ui-rs.information.requestingInstitution" />}
               component={TextField}
@@ -221,7 +212,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
       <Row>
         <Col xs={3}>
           <Field
-            id="edit-request-metadata-patronNote"
             name="serviceInfo.note"
             label={<FormattedMessage id="ui-rs.information.notes" />}
             component={TextArea}
@@ -231,7 +221,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
         </Col>
         <Col xs={3}>
           <Field
-            id="edit-request-metadata-internalNote"
             name="internalNote"
             label={<FormattedMessage id="ui-rs.information.internalNote" />}
             component={TextArea}
@@ -244,7 +233,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
             <Row>
               <Col xs={12}>
                 <Field
-                  id="edit-request-metadata-tier"
                   name="tier"
                   placeholder=" "
                   label={<FormattedMessage id="ui-rs.information.tier" />}
@@ -259,7 +247,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
           <Row>
             <Col xs={6}>
               <Field
-                id="edit-request-metadata-serviceLevel"
                 name="serviceInfo.serviceLevel['#text']"
                 label={<FormattedMessage id="ui-rs.information.serviceLevel" />}
                 placeholder=" "
@@ -272,7 +259,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
             {showCost &&
               <Col xs={6}>
                 <Field
-                  id="edit-request-metadata-maximumCostsMonetaryValue"
                   name="billingInfo.maximumCosts.monetaryValue"
                   label={<FormattedMessage id="ui-rs.information.maximumCost" />}
                   component={TextField}
@@ -285,7 +271,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
         {isCopyReq &&
         <Col xs={3}>
           <Field
-            id="edit-request-metadata-copyright-type"
             name="serviceInfo.copyrightCompliance['#text']"
             label={<FormattedMessage id="ui-rs.information.copyrightType" />}
             placeholder=" "
@@ -314,7 +299,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
         <Row>
           <Col xs={8}>
             <Field
-              id="edit-patron-request-systemInstanceIdentifier"
               name="systemInstanceIdentifier"
               label={<FormattedMessage id="ui-rs.information.systemInstanceIdentifier" />}
               component={TextField}
@@ -340,7 +324,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
         <Row>
           <Col xs={4}>
             <Field
-              id="edit-patron-request-title"
               name="bibliographicInfo.title"
               label={<FormattedMessage id="ui-rs.information.title" />}
               component={TextField}
@@ -350,7 +333,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
           </Col>
           <Col xs={4}>
             <Field
-              id="edit-patron-request-subtitle"
               name="bibliographicInfo.subtitle"
               label={<FormattedMessage id="ui-rs.information.subtitle" />}
               component={TextField}
@@ -358,7 +340,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
           </Col>
           <Col xs={4}>
             <Field
-              id="edit-patron-request-author"
               name="bibliographicInfo.author"
               label={<FormattedMessage id="ui-rs.information.author" />}
               component={TextField}
@@ -368,7 +349,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
           </Col>
           <Col xs={4}>
             <Field
-              id="edit-patron-request-isbn"
               name="identifiers.ISBN"
               label={<FormattedMessage id="ui-rs.information.isbn" />}
               component={TextField}
@@ -376,7 +356,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
           </Col>
           <Col xs={4}>
             <Field
-              id="edit-patron-request-issn"
               name="identifiers.ISSN"
               label={<FormattedMessage id="ui-rs.information.issn" />}
               component={TextField}
@@ -384,7 +363,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
           </Col>
           <Col xs={4}>
             <Field
-              id="edit-patron-request-oclcNumber"
               name="identifiers.OCLC"
               label={<FormattedMessage id="ui-rs.information.oclcNumber" />}
               component={TextField}
@@ -396,7 +374,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
         <Row>
           <Col xs={4}>
             <Field
-              id="edit-patron-request-title-of-component"
               name="bibliographicInfo.titleOfComponent"
               label={<FormattedMessage id="ui-rs.information.titleOfComponent" />}
               component={TextField}
@@ -404,7 +381,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
           </Col>
           <Col xs={4}>
             <Field
-              id="edit-patron-request-author-of-component"
               name="bibliographicInfo.authorOfComponent"
               label={<FormattedMessage id="ui-rs.information.authorOfComponent" />}
               component={TextField}
@@ -412,7 +388,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
           </Col>
           <Col xs={4}>
             <Field
-              id="edit-request-metadata-volume"
               name="bibliographicInfo.volume"
               label={<FormattedMessage id="ui-rs.information.volume" />}
               component={TextField}
@@ -420,7 +395,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
           </Col>
           <Col xs={4}>
             <Field
-              id="edit-patron-request-issue"
               name="bibliographicInfo.issue"
               label={<FormattedMessage id="ui-rs.information.issue" />}
               component={TextField}
@@ -428,7 +402,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
           </Col>
           <Col xs={4}>
             <Field
-              id="edit-patron-request-pages"
               name="bibliographicInfo.pagesRequested"
               label={<FormattedMessage id="ui-rs.information.pages" />}
               component={TextField}
@@ -440,7 +413,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
         <Row>
           <Col xs={4}>
             <Field
-              id="edit-patron-request-publisher"
               name="publicationInfo.publisher"
               label={<FormattedMessage id="ui-rs.information.publisher" />}
               component={TextField}
@@ -448,7 +420,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
           </Col>
           <Col xs={4}>
             <Field
-              id="edit-patron-request-publicationDate"
               name="publicationInfo.publicationDate"
               label={<FormattedMessage id="ui-rs.information.date" />}
               component={TextField}
@@ -456,7 +427,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
           </Col>
           <Col xs={4}>
             <Field
-              id="edit-patron-request-placeOfPublication"
               name="publicationInfo.placeOfPublication"
               label={<FormattedMessage id="ui-rs.information.placeOfPublication" />}
               component={TextField}
@@ -464,7 +434,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
           </Col>
           <Col xs={4}>
             <Field
-              id="edit-patron-request-edition"
               name="bibliographicInfo.edition"
               label={<FormattedMessage id="ui-rs.information.edition" />}
               component={TextField}
@@ -472,7 +441,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
           </Col>
           <Col xs={4}>
             <Field
-              id="edit-patron-request-publicationType"
               name="publicationInfo.publicationType['#text']"
               label={<FormattedMessage id="ui-rs.information.publicationType" />}
               placeholder=" "

@@ -1,31 +1,15 @@
-import { omit } from 'lodash';
 import React, { useContext } from 'react';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { FormattedMessage } from 'react-intl';
 import { Form } from 'react-final-form';
-import { useMutation, useQueryClient } from 'react-query';
+import { useMutation } from 'react-query';
 import { Prompt, useLocation } from 'react-router-dom';
 import { Button, Pane, Paneset, PaneMenu, KeyValue } from '@folio/stripes/components';
 import { CalloutContext, useStripes } from '@folio/stripes/core';
-import { useCloseDirect, useOkapiKy, useOkapiQuery, usePerformAction, useSetting } from '@projectreshare/stripes-reshare';
+import { useCloseDirect, useOkapiKy } from '@projectreshare/stripes-reshare';
 import PatronRequestForm from '../components/PatronRequestForm';
 import { CopyrightCompliance, ServiceLevel } from '../constants/iso18626';
 import tiersBySymbol from '../util/tiersBySymbol';
-import useSelectifiedRefdata from '../util/useSelectifiedRefdata';
-import useNewDirectoryEntries from '../util/useNewDirectoryEntries';
-import tierForRequest from '../util/tierForRequest';
 
-
-// Possible operations performed by submitting this form
-const CREATE = 'create';
-const EDIT = 'update';
-const REREQUEST = 'rerequest';
-const REVALIDATE = 'revalidate';
-
-// Actions performed by each operation
-const OP_ACTION = {
-  [REREQUEST]: 'rerequest',
-  [REVALIDATE]: 'requesterRetryValidation'
-};
 
 const SI_FIELDS = ['title', 'author', 'edition', 'isbn', 'issn', 'oclcNumber', 'publisher', 'publicationDate', 'placeOfPublication', 'publicationType'];
 const SI_FIELD_MAP = {
@@ -40,10 +24,6 @@ const SI_FIELD_MAP = {
   placeOfPublication: 'publicationInfo.placeOfPublication',
   publicationType: "publicationInfo.publicationType['#text']",
 };
-// Eventually we want an allowlist of the fields mutable via the form but currently rerequest depends on
-// the previous behaviour of resubmitting the whole request. Trimming at this point mainly to avoid noise
-// in the audit trail.
-const LARGE_UNEDITABLE_FIELDS = ['audit', 'bibrecord', 'batches', 'conditions', 'notifications', 'requestIdentifiers', 'rota', 'tags', 'validActions', 'volumes', 'lastProtocolData', 'protocolAudit', 'resolvedPatron', 'resolvedPickupLocation', 'resolvedSupplier', 'state', 'stateModel'];
 
 // state, tools parameters are from being used as Final Form "mutator" rather than called directly
 const handleSISelect = (args, state, tools) => {
@@ -85,14 +65,9 @@ const handleSISelect = (args, state, tools) => {
   });
 };
 
-const CreateEditRoute = props => {
-  const { history, match } = props;
-  const id = match.params?.id;
-  const performAction = usePerformAction(id);
+const CreateRoute = () => {
   const routerLocation = useLocation();
   const callout = useContext(CalloutContext);
-  const intl = useIntl();
-  const queryClient = useQueryClient();
   const okapiKy = useOkapiKy();
   const close = useCloseDirect();
   // We could provision these vocabs on the form directly but are passing them
@@ -103,13 +78,9 @@ const CreateEditRoute = props => {
   const serviceLevels = ServiceLevel.map(value => ({ label: value, value }));
   const serviceLevelsLoaded = true;
   const stripes = useStripes();
-  const config = stripes.config?.reshare;
 
   // TODO: Broker API
-  // const borrowerCheckSetting = useSetting('borrower_check', 'hostLMSIntegration');
   // const defaultRequesterSymbolSetting = useSetting('default_request_symbol', 'requests');
-  // const defaultCopyrightSetting = useSetting('default_copyright_type', 'other');
-  // const defaultServiceLevelSetting = useSetting('default_service_level', 'other');
   // const routingAdapterSetting = useSetting('routing_adapter');
   const defaultRequesterSymbolSetting = { value: { label: 'Default', value: 'ISIL:DEFAULT' }, isSuccess: true };
   const routingAdapterSetting = { value: 'disabled', isSuccess: true };
@@ -139,13 +110,6 @@ const CreateEditRoute = props => {
   //   }
   // );
   const institutionQuery = { isSuccess: true, data: [] };
-  // TODO: Broker API
-  // const { data: enabledFields } = useOkapiQuery('rs/patronrequests/editableFields/edit', {
-  //   useErrorBoundary: false,
-  //   staleTime: 2 * 60 * 60 * 1000
-  // });
-  const enabledFields = undefined;
-  const reqQuery = useOkapiQuery(`broker/patron_requests/${id}`, { enabled: !!id });
 
   const publicationTypesList = ['ArchiveMaterial', 'Article', 'AudioBook',
     'Book', 'Chapter', 'ConferenceProc', 'Game', 'GovernmentPubl', 'Image',
@@ -154,52 +118,13 @@ const CreateEditRoute = props => {
   ];
   const publicationTypes = publicationTypesList.map(x => ({ label: x, value: x.toLowerCase() }));
 
-  const onSuccessfulEdit = async () => {
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    await queryClient.invalidateQueries(`broker/patron_requests/${id}`);
-    await queryClient.invalidateQueries('broker/patron_requests');
-    close();
-  };
-
-  const updater = useMutation({
-    mutationFn: (updated) => okapiKy
-      .put(`broker/patron_requests/${id}`, { json: updated })
-      .then((res) => res.data),
-    onSuccess: onSuccessfulEdit,
-    onError: (err) => {
-      callout.sendCallout({ type: 'error',
-        message: (
-          <KeyValue
-            label={<FormattedMessage id="ui-rs.update.error" />}
-            value={err?.message || ''}
-          />
-        ) });
-    },
-  });
-
   const creator = useMutation({
     mutationFn: (newRecord) => okapiKy
       .post('broker/patron_requests', { json: newRecord }),
-    onSuccess: async (res) => {
-      const created = await res.json();
+    onSuccess: async () => {
       // TODO: Redirect to view page once implemented
-      // if (routerLocation?.pathname?.match('/request/requests/create/.+')) {
-      //   history.replace(`../view/${created.ID}?${routerLocation.search}`);
-      // } else {
-      //   history.replace(`view/${created.ID}?${routerLocation.search}`);
-      // }
-
       // For now, go back to the request list
       close();
-    },
-    onError: (err) => {
-      callout.sendCallout({ type: 'error',
-        message: (
-          <KeyValue
-            label={<FormattedMessage id="ui-rs.create.error" />}
-            value={err?.message || ''}
-          />
-        ) });
     },
   });
 
@@ -239,59 +164,20 @@ const CreateEditRoute = props => {
 
   const tiersByRequester = tiersBySymbol(directoryEntriesQuery.data?.items);
 
-  // Determine operation
-  let op;
-  if (id) {
-    if (routerLocation.pathname.endsWith('rerequest')) op = REREQUEST;
-    else if (routerLocation.pathname.endsWith('revalidate')) op = REVALIDATE;
-    else op = EDIT;
-  } else op = CREATE;
-
-  let initialValues;
-  let record;
-  if (id) {
-    if (!reqQuery.isSuccess) return null;
-    record = reqQuery.data;
-    initialValues = { ...record,
-      formattedDateCreated: (
-        intl.formatDate(record.dateCreated) + ', ' + intl.formatTime(record.dateCreated)
-      ),
-      serviceLevel: { value: record?.serviceLevel?.value },
-      serviceType: { value: record?.serviceType?.value } };
-    if (config?.useTiers) {
-      initialValues.tier = tierForRequest(record, tiersByRequester[record.requesterSymbol])?.id;
-    }
-  } else {
-    record = null;
-    initialValues = {
-      // TODO: Broker API
-      // copyrightType: defaultCopyrightSetting,
-      // serviceLevel: { value: config?.useTiers ? undefined : defaultServiceLevelSetting.value },
-      serviceInfo: { serviceType: 'Loan' },
-    };
-  }
+  const initialValues = {
+    // TODO: Broker API
+    // copyrightType: defaultCopyrightSetting,
+    // serviceLevel: { value: config?.useTiers ? undefined : defaultServiceLevelSetting.value },
+    serviceInfo: { serviceType: 'Loan' },
+  };
 
   const reg = /.+\/create\/(\d+)/;
   const sysIdMatch = reg.exec(routerLocation?.pathname);
-  const autopopulate = sysIdMatch && op === CREATE;
+  const autopopulate = !!sysIdMatch;
 
   if (autopopulate) {
     initialValues.systemInstanceIdentifier = sysIdMatch[1];
   }
-
-  // TODO: Broker API
-  // if (borrowerCheckSetting.value === 'none' && op === CREATE) {
-  //   const institutions = directoryEntriesQuery.isSuccess
-  //     ? directoryEntriesQuery.data?.items?.filter(item => item.type === 'institution')
-  //     : [];
-
-  //   if (institutions?.length) {
-  //     initialValues.patronEmail = institutions[0].email;
-  //   }
-
-  //   initialValues.patronGivenName = stripes?.user?.user?.firstName;
-  //   initialValues.patronSurname = stripes?.user?.user?.lastName;
-  // }
 
   const getEntriesByType = (entryData, typeValue) => {
     return entryData?.items?.filter(entry => { return entry.type === typeValue; });
@@ -344,75 +230,60 @@ const CreateEditRoute = props => {
 
 
   const submit = async submittedRecord => {
-    if (op === CREATE) {
-      // Separate top-level broker fields and ISO18626 transform inputs from the
-      // fields that flow directly into illRequest.
-      const {
-        internalNote,
-        identifiers = {},
-        systemInstanceIdentifier,
-        ...illRequestFields
-      } = submittedRecord;
-      const bibliographicItemId = ['ISBN', 'ISSN']
-        .filter(code => identifiers[code])
-        .map(code => ({
-          bibliographicItemIdentifier: identifiers[code],
-          bibliographicItemIdentifierCode: { '#text': code }
-        }));
-      const bibliographicRecordId = identifiers.OCLC ? [{
-        bibliographicRecordIdentifier: identifiers.OCLC,
-        bibliographicRecordIdentifierCode: { '#text': 'OCLC' }
-      }] : [];
+    // Separate top-level broker fields and ISO18626 transform inputs from the
+    // fields that flow directly into illRequest.
+    const {
+      internalNote,
+      identifiers = {},
+      systemInstanceIdentifier,
+      ...illRequestFields
+    } = submittedRecord;
+    const bibliographicItemId = ['ISBN', 'ISSN']
+      .filter(code => identifiers[code])
+      .map(code => ({
+        bibliographicItemIdentifier: identifiers[code],
+        bibliographicItemIdentifierCode: { '#text': code }
+      }));
+    const bibliographicRecordId = identifiers.OCLC ? [{
+      bibliographicRecordIdentifier: identifiers.OCLC,
+      bibliographicRecordIdentifierCode: { '#text': 'OCLC' }
+    }] : [];
 
-      const newRecord = {
-        patron: illRequestFields?.patronInfo?.patronId,
-        ...(internalNote && { internalNote }),
-        illRequest: {
-          ...illRequestFields,
-          bibliographicInfo: {
-            ...illRequestFields.bibliographicInfo,
-            ...(bibliographicItemId.length > 0 && { bibliographicItemId }),
-            ...(bibliographicRecordId.length > 0 && { bibliographicRecordId }),
-            supplierUniqueRecordId: systemInstanceIdentifier,
-          },
+    const newRecord = {
+      patron: illRequestFields?.patronInfo?.patronId,
+      ...(internalNote && { internalNote }),
+      illRequest: {
+        ...illRequestFields,
+        bibliographicInfo: {
+          ...illRequestFields.bibliographicInfo,
+          ...(bibliographicItemId.length > 0 && { bibliographicItemId }),
+          ...(bibliographicRecordId.length > 0 && { bibliographicRecordId }),
+          supplierUniqueRecordId: systemInstanceIdentifier,
         },
-      };
+      },
+    };
 
-      const maximumCosts = newRecord.illRequest?.billingInfo?.maximumCosts;
+    const maximumCosts = newRecord.illRequest?.billingInfo?.maximumCosts;
 
-      if (maximumCosts?.monetaryValue == null || maximumCosts.monetaryValue === '') {
-        delete newRecord.illRequest?.billingInfo?.maximumCosts;
-      } else {
-        newRecord.illRequest.billingInfo.maximumCosts.currencyCode = { '#text': stripes.currency };
-      }
-
-      return creator.mutateAsync(newRecord);
+    if (maximumCosts?.monetaryValue == null || maximumCosts.monetaryValue === '') {
+      delete newRecord.illRequest?.billingInfo?.maximumCosts;
+    } else {
+      newRecord.illRequest.billingInfo.maximumCosts.currencyCode = { '#text': stripes.currency };
     }
 
-    // too many fields flow through from the record used to initialise the form
-    const trimmedRecord = omit(submittedRecord, LARGE_UNEDITABLE_FIELDS);
-
-    if (op === EDIT) return updater.mutateAsync(trimmedRecord);
-
-    // Since it's not create or edit, this route is for an action that involves updating the request
-    const opAction = OP_ACTION[op];
-    const res = await performAction(opAction, trimmedRecord,
-      { error: `stripes-reshare.actions.${opAction}.error`, success: `stripes-reshare.actions.${opAction}.success` });
-
-    if (res.json && (await res.json()).status === true) {
-      if (op === REREQUEST) {
-        const refetched = await reqQuery.refetch();
-        const newReqId = refetched.data?.succeededBy?.id;
-        // When creating a new request we need to delay before redirecting to the request's page to
-        // give the server some time to resolve the requesting institution from the symbol and generate
-        // an appropriate ID.
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        if (newReqId) history.replace(`../${newReqId}${routerLocation.search}`);
-      } else {
-        await onSuccessfulEdit();
-      }
+    try {
+      await creator.mutateAsync(newRecord);
+    } catch (err) {
+      callout.sendCallout({
+        type: 'error',
+        message: (
+          <KeyValue
+            label={<FormattedMessage id="ui-rs.create.error" />}
+            value={err?.message || ''}
+          />
+        ),
+      });
     }
-    return res;
   };
 
   return (
@@ -427,20 +298,19 @@ const CreateEditRoute = props => {
             lastMenu={
               <PaneMenu>
                 <Button
-                  id={`clickable-${op}-rs-entry`}
                   type="submit"
                   disabled={pristine || submitting}
                   onClick={handleSubmit}
                   buttonStyle="primary paneHeaderNewButton"
                   marginBottom0
                 >
-                  <FormattedMessage id={`ui-rs.${op}PatronRequest`} />
+                  <FormattedMessage id="ui-rs.createPatronRequest" />
                 </Button>
               </PaneMenu>
             }
-            paneTitle={<FormattedMessage id={`ui-rs.${op}PatronRequest`} />}
+            paneTitle={<FormattedMessage id="ui-rs.createPatronRequest" />}
           >
-            <form onSubmit={handleSubmit} id="form-rs-entry">
+            <form onSubmit={handleSubmit}>
               <PatronRequestForm
                 copyrightTypes={copyrightTypes}
                 serviceLevels={serviceLevels}
@@ -450,9 +320,7 @@ const CreateEditRoute = props => {
                 tiersByRequester={tiersByRequester}
                 onSISelect={form.mutators.handleSISelect}
                 autopopulate={autopopulate}
-                enabledFields={op === EDIT ? enabledFields : undefined}
-                operation={op}
-                patronRequest={record}
+                operation="create"
               />
             </form>
             <FormattedMessage id="ui-rs.confirmDirtyNavigate">
@@ -465,4 +333,4 @@ const CreateEditRoute = props => {
   );
 };
 
-export default CreateEditRoute;
+export default CreateRoute;

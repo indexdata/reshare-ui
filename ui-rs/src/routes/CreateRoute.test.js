@@ -4,7 +4,7 @@ import { fireEvent, waitFor } from '@folio/jest-config-stripes/testing-library/r
 
 import { renderWithRs } from '../test/renderWithRs';
 import { makeOkapiKyMock } from '../test/okapiKyMock';
-import CreateEditRoute from './CreateEditRoute';
+import CreateRoute from './CreateRoute';
 
 const mockOkapi = makeOkapiKyMock();
 
@@ -26,22 +26,23 @@ const sendCallout = jest.fn();
 
 const renderCreate = () => renderWithRs(
   <CalloutContext.Provider value={{ sendCallout }}>
-    <Route path="/requests/create" component={CreateEditRoute} />
+    <Route path="/requests/create" component={CreateRoute} />
   </CalloutContext.Provider>,
   { initialEntries: ['/requests/create'] }
 );
 
-// Fields are addressed by their stable Field ids rather than label text (required
-// labels carry an asterisk and several share a translation-key prefix). A single
-// fireEvent.change drives final-form's onChange in one act()-wrapped update —
-// userEvent.type fires per-keystroke and floods the run with final-form's
-// post-event subscription notifications as act() warnings, with no added signal
-// for a payload-transform assertion.
-const setField = (id, value) => fireEvent.change(
-  document.getElementById(id), { target: { value } }
+// Fields are addressed by their Final Form names because the submitted payload
+// shape is what this test protects. A single fireEvent.change drives final-form's
+// onChange in one act()-wrapped update; userEvent.type fires per-keystroke and
+// floods the run with final-form's post-event subscription notifications.
+const fieldByName = (name) => Array.from(document.querySelectorAll('[name]'))
+  .find(el => el.getAttribute('name') === name);
+
+const setField = (name, value) => fireEvent.change(
+  fieldByName(name), { target: { value } }
 );
 
-describe('CreateEditRoute (create)', () => {
+describe('CreateRoute', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -51,20 +52,20 @@ describe('CreateEditRoute (create)', () => {
 
     // Submit is disabled while pristine; fill the required fields (serviceType
     // defaults to Loan) plus an ISBN to exercise the identifier transform.
-    setField('edit-request-metadata-patronGivenName', 'Ada');
-    setField('edit-request-metadata-patronSurname', 'Lovelace');
-    setField('edit-patron-request-title', 'Test Title');
-    setField('edit-patron-request-author', 'Some Author');
-    setField('edit-patron-request-isbn', '9781234567890');
-    setField('edit-request-metadata-serviceLevel', 'Standard');
-    setField('edit-request-metadata-internalNote', 'Staff only note');
+    setField('patronInfo.givenName', 'Ada');
+    setField('patronInfo.surname', 'Lovelace');
+    setField('bibliographicInfo.title', 'Test Title');
+    setField('bibliographicInfo.author', 'Some Author');
+    setField('identifiers.ISBN', '9781234567890');
+    setField("serviceInfo.serviceLevel['#text']", 'Standard');
+    setField('internalNote', 'Staff only note');
 
-    fireEvent.click(document.getElementById('clickable-create-rs-entry'));
+    fireEvent.click(document.querySelector('button[type="submit"]'));
 
     await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
     // On success the route navigates away (close()); wait for the form to unmount
     // so the async post-submit state updates settle inside act().
-    await waitFor(() => expect(document.getElementById('clickable-create-rs-entry')).toBeNull());
+    await waitFor(() => expect(document.querySelector('button[type="submit"]')).toBeNull());
 
     const [path, opts] = mockOkapi.post.mock.calls[0];
     expect(path).toBe('broker/patron_requests');
@@ -85,5 +86,31 @@ describe('CreateEditRoute (create)', () => {
 
     // No error callout on the happy path.
     expect(sendCallout).not.toHaveBeenCalled();
+  });
+
+  it('surfaces an HTTP failure as an error callout and keeps the form mounted', async () => {
+    // The POST rejects (e.g. broker validation / 5xx). The rejection must be
+    // caught in submit so it becomes a callout rather than an unhandled
+    // rejection that unmounts the form into the error boundary.
+    mockOkapi.post.mockRejectedValueOnce(new Error('Boom'));
+
+    renderCreate();
+
+    setField('patronInfo.givenName', 'Ada');
+    setField('patronInfo.surname', 'Lovelace');
+    setField('bibliographicInfo.title', 'Test Title');
+    setField('bibliographicInfo.author', 'Some Author');
+    setField("serviceInfo.serviceLevel['#text']", 'Standard');
+
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+
+    await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
+
+    // The failure is reported via an error callout...
+    await waitFor(() => expect(sendCallout).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'error' })
+    ));
+    // ...and the form stays mounted (close() never ran, boundary not tripped).
+    expect(document.querySelector('button[type="submit"]')).not.toBeNull();
   });
 });

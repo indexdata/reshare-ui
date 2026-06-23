@@ -3,7 +3,7 @@ import { Redirect, Route, Switch } from 'react-router-dom';
 import Settings from './settings';
 import AppNameContext from './AppNameContext';
 
-import CreateEditRoute from './routes/CreateEditRoute';
+import CreateRoute from './routes/CreateRoute';
 import PatronRequestsRoute from './routes/PatronRequestsRoute';
 import PullSlipRoute from './routes/PullSlipRoute';
 import PullSlipsRoute from './routes/PullSlipsRoute';
@@ -50,19 +50,10 @@ const ResourceSharing = (props) => {
         />
 
         {appName === 'request' &&
-          <Route path={`${path}/requests/create`} component={CreateEditRoute} />
-        }
-        {appName === 'request' &&
-          <Route path={`${path}/requests/:id/edit`} component={CreateEditRoute} />
+          <Route path={`${path}/requests/create`} component={CreateRoute} />
         }
         <Route path={`${path}/requests/pullslips`} component={PullSlipsRoute} />
         <Route path={`${path}/requests/:id/pullslip`} component={PullSlipRoute} />
-        {appName === 'request' &&
-          <Route path={`${path}/requests/:id/rerequest`} component={CreateEditRoute} />
-        }
-        {appName === 'request' &&
-          <Route path={`${path}/requests/:id/revalidate`} component={CreateEditRoute} />
-        }
         <Redirect
           exact
           from={`${path}/requests/:id`}

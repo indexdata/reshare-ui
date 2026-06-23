@@ -57,8 +57,6 @@
   "information.volume": "Band",
   "createPatronRequest": "Bestellung für Benutzer/-in anlegen",
   "create.error": "Fehler beim Bestellen",
-  "updatePatronRequest": "Aktualisiere Bestellung",
-  "update.error": "Fehler beim Aktualisieren der Bestellung",
   "rerequestPatronRequest": "Erstelle geänderte Bestellung",
   "revalidatePatronRequest": "Erneute Aufgabe der Bestellung",
   "closeNewPatronRequest": "Neue Bestellung schließen",
