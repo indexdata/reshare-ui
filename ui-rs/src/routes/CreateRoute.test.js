@@ -1,5 +1,6 @@
 import React from 'react';
 import { Route } from 'react-router-dom';
+import { createMemoryHistory } from 'history';
 import { fireEvent, waitFor } from '@folio/jest-config-stripes/testing-library/react';
 
 import { renderWithRs } from '../test/renderWithRs';
@@ -24,11 +25,11 @@ const { CalloutContext } = require('@folio/stripes/core');
 
 const sendCallout = jest.fn();
 
-const renderCreate = () => renderWithRs(
+const renderCreate = (options = {}) => renderWithRs(
   <CalloutContext.Provider value={{ sendCallout }}>
     <Route path="/requests/create" component={CreateRoute} />
   </CalloutContext.Provider>,
-  { initialEntries: ['/requests/create'] }
+  { initialEntries: ['/requests/create'], ...options }
 );
 
 // Fields are addressed by their Final Form names because the submitted payload
@@ -48,7 +49,8 @@ describe('CreateRoute', () => {
   });
 
   it('transforms the filled form into the broker create payload and POSTs it', async () => {
-    renderCreate();
+    const history = createMemoryHistory({ initialEntries: ['/requests/create?foo=bar'] });
+    renderCreate({ history });
 
     // Submit is disabled while pristine; fill the required fields (serviceType
     // defaults to Loan) plus an ISBN to exercise the identifier transform.
@@ -63,9 +65,13 @@ describe('CreateRoute', () => {
     fireEvent.click(document.querySelector('button[type="submit"]'));
 
     await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
-    // On success the route navigates away (close()); wait for the form to unmount
-    // so the async post-submit state updates settle inside act().
+    // On success the route navigates to the new request and preserves the query
+    // string; wait for the form to unmount so async post-submit updates settle.
     await waitFor(() => expect(document.querySelector('button[type="submit"]')).toBeNull());
+    expect(history.location).toMatchObject({
+      pathname: '/requests/new-1',
+      search: '?foo=bar',
+    });
 
     const [path, opts] = mockOkapi.post.mock.calls[0];
     expect(path).toBe('broker/patron_requests');

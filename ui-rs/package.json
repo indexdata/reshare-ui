@@ -19,7 +19,8 @@
     "@folio/eslint-config-stripes": "~7.1.0",
     "@folio/jest-config-stripes": "~3.0.2",
     "@folio/stripes-cli": "~4.0.0",
-    "eslint": "^7.0.0"
+    "eslint": "^7.0.0",
+    "history": "^4.10.1"
   },
   "dependencies": {
     "@folio/stripes-erm-components": "~9.0.0",

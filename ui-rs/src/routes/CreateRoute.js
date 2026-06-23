@@ -1,8 +1,8 @@
 import React, { useContext } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { Form } from 'react-final-form';
-import { useMutation } from 'react-query';
-import { Prompt, useLocation } from 'react-router-dom';
+import { useMutation, useQueryClient } from 'react-query';
+import { Prompt, useHistory, useLocation } from 'react-router-dom';
 import { Button, Pane, Paneset, PaneMenu, KeyValue } from '@folio/stripes/components';
 import { CalloutContext, useStripes } from '@folio/stripes/core';
 import { useCloseDirect, useOkapiKy } from '@projectreshare/stripes-reshare';
@@ -66,8 +66,10 @@ const handleSISelect = (args, state, tools) => {
 };
 
 const CreateRoute = () => {
+  const history = useHistory();
   const routerLocation = useLocation();
   const callout = useContext(CalloutContext);
+  const queryClient = useQueryClient();
   const okapiKy = useOkapiKy();
   const close = useCloseDirect();
   // We could provision these vocabs on the form directly but are passing them
@@ -121,10 +123,20 @@ const CreateRoute = () => {
   const creator = useMutation({
     mutationFn: (newRecord) => okapiKy
       .post('broker/patron_requests', { json: newRecord }),
-    onSuccess: async () => {
-      // TODO: Redirect to view page once implemented
-      // For now, go back to the request list
-      close();
+    onSuccess: async (res) => {
+      const created = await res.json();
+      await queryClient.invalidateQueries('broker/patron_requests');
+
+      if (created?.id) {
+        // Creation may start at either requests/create or
+        // requests/create/:systemInstanceId. In both cases, replace it with
+        // the new request's route and retain any list/aside query parameters.
+        const requestsPath = routerLocation.pathname.replace(/\/create(?:\/[^/]+)?$/, '');
+        history.replace(`${requestsPath}/${created.id}${routerLocation.search}`);
+      } else {
+        // Fall back to the request list if the server did not return an id.
+        close();
+      }
     },
   });
 

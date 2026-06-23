@@ -1,6 +1,6 @@
 import React from 'react';
 import { IntlProvider } from 'react-intl';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Router } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { render } from '@folio/jest-config-stripes/testing-library/react';
 
@@ -23,18 +23,25 @@ const makeQueryClient = () => new QueryClient({
 // Wrap the app providers our routes rely on at runtime — React Query, router, and
 // Intl — around `ui`. The <Route>/<Switch> being exercised stays in the test body
 // (passed as `ui`), not hidden in here; this helper only supplies the shell.
-const renderWithRs = (ui, { initialEntries = ['/'], messages = {} } = {}) => render(
-  <QueryClientProvider client={makeQueryClient()}>
-    <MemoryRouter initialEntries={initialEntries}>
-      <IntlProvider
-        locale="en"
-        messages={messages}
-        onError={ignoreMissingTranslations}
-      >
-        {ui}
-      </IntlProvider>
-    </MemoryRouter>
-  </QueryClientProvider>
-);
+const renderWithRs = (ui, {
+  initialEntries = ['/'], messages = {}, history
+} = {}) => {
+  const RouterProvider = history ? Router : MemoryRouter;
+  const routerProps = history ? { history } : { initialEntries };
+
+  return render(
+    <QueryClientProvider client={makeQueryClient()}>
+      <RouterProvider {...routerProps}>
+        <IntlProvider
+          locale="en"
+          messages={messages}
+          onError={ignoreMissingTranslations}
+        >
+          {ui}
+        </IntlProvider>
+      </RouterProvider>
+    </QueryClientProvider>
+  );
+};
 
 export { renderWithRs, ignoreMissingTranslations, makeQueryClient };
