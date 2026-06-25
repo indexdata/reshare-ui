@@ -1,25 +1,34 @@
 import React from 'react';
 import { Field } from 'react-final-form';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import { Col, Row, TextField } from '@folio/stripes/components';
 
-// Per-action settings for `age-requests`: a Go duration per request tier.
-// Unvalidated text for now (e.g. "720h").
-const DURATIONS = ['standard', 'rush', 'express'];
+// A Go time.ParseDuration string limited to second/minute/hour units: one or
+// more number+unit segments, e.g. "168h", "1.5h", "72h3m30s". No sign — a
+// negative aging interval is meaningless here.
+const GO_DURATION = /^([0-9]*\.?[0-9]+(s|m|h))+$/;
 
-const AgeRequestsParams = () => (
-  <Row>
-    {DURATIONS.map(tier => (
-      <Col xs={4} key={tier}>
+const AgeRequestsParams = () => {
+  const intl = useIntl();
+  const validateInterval = (value) => (
+    !value || GO_DURATION.test(value.trim())
+      ? undefined
+      : intl.formatMessage({ id: 'ui-rs.settings.scheduledActions.validate.interval' })
+  );
+
+  return (
+    <Row>
+      <Col xs={6}>
         <Field
-          id={`scheduled-action-age-${tier}`}
-          name={`actionParams.${tier}`}
+          id="scheduled-action-age-interval"
+          name="actionParams.interval"
           component={TextField}
-          label={<FormattedMessage id={`ui-rs.settings.scheduledActions.params.${tier}`} />}
+          validate={validateInterval}
+          label={<FormattedMessage id="ui-rs.settings.scheduledActions.params.interval" />}
         />
       </Col>
-    ))}
-  </Row>
-);
+    </Row>
+  );
+};
 
 export default AgeRequestsParams;

@@ -97,7 +97,7 @@ describe('ScheduledActionForm', () => {
     fireEvent.change(byId('scheduled-action-actionName'), { target: { value: 'age-requests' } });
 
     // The email block is replaced by the age-requests block...
-    await waitFor(() => expect(byId('scheduled-action-age-standard')).toBeInTheDocument());
+    await waitFor(() => expect(byId('scheduled-action-age-interval')).toBeInTheDocument());
     expect(screen.queryByLabelText(ATTACH_PDF)).toBeNull();
 
     // ...and the discarded param doesn't leak into the submitted payload.

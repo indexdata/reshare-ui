@@ -669,11 +669,10 @@
   "settings.scheduledActions.validate.hoursRequired": "Enter at least one hour",
   "settings.scheduledActions.validate.hoursInvalid": "Use comma-separated hours 0–23",
   "settings.scheduledActions.validate.minute": "Enter minutes 0–59",
+  "settings.scheduledActions.validate.interval": "Enter a duration like 168h, 30m, or 72h3m30s",
   "settings.scheduledActions.action.email-pullslips": "Email pull slips",
   "settings.scheduledActions.action.age-requests": "Age requests",
   "settings.scheduledActions.params.attachPdf": "Attach pull slip PDF to email",
-  "settings.scheduledActions.params.standard": "Standard (e.g. 720h)",
-  "settings.scheduledActions.params.rush": "Rush (e.g. 168h)",
-  "settings.scheduledActions.params.express": "Express (e.g. 24h)",
+  "settings.scheduledActions.params.interval": "Age requests older than (e.g. 168h)",
   "SENTINEL": "SENTINEL"
 }
