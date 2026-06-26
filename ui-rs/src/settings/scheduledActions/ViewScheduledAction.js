@@ -1,19 +1,20 @@
 import React, { useContext, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useMutation, useQueryClient } from 'react-query';
-import { Button, ConfirmationModal, KeyValue, Pane } from '@folio/stripes/components';
+import { Button, Col, ConfirmationModal, KeyValue, Pane, Row } from '@folio/stripes/components';
 import { CalloutContext } from '@folio/stripes/core';
-import { useOkapiKy, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { DirectLink, useOkapiKy, useOkapiQuery, useCloseDirect } from '@projectreshare/stripes-reshare';
 
 import { describeSchedule } from './schedule/scheduleExpression';
+import actionRegistry from './actions/actionRegistry';
 
-const ViewScheduledAction = ({ history, match, basePath }) => {
+const ViewScheduledAction = ({ match }) => {
   const { id } = match.params;
   const intl = useIntl();
   const okapiKy = useOkapiKy();
   const queryClient = useQueryClient();
   const callout = useContext(CalloutContext);
-  const close = () => history.push(basePath);
+  const close = useCloseDirect();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const { data, isSuccess } = useOkapiQuery(`broker/batch_actions/${id}`);
@@ -50,6 +51,7 @@ const ViewScheduledAction = ({ history, match, basePath }) => {
     id: `ui-rs.settings.scheduledActions.action.${data.actionName}`,
     defaultMessage: data.actionName,
   });
+  const ParamsView = actionRegistry[data.actionName]?.view;
 
   return (
     <Pane
@@ -59,12 +61,14 @@ const ViewScheduledAction = ({ history, match, basePath }) => {
       dismissible
       actionMenu={({ onToggle }) => (
         <>
-          <Button
+          <DirectLink
+            component={Button}
             buttonStyle="dropdownItem"
-            onClick={() => { onToggle(); history.push(`${basePath}/${id}/edit`); }}
+            onClick={onToggle}
+            to={`${match.url}/edit`}
           >
             <FormattedMessage id="ui-rs.edit" />
-          </Button>
+          </DirectLink>
           <Button
             buttonStyle="dropdownItem"
             onClick={() => { onToggle(); toggler.mutate(); }}
@@ -80,22 +84,25 @@ const ViewScheduledAction = ({ history, match, basePath }) => {
         </>
       )}
     >
-      <KeyValue
-        label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.actionName" />}
-        value={actionLabel}
-      />
-      <KeyValue
-        label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.scheduleUtc" />}
-        value={describeSchedule(data.schedule, intl)}
-      />
-      <KeyValue
-        label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.batchQuery" />}
-        value={data.batchQuery}
-      />
-      <KeyValue
-        label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.active" />}
-        value={<FormattedMessage id={`ui-rs.settings.scheduledActions.status.${active ? 'active' : 'inactive'}`} />}
-      />
+      <Row>
+        <Col xs={12} md={6}>
+          <KeyValue
+            label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.batchQuery" />}
+            value={data.batchQuery}
+          />
+          <KeyValue
+            label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.active" />}
+            value={<FormattedMessage id={`ui-rs.settings.scheduledActions.status.${active ? 'active' : 'inactive'}`} />}
+          />
+          <KeyValue
+            label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.scheduleUtc" />}
+            value={describeSchedule(data.schedule, intl)}
+          />
+        </Col>
+        <Col xs={12} md={6}>
+          {ParamsView && <ParamsView actionParams={data.actionParams} />}
+        </Col>
+      </Row>
       <ConfirmationModal
         open={confirmDelete}
         heading={<FormattedMessage id="ui-rs.settings.scheduledActions.delete.heading" />}

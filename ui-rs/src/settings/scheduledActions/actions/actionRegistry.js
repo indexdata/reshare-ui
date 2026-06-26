@@ -1,13 +1,12 @@
-import EmailPullslipsParams from './EmailPullslipsParams';
-import AgeRequestsParams from './AgeRequestsParams';
+import { EmailPullslipsParams, EmailPullslipsView } from './EmailPullslipsParams';
+import { AgeRequestsParams, AgeRequestsView } from './AgeRequestsParams';
 
-// Map from the API's `actionName` string to that action's per-action settings
-// component. The form reads the current actionName and renders the matching
-// entry. Adding an action type = one entry + a params component; the common
-// section (action select / schedule / batchQuery) and CRUD shells are untouched.
+// Map from the API's `actionName` string to that action's per-action components:
+// `form` is the editable params block (ScheduledActionForm), `view` is the read-only
+// block (ViewScheduledAction).
 const actionRegistry = {
-  'email-pullslips': EmailPullslipsParams,
-  'age-requests': AgeRequestsParams,
+  'email-pullslips': { form: EmailPullslipsParams, view: EmailPullslipsView },
+  'age-requests': { form: AgeRequestsParams, view: AgeRequestsView },
 };
 
 export default actionRegistry;

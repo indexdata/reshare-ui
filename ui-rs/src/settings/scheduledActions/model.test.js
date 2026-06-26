@@ -14,12 +14,12 @@ describe('scheduledActions model', () => {
         days: [1, 3, 5],
         hours: '6, 13',
         minute: 30,
-        actionParams: { attachPdf: true },
+        actionParams: { includePdf: true },
       })).toEqual({
         actionName: 'email-pullslips',
         batchQuery: 'state==REQ',
         schedule: scheduleToExpression({ days: [1, 3, 5], hours: '6, 13', minute: 30 }),
-        actionParams: { attachPdf: true },
+        actionParams: { includePdf: true },
       });
     });
 
@@ -36,12 +36,12 @@ describe('scheduledActions model', () => {
         actionName: 'email-pullslips',
         schedule,
         batchQuery: 'state==REQ',
-        actionParams: { attachPdf: true },
+        actionParams: { includePdf: true },
       })).toEqual({
         actionName: 'email-pullslips',
         batchQuery: 'state==REQ',
         ...scheduleFromExpression(schedule),
-        actionParams: { attachPdf: true },
+        actionParams: { includePdf: true },
       });
     });
   });

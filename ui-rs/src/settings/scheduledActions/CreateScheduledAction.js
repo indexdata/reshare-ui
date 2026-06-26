@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { useMutation, useQueryClient } from 'react-query';
 import { CalloutContext } from '@folio/stripes/core';
-import { useOkapiKy } from '@projectreshare/stripes-reshare';
+import { useOkapiKy, useCloseDirect } from '@projectreshare/stripes-reshare';
 
 import ScheduledActionForm from './ScheduledActionForm';
 import { buildBatchActionBody } from './model';
@@ -13,14 +13,14 @@ const INITIAL_VALUES = {
   hours: '',
   minute: 0,
   batchQuery: '',
-  actionParams: { attachPdf: false },
+  actionParams: { includePdf: false },
 };
 
-const CreateScheduledAction = ({ history, basePath }) => {
+const CreateScheduledAction = () => {
   const okapiKy = useOkapiKy();
   const queryClient = useQueryClient();
   const callout = useContext(CalloutContext);
-  const close = () => history.push(basePath);
+  const close = useCloseDirect();
 
   const creator = useMutation({
     mutationFn: (values) => okapiKy.post('broker/batch_actions', { json: buildBatchActionBody(values) }),

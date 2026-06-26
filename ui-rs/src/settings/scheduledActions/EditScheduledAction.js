@@ -2,18 +2,18 @@ import React, { useContext } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { useMutation, useQueryClient } from 'react-query';
 import { CalloutContext } from '@folio/stripes/core';
-import { useOkapiKy, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { useOkapiKy, useOkapiQuery, useCloseDirect } from '@projectreshare/stripes-reshare';
 
 import ScheduledActionForm from './ScheduledActionForm';
 import { buildBatchActionBody, recordToFormValues } from './model';
 import { isScheduleSupported } from './schedule/scheduleExpression';
 
-const EditScheduledAction = ({ history, match, basePath }) => {
+const EditScheduledAction = ({ match }) => {
   const { id } = match.params;
   const okapiKy = useOkapiKy();
   const queryClient = useQueryClient();
   const callout = useContext(CalloutContext);
-  const close = () => history.push(basePath);
+  const close = useCloseDirect();
 
   const { data, isSuccess } = useOkapiQuery(`broker/batch_actions/${id}`);
 

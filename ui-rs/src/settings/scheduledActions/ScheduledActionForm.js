@@ -1,5 +1,6 @@
 import React from 'react';
 import { Form, Field } from 'react-final-form';
+import arrayMutators from 'final-form-arrays';
 import { FormattedMessage, useIntl } from 'react-intl';
 import {
   Accordion,
@@ -51,10 +52,11 @@ const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLa
     <Form
       onSubmit={onSubmit}
       initialValues={initialValues}
+      mutators={{ ...arrayMutators }}
       validate={validate}
     >
       {({ handleSubmit, values, pristine, invalid, form }) => {
-        const ParamsComponent = actionRegistry[values?.actionName];
+        const ParamsComponent = actionRegistry[values?.actionName]?.form;
         const footer = (
           <PaneFooter
             renderStart={

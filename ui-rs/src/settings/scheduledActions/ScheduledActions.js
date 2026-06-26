@@ -2,7 +2,7 @@ import React from 'react';
 import { Switch, Route } from 'react-router-dom';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { Button, MultiColumnList, Pane, PaneMenu } from '@folio/stripes/components';
-import { useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { DirectLink, useOkapiQuery } from '@projectreshare/stripes-reshare';
 
 import { describeSchedule } from './schedule/scheduleExpression';
 import CreateScheduledAction from './CreateScheduledAction';
@@ -32,14 +32,15 @@ const ScheduledActionsList = ({ match, history }) => {
       paneTitle={<FormattedMessage id="ui-rs.settings.scheduledActions.heading" />}
       lastMenu={
         <PaneMenu>
-          <Button
+          <DirectLink
+            component={Button}
             id="clickable-new-scheduled-action"
             to={`${match.url}/new`}
             buttonStyle="primary paneHeaderNewButton"
             marginBottom0
           >
             <FormattedMessage id="ui-rs.settings.scheduledActions.new" />
-          </Button>
+          </DirectLink>
         </PaneMenu>
       }
     >
@@ -53,7 +54,7 @@ const ScheduledActionsList = ({ match, history }) => {
           createdAt: <FormattedMessage id="ui-rs.settings.scheduledActions.field.createdAt" />,
         }}
         formatter={formatter}
-        onRowClick={(_e, row) => history.push(`${match.url}/${row.id}`)}
+        onRowClick={(_e, row) => history.push({ pathname: `${match.url}/${row.id}`, state: { direct: true } })}
         isEmptyMessage={
           isSuccess
             ? <FormattedMessage id="ui-rs.settings.scheduledActions.empty" />
@@ -65,21 +66,22 @@ const ScheduledActionsList = ({ match, history }) => {
 };
 
 // Settings renders this page at a non-exact route, so it also receives the
-// /new, /:id and /:id/edit sub-paths; we discriminate with a nested Switch and
-// inject the list base path so the sub-routes know where to return to.
+// /new, /:id and /:id/edit sub-paths; we discriminate with a nested Switch. The
+// sub-routes close via useCloseDirect, which returns to the natural previous
+// location when navigated to in-app and degrades to upNLevels otherwise.
 const ScheduledActions = ({ match }) => (
   <Switch>
     <Route
       path={`${match.path}/new`}
-      render={props => <CreateScheduledAction {...props} basePath={match.url} />}
+      component={CreateScheduledAction}
     />
     <Route
       path={`${match.path}/:id/edit`}
-      render={props => <EditScheduledAction {...props} basePath={match.url} />}
+      component={EditScheduledAction}
     />
     <Route
       path={`${match.path}/:id`}
-      render={props => <ViewScheduledAction {...props} basePath={match.url} />}
+      component={ViewScheduledAction}
     />
     <Route render={props => <ScheduledActionsList {...props} match={match} />} />
   </Switch>
