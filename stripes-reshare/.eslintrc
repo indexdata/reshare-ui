@@ -1,0 +1,15 @@
+{
+  "extends": "@folio/eslint-config-stripes",
+  "overrides": [
+    {
+      "files": [ "src/**/tests/*", "**/*.test.js", "test/**/*" ],
+      "rules": {
+        "react/prop-types": "off",
+        "import/prefer-default-export": "off"
+      }
+    }
+  ],
+  "env": {
+    "jest": true
+  }
+}

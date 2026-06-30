@@ -1,0 +1,50 @@
+{
+  "hasLocalNote": "Interne Notiz vorhanden",
+  "hasPatronNote": "Benutzernotiz vorhanden",
+  "requestState": "Bestellstatus",
+
+  "action.notValidForState": "Aktion in diesem Status nicht möglich",
+  "actions.generic.success": "Erfolg: {action}",
+  "actions.generic.error": "Fehler: {action}. {errMsg}",
+  "states.undefined": "Fehler: Undefinierter Status",
+  "catalogInfo.viewRecord": "Eintrag ansehen",
+  "catalogInfo.error": "Eintrag kann nicht angezeigt werden",
+  "catalogInfo.title": "Titel",
+  "catalogInfo.author": "Mitwirkende",
+  "catalogInfo.issn": "ISSN",
+  "catalogInfo.isbn": "ISBN",
+  "catalogInfo.date": "Datum",
+
+
+
+  "AND": "UND",
+  "OR": "ODER",
+  "create": "Anlegen",
+  "edit": "Bearbeiten",
+  "save": "Speichern",
+  "saveAndClose": "Speichern & schließen",
+  "cancel": "Abbrechen",
+  "delete": "Löschen",
+  "apply": "Anwenden",
+  "new": "Neu",
+  "notSet": "Keine Angabe",
+  "search": "Suche",
+  "yes": "Ja",
+  "no": "Nein",
+  "actions": "Aktionen",
+
+  "refdata.deleteRefdataValue": "Referenzdaten löschen",
+  "refdata.deleteRefdataValue.confirmMessage": "<strong>{name}</strong> wird gelöscht.",
+  "refdata.deleteRefdataValue.errorMessage": "<strong>Error: {label}</strong> wurde nicht gelöscht. {error}",
+  "refdata.label": "Bezeichnung",
+  "refdata.value": "Wert",
+  "refdata.editAriaLabel": "Wert {label} bearbeiten",
+  "refdata.deleteAriaLabel": "Wert {label} löschen",
+
+  "settings.noCurrentValue": "Kein aktueller Wert",
+  "settings.default": "Standard",
+  "settings.edit": "Bearbeiten",
+  "settings.settingLoading": "Wird geladen",
+  "settings.finishEditing": "Bearbeitung beenden",
+  "settings.valueFor": "Wert für die Einstellung {name}"
+}

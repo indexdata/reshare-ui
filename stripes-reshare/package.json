@@ -1,0 +1,33 @@
+{
+  "name": "@projectreshare/stripes-reshare",
+  "version": "3.0.0",
+  "description": "Common elements used by ReShare's Stripes modules",
+  "repository": "https://github.com/openlibraryenvironment/stripes-reshare.git",
+  "license": "Apache-2.0",
+  "scripts": {
+    "lint": "eslint ./src",
+    "test": "jest"
+  },
+  "dependencies": {
+    "lodash": "^4.17.4",
+    "prop-types": "^15.6.0"
+  },
+  "devDependencies": {
+    "@folio/eslint-config-stripes": "~7.1.0",
+    "@folio/jest-config-stripes": "~3.0.2",
+    "eslint": "^7.32.0",
+    "@folio/stripes": "^10.0.0",
+    "react": "~18.2.0",
+    "react-dom": "~18.2.0",
+    "react-intl": "^7.0.0",
+    "react-query": "^3.9.0"
+  },
+  "peerDependencies": {
+    "@folio/stripes": "^8.0.0 || ^9.0.0 || ^10.0.0",
+    "react": "*",
+    "react-intl": "^6.0.0 || ^7.0.0",
+    "react-query": "^3.9.0",
+    "react-router": "^5.2.0",
+    "react-router-dom": "^5.2.0"
+  }
+}
