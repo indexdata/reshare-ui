@@ -5,9 +5,9 @@
   },
   "overrides": [
     {
-      "files": [ "src/**/tests/*", "*.test.js", "test/**/*" ],
+      "files": [ "src/**/tests/*", "src/test/**/*", "*.test.js", "test/**/*" ],
       "rules": {
-        "react/prop-types": "off",
+        "import/no-extraneous-dependencies": ["error", { "packageDir": [".", ".."] }],
         "import/prefer-default-export": "off",
         "global-require": "off"
       }
