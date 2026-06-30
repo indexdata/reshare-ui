@@ -2,6 +2,7 @@
   "private": true,
   "workspaces": [
     "platform-rs-dev",
+    "platform-rs-x",
     "stripes-reshare",
     "ui-request",
     "ui-rs",
