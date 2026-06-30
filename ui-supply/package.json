@@ -1,0 +1,79 @@
+{
+  "name": "@projectreshare/supply",
+  "version": "1.6.6",
+  "description": "Supply resources for ILL",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openlibraryenvironment/ui-supply"
+  },
+  "dependencies": {
+    "@projectreshare/rs": "^1.6.0",
+    "@projectreshare/directory": "^1.13.0"
+  },
+  "stripes": {
+    "actsAs": ["app"],
+    "displayName": "ui-supply.meta.title",
+    "route": "/supply",
+    "home": "/supply/requests?filters=terminal.false&sort=-dateCreated",
+    "icons": [
+      {
+        "name": "app",
+        "alt": "Supply items in response to ILL requests",
+        "title": "Supply"
+      }
+    ],
+    "stripesDeps": [
+      "@projectreshare/rs",
+      "@folio/stripes-erm-components",
+      "@projectreshare/stripes-reshare"
+    ],
+    "permissionSets": [
+      {
+        "permissionName": "module.supply.enabled",
+        "displayName": "UI: supply module is enabled",
+        "subPermissions": [
+          "ui-supply.view"
+        ],
+        "visible": true
+      },
+      {
+        "permissionName": "ui-supply.view",
+        "displayName": "ILL Supply: View requests",
+        "subPermissions": [
+          "rs.batch.get",
+          "rs.hostlmslocations.get",
+          "rs.patronrequests.generateBatch",
+          "rs.patronrequests.read",
+          "rs.refdata.get",
+          "rs.report.execute",
+          "rs.status.get",
+          "configuration.entries.collection.get",
+          "tags.collection.get",
+          "directory.entry.collection.get",
+          "rs.shelvingLocations.read",
+          "rs.settings.get"
+        ],
+        "visible": "true"
+      },
+      {
+        "permissionName": "ui-supply.create",
+        "displayName": "ILL Supply: Create requests",
+        "subPermissions": [
+          "rs.patronrequests.item.post"
+        ],
+        "visible": "true"
+      },
+      {
+        "permissionName": "ui-supply.edit",
+        "displayName": "ILL Supply: Edit requests",
+        "subPermissions": [
+          "rs.patronrequests.item.put",
+          "rs.patronrequests.item.performaction",
+          "rs.patronrequests.markBatchPrinted"
+        ],
+        "visible": "true"
+      }
+    ]
+  }
+}

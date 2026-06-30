@@ -1,0 +1,7 @@
+{
+  "meta.title": "AFL",
+  "permission.module.supply.enabled":"UI: Modul AFL ist aktiviert",
+  "permission.ui-supply.view":"AFL: Bestellungen ansehen",
+  "permission.ui-supply.create":"AFL: Bestellung anlegen",
+  "permission.ui-supply.edit":"AFL: Bestellung bearbeiten"
+}

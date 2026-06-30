@@ -1,0 +1,7 @@
+{
+  "meta.title": "PFL",
+  "permission.module.request.enabled":"UI: Modul PFL ist aktiviert",
+  "permission.ui-request.view":"PFL: Bestellungen ansehen",
+  "permission.ui-request.create":"PFL: Bestellung anlegen",
+  "permission.ui-request.edit":"PFL: Bestellung bearbeiten"
+}

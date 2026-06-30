@@ -1,0 +1,7 @@
+{
+  "meta.title": "ILL Supply",
+  "permission.module.supply.enabled":"UI: request module is enabled",
+  "permission.ui-supply.view":"Supply: View requests",
+  "permission.ui-supply.create":"Supply: Create requests",
+  "permission.ui-supply.edit":"Supply: Edit requests"
+}

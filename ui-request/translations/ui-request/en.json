@@ -1,0 +1,7 @@
+{
+  "meta.title": "ILL Request",
+  "permission.module.request.enabled":"UI: request module is enabled",
+  "permission.ui-request.view":"Request: View requests",
+  "permission.ui-request.create":"Request: Create requests",
+  "permission.ui-request.edit":"Request: Edit requests"
+}
