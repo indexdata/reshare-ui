@@ -8,8 +8,7 @@
     "url": "https://github.com/openlibraryenvironment/ui-supply"
   },
   "dependencies": {
-    "@projectreshare/rs": "^1.6.0",
-    "@projectreshare/directory": "^1.13.0"
+    "@projectreshare/rs": "^1.6.0"
   },
   "stripes": {
     "actsAs": ["app"],

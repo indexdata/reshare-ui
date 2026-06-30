@@ -1,0 +1,34 @@
+{
+  "name": "@projectreshare/platform-rs-dev",
+  "version": "2.0.0",
+  "description": "Top-level platform for ReShare UI",
+  "license": "Apache-2.0",
+  "scripts": {
+    "build": "export STRIPES_TRANSPILE_TOKENS=\"@projectreshare\"; export NODE_OPTIONS=\"--max-old-space-size=4096 $NODE_OPTIONS\"; stripes build stripes.config.js",
+    "stripes": "stripes",
+    "start": "stripes serve stripes.config.js",
+    "build-module-descriptors": "node ./build-module-descriptors.js"
+  },
+  "dependencies": {
+    "@folio/developer": "~10.0.2",
+    "@folio/stripes": "~10.0.0",
+    "@folio/tenant-settings": "10.0.0",
+    "@folio/users": "12.1.16",
+    "@projectreshare/supply": "*",
+    "@projectreshare/request": "*",
+    "@projectreshare/rs": "*",
+    "moment": "~2.29.0",
+    "react": "~18.2.0",
+    "react-dom": "~18.2.0",
+    "react-intl": "^7.1.10",
+    "react-query": "^3.13.0",
+    "react-redux": "^8.0.5",
+    "react-router": "^5.2.0",
+    "react-router-dom": "^5.2.0",
+    "redux": "^4.0.5",
+    "rrule": "2.6.4"
+  },
+  "devDependencies": {
+    "@folio/stripes-cli": "~4.0.0"
+  }
+}
