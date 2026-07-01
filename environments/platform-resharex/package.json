@@ -1,5 +1,5 @@
 {
-  "name": "@projectreshare/platform-rs",
+  "name": "@projectreshare/platform-resharex",
   "version": "2.0.0",
   "description": "Top-level platform for ReShare UI",
   "license": "Apache-2.0",
@@ -85,9 +85,10 @@
     "@folio/tags": "8.2.1",
     "@folio/tenant-settings": "9.0.0",
     "@folio/users": "11.0.14",
-    "@projectreshare/rs": "*",
-    "@projectreshare/request": "*",
-    "@projectreshare/supply": "*",
+    "@projectreshare/rs": "file:../../ui-rs",
+    "@projectreshare/rsdir": "git+ssh://git@github.com/indexdata/ui-rsdir.git#main",
+    "@projectreshare/request": "file:../../ui-request",
+    "@projectreshare/supply": "file:../../ui-supply",
     "final-form": "^4.20.7",
     "final-form-arrays": "^3.0.2",
     "moment": "~2.29.0",
@@ -107,7 +108,30 @@
     "zustand": "^4.1.1"
   },
   "devDependencies": {
+    "@folio/stripes-cli": "3.2.2",
+    "@types/lodash": "^4.14.197",
+    "eslint": "^6.2.1",
+    "lodash": "^4.17.5"
   },
   "resolutions": {
+    "@jridgewell/gen-mapping": "0.3.7",
+    "@types/react": "^18",
+    "@apollo/client": "3.8.6",
+    "@folio/stripes-acq-components": "6.0.5",
+    "@folio/stripes-template-editor": "3.4.2",
+    "typescript": "~5.5",
+    "colors": "1.4.0",
+    "downshift": "9.0.13",
+    "final-form": "^4.20.4",
+    "minimist": "^1.2.3",
+    "moment": "~2.29.0",
+    "react-cookie": "^7.2.2",
+    "redux-form": "^8.0.0",
+    "@folio/plugin-create-inventory-records": "5.0.1",
+    "@folio/plugin-query-builder" : "1.2.10",
+    "@projectreshare/rs": "file:../../ui-rs",
+    "@projectreshare/request": "file:../../ui-request",
+    "@projectreshare/supply": "file:../../ui-supply",
+    "@rehooks/local-storage": "2.4.5"
   }
 }

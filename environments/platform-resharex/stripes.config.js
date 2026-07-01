@@ -30,6 +30,7 @@ module.exports = {
     "@folio/tenant-settings": {},
     "@folio/users": {},
     "@projectreshare/rs": {},
+    "@projectreshare/rsdir": {},
     "@projectreshare/request": {},
     "@projectreshare/supply": {}
   },
