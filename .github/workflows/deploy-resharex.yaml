@@ -15,10 +15,6 @@ env:
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_DEFAULT_REGION: 'us-east-1'
 
-defaults:
-  run:
-    working-directory: ./environments/platform-resharex
-
 jobs:
   deploy:
 
@@ -50,9 +46,11 @@ jobs:
 
       - name: prepare
         run: yarn config set @folio:registry https://repository.folio.org/repository/npm-folio/
+        working-directory: ./environments/platform-resharex
 
       - name: Do yarn install
         run: yarn install
+        working-directory: ./environments/platform-resharex
 
       - name: Upload yarn.lock
         uses: actions/upload-artifact@v4
@@ -63,6 +61,7 @@ jobs:
       - name: build module descriptors
         run: |
           ./node_modules/.bin/stripes mod descriptor stripes.config.js --output ./ModuleDescriptors 
+        working-directory: ./environments/platform-resharex
 
       - name: build webpacks
         run: |
@@ -73,6 +72,7 @@ jobs:
             rm -rf "./${tenant}"
             mv output "./${tenant}"
           done
+        working-directory: ./environments/platform-resharex
 
       - name: build consortial webpack
         run: |
@@ -83,6 +83,7 @@ jobs:
             rm -rf "./${tenant}"
             mv output "./${tenant}"
           done
+        working-directory: ./environments/platform-resharex
 
       - name: upload builds
         run: |
@@ -90,3 +91,4 @@ jobs:
           aws s3 sync ./rs2 s3://reshare-bundles/rs2 --acl public-read --delete
           aws s3 sync ./rs3 s3://reshare-bundles/rs3 --acl public-read --delete
           aws s3 sync ./consortial s3://reshare-bundles/consortial --acl public-read --delete
+        working-directory: ./environments/platform-resharex
