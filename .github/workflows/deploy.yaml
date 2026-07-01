@@ -1,0 +1,94 @@
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        required: false
+        type: string
+      source_repo:
+        required: false
+        type: string
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: 'us-east-1'
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Deploy triggered from ${{ inputs.source_repo }} @ ${{ inputs.source_sha }}"
+
+      - name: checkout module
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      # temporary, so we can clone from git on a private repo
+      - name: Set up SSH for private git deps
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.UI_RSDIR_DEPLOY_KEY }}
+
+      - name: Trust github.com host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+      # END temporary, so we can clone from git on a private repo
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: prepare
+        run: yarn config set @folio:registry https://repository.folio.org/repository/npm-folio/
+
+      - name: Do yarn install
+        run: yarn install
+        working-directory: ./environments/platform-resharex
+
+      - name: Upload yarn.lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: yarn.lock
+          path: yarn.lock
+        working-directory: ./environments/platform-resharex
+
+      - name: build module descriptors
+        run: |
+          ./node_modules/.bin/stripes mod descriptor stripes.config.js --output ./ModuleDescriptors 
+        working-directory: ./environments/platform-resharex
+
+      - name: build webpacks
+        run: |
+          set -euo pipefail
+          rm -rf rs1 rs2 rs3
+          for tenant in rs1 rs2 rs3; do
+            yarn build --tenant "$tenant" --okapi "https://${tenant}-okapi.reshare-dev.indexdata.com"
+            rm -rf "./${tenant}"
+            mv output "./${tenant}"
+          done
+        working-directory: ./environments/platform-resharex
+
+      - name: build consortial webpack
+        run: |
+          set -euo pipefail
+          rm -rf consortial
+          for tenant in consortial; do
+            yarn buildconsortial
+            rm -rf "./${tenant}"
+            mv output "./${tenant}"
+          done
+        working-directory: ./environments/platform-resharex
+
+      - name: upload builds
+        run: |
+          aws s3 sync ./rs1 s3://reshare-bundles/rs1 --acl public-read --delete
+          aws s3 sync ./rs2 s3://reshare-bundles/rs2 --acl public-read --delete
+          aws s3 sync ./rs3 s3://reshare-bundles/rs3 --acl public-read --delete
+          aws s3 sync ./consortial s3://reshare-bundles/consortial --acl public-read --delete
+        working-directory: ./environments/platform-resharex
