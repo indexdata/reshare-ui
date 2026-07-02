@@ -12,11 +12,19 @@ const Search = ({ resetAll, searchHandlers, searchValue, searchChanged, filterCh
     { label: 'isbn', value: 'isbn' },
     { label: 'issn', value: 'issn' },
     { label: 'requesterIdentifier', value: 'patron' },
-    { label: 'requesterGivenName', value: 'given_name' },
-    { label: 'requesterSurname', value: 'surname' },
+    {
+      label: 'requesterName',
+      value: 'requester_name',
+      placeholder: intl.formatMessage({ id: 'ui-rs.index.requesterName.placeholder' }),
+    },
+    {
+      label: 'cql',
+      value: 'cql',
+      placeholder: intl.formatMessage({ id: 'ui-rs.index.cql.placeholder' }),
+    },
   ].map(x => ({
+    ...x,
     label: intl.formatMessage({ id: `ui-rs.index.${x.label}` }),
-    value: x.value,
   }));
 
   return (

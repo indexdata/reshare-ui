@@ -499,8 +499,6 @@
   "index.hrid": "FL-Nummer",
   "index.extid": "Externe ID",
   "index.extidType": "Quelle externe ID",
-  "index.requesterGivenName": "Vorname (Benutzer-/in)",
-  "index.requesterSurname": "Nachname (Benutzer-/in)",
   "index.requesterIdentifier": "Barcode Benutzer/-in",
   "index.title": "Titel",
   "index.author": "Autor/-in",
