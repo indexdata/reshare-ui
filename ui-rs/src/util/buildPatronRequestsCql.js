@@ -65,7 +65,7 @@ export const buildPatronRequestsCql = (location) => {
   } else if (rawCql) {
     // Use the original, unescaped query — escapeCqlValue would mangle the user's
     // own quotes/operators.
-    queryTemplate = () => urlParams.query;
+    queryTemplate = () => (urlParams.query || '');
   }
   const getCQL = makeQueryFunction(
     'cql.allRecords=1',
