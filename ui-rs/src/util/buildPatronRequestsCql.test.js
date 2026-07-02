@@ -25,6 +25,11 @@ describe('buildPatronRequestsCql', () => {
       const cql = cqlFor('qindex=requester_name&query=Smith');
       expect(cql).not.toContain('requester_name');
     });
+
+    it('escapes quotes and backslashes in the name values', () => {
+      const cql = cqlFor(`qindex=requester_name&query=${encodeURIComponent('Sm\\ith, Jo"hn')}`);
+      expect(cql).toBe('surname="Sm\\\\ith" and given_name="Jo\\"hn"');
+    });
   });
 
   describe('cql index', () => {
