@@ -131,6 +131,7 @@
     "@folio/plugin-query-builder" : "1.2.10",
     "@projectreshare/rs": "file:../../ui-rs",
     "@projectreshare/request": "file:../../ui-request",
+    "@projectreshare/stripes-reshare": "file:../../stripes-reshare",
     "@projectreshare/supply": "file:../../ui-supply",
     "@rehooks/local-storage": "2.4.5"
   }

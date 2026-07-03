@@ -1,6 +1,6 @@
 {
   "name": "@projectreshare/supply",
-  "version": "1.6.6",
+  "version": "2.0.0",
   "description": "Supply resources for ILL",
   "license": "Apache-2.0",
   "repository": {
@@ -8,7 +8,7 @@
     "url": "https://github.com/openlibraryenvironment/ui-supply"
   },
   "dependencies": {
-    "@projectreshare/rs": "^1.6.0"
+    "@projectreshare/rs": "~2.0.0"
   },
   "stripes": {
     "actsAs": ["app"],
