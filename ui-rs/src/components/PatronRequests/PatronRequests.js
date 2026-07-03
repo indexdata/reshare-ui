@@ -12,9 +12,11 @@ import {
   Button,
   Icon,
   IconButton,
+  Layout,
   Loading,
   LoadingPane,
   MCLPagingTypes,
+  MessageBanner,
   MultiColumnList,
   Pane,
   PaneMenu,
@@ -75,9 +77,12 @@ const PatronRequests = ({ requestsQuery, perPage, filterOptions, children }) => 
   const totalCount = requestsQuery?.data?.pages?.[0]?.about?.count || 0;
   const parsedParams = queryString.parse(location.search);
   const sortOrder = parsedParams.sort || '';
-  const fetchMore = (_askAmount, index) => {
-    requestsQuery.fetchNextPage({ pageParam: index });
-    setOffset(index);
+  const fetchMore = async (_askAmount, index) => {
+    // Advance the visible page only once its data has loaded; on a failed page
+    // fetch, keep the current page's results on screen (the error surfaces via
+    // the isRefetchError callout) instead of flipping to an empty page.
+    const { isError } = await requestsQuery.fetchNextPage({ pageParam: index });
+    if (!isError) setOffset(index);
   };
   const initialSearch = '?filters=terminal.false&sort=-dateCreated';
 
@@ -86,6 +91,17 @@ const PatronRequests = ({ requestsQuery, perPage, filterOptions, children }) => 
       history.push(location.pathname + initialSearch);
     }
   });
+
+  // A refetch or pagination failure (as opposed to a cold-load failure) keeps the
+  // existing results on screen, so surface it as a transient callout rather than
+  // replacing the table. Keyed on errorUpdatedAt so a repeat error refires but
+  // ordinary re-renders don't.
+  useEffect(() => {
+    if (requestsQuery.isRefetchError) {
+      sendCallout('ui-rs.search.refreshError', 'error', { errMsg: requestsQuery.error?.message });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestsQuery.isRefetchError, requestsQuery.errorUpdatedAt]);
 
 
   const { title, visibleColumns, createPerm } = appDetails[appName];
@@ -137,7 +153,29 @@ const PatronRequests = ({ requestsQuery, perPage, filterOptions, children }) => 
                   options={filterOptions}
                 />
               </Pane>
-              {requestsQuery.isSuccess ?
+              {requestsQuery.isLoading && <LoadingPane />}
+              {requestsQuery.isLoadingError &&
+                <Pane
+                  appIcon={<AppIcon app={appName} iconKey="app" size="small" />}
+                  defaultWidth="fill"
+                  firstMenu={(
+                    <PaneMenu>
+                      { requestsQuery?.isRefetching ? <Loading /> : <IconButton icon="refresh" onClick={() => requestsQuery?.refetch()} /> }
+                    </PaneMenu>
+                  )}
+                  paneTitle={title}
+                >
+                  <Layout className="padding-all-gutter max-width-container centered">
+                    <MessageBanner type="error">
+                      <FormattedMessage
+                        id="ui-rs.search.queryError"
+                        values={{ errMsg: requestsQuery.error?.message }}
+                      />
+                    </MessageBanner>
+                  </Layout>
+                </Pane>
+              }
+              {!requestsQuery.isLoading && !requestsQuery.isLoadingError &&
                 <Pane
                   appIcon={<AppIcon app={appName} iconKey="app" size="small" />}
                   defaultWidth="fill"
@@ -288,7 +326,6 @@ const PatronRequests = ({ requestsQuery, perPage, filterOptions, children }) => 
                     visibleColumns={visibleColumns}
                   />
                 </Pane>
-                : <LoadingPane />
               }
               {children}
             </PersistedPaneset>

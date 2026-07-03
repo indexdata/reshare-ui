@@ -40,6 +40,8 @@
   "patronrequests.found": "{number} records found",
   "patronrequests.notFound": "No records found.",
   "patronrequests.withoutFilter": "Click here to try search again without filters.",
+  "search.queryError": "Your search could not be run: {errMsg}",
+  "search.refreshError": "Could not update results: {errMsg}",
   "information.heading.developer": "Developer info",
   "information.heading.developer.help": "(JSON dump of raw record)",
   "information.heading.developer.record": "Record",

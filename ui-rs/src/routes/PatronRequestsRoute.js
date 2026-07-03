@@ -29,7 +29,9 @@ const PatronRequestsRoute = ({ appName, children }) => {
         if (cql) params.append('cql', cql);
         return ky(`broker/patron_requests?${params.toString()}`).json();
       },
-      useErrorBoundary: true,
+      // Surface query failures (e.g. malformed CQL) inline via MessageBanner rather
+      // than crashing into the error boundary.
+      useErrorBoundary: false,
       staleTime: 2 * 60 * 1000,
       cacheTime: 10 * 60 * 1000,
     }
