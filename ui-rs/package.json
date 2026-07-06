@@ -4,10 +4,10 @@
   "description": "Resource Sharing",
   "repository": {
     "type": "git",
-    "url": "https://github.com/openlibraryenvironment/ui-rs"
+    "url": "https://github.com/indexdata/reshare-ui",
+    "directory": "ui-rs"
   },
   "main": "src/index.js",
-  "repository": "",
   "license": "Apache-2.0",
   "scripts": {
     "start": "stripes serve",
@@ -21,7 +21,6 @@
     "classnames": "^2.2.6",
     "final-form": "^4.2.0",
     "final-form-arrays": "^3.0.2",
-    "graphql-tag": "^2.5.0",
     "json-stable-stringify": "^1.0.1",
     "ky": "^0.23.0",
     "lodash": "^4.17.4",
