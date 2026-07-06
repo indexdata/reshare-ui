@@ -3009,10 +3009,8 @@
 
 "@projectreshare/request@file:../../ui-request":
   version "2.0.0"
-  dependencies:
-    "@projectreshare/rs" "~2.0.0"
 
-"@projectreshare/rs@file:../../ui-rs", "@projectreshare/rs@~2.0.0":
+"@projectreshare/rs@file:../../ui-rs":
   version "2.0.0"
   dependencies:
     "@folio/stripes-erm-components" "~9.0.0"
@@ -3049,8 +3047,6 @@
 
 "@projectreshare/supply@file:../../ui-supply":
   version "2.0.0"
-  dependencies:
-    "@projectreshare/rs" "~2.0.0"
 
 "@rehooks/local-storage@2.4.4", "@rehooks/local-storage@2.4.5", "@rehooks/local-storage@^2.4.4", "@rehooks/local-storage@^2.4.5":
   version "2.4.5"
