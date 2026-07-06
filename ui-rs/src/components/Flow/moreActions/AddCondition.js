@@ -109,7 +109,7 @@ const AddCondition = ({ request, performAction }) => {
                   </Layout>
                 )}
                 <Layout className="padding-top-gutter">
-                  <strong><FormattedMessage id="ui-rs.actions.addNote" /></strong>
+                  <Label><FormattedMessage id="ui-rs.actions.addNote" /></Label>
                 </Layout>
                 <Row>
                   <Col xs={11}>
