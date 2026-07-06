@@ -21,6 +21,7 @@ yarn-error.log*
 .yarn-integrity
 
 # Local config / secrets
+.actrc
 .env
 .env.*
 !.env.example

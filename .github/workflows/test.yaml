@@ -1,0 +1,40 @@
+name: test
+
+on:
+  pull_request:
+  # allows deploy workflows to run these tests as a gating job
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+          cache-dependency-path: yarn.lock
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: prepare
+        run: yarn config set @folio:registry https://repository.folio.org/repository/npm-folio/
+
+      - name: Do yarn install
+        run: yarn install --frozen-lockfile
+
+      - name: Test stripes-reshare
+        run: yarn workspace @projectreshare/stripes-reshare test --ci
+
+      - name: Test ui-rs
+        run: yarn workspace @projectreshare/rs test --ci
+
+      # PR-only: pushes to main already build the full deploy
+      # platform in deploy-resharex.yaml, this lets PRs verify
+      # at least the leaner dev platform builds
+      - name: Build platform-rs-dev
+        if: github.event_name == 'pull_request'
+        run: yarn workspace @projectreshare/platform-rs-dev build

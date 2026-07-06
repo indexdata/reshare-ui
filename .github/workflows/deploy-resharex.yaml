@@ -21,7 +21,7 @@ env:
   AWS_DEFAULT_REGION: 'us-east-1'
 
 jobs:
-  deploy:
+  test:
     # don't run CI if commit includes  [ci skip] or [skip ci]
     if: >-
       github.event_name == 'workflow_dispatch' ||
@@ -29,6 +29,10 @@ jobs:
         !contains(github.event.head_commit.message, '[ci skip]') &&
         !contains(github.event.head_commit.message, '[skip ci]')
       )
+    uses: ./.github/workflows/test.yaml
+
+  deploy:
+    needs: test
 
     runs-on: ubuntu-latest
     steps:
@@ -40,7 +44,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      
+          cache: yarn
+          cache-dependency-path: environments/platform-resharex/yarn.lock
+
       # temporary, so we can clone from git on a private repo
       - name: Set up SSH for private git deps
         uses: webfactory/ssh-agent@v0.9.0
