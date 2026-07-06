@@ -9,6 +9,7 @@ build/
 coverage/
 .nyc_output/
 artifacts/
+.act/
 junit.xml
 
 # Logs and caches
@@ -23,7 +24,10 @@ yarn-error.log*
 .env
 .env.*
 !.env.example
+.input
 .npmrc
+.secrets
+.vars
 *.local.js
 
 # Package tarballs

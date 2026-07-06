@@ -98,6 +98,7 @@ jobs:
         working-directory: ./environments/platform-resharex
 
       - name: upload builds
+        if: ${{ !env.ACT }}
         run: |
           aws s3 sync ./rs1 s3://reshare-bundles/rs1 --acl public-read --delete
           aws s3 sync ./rs2 s3://reshare-bundles/rs2 --acl public-read --delete
