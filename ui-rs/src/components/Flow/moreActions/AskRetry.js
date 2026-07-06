@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Form, Field } from 'react-final-form';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useIsActionPending } from '@projectreshare/stripes-reshare';
-import { Button, Col, Icon, Layout, Modal, ModalFooter, RadioButton, Row, TextArea, TextField } from '@folio/stripes/components';
+import { Button, Col, Icon, Label, Layout, Modal, ModalFooter, RadioButton, Row, TextArea, TextField } from '@folio/stripes/components';
 import { required } from '@folio/stripes/util';
 
 import actionMeta from '../actionMeta';
@@ -51,11 +51,11 @@ const AskRetry = ({ request, performAction }) => {
           onSubmit={onSubmit}
           validate={validate}
           initialValues={{ reasonRetry: SupportedReasonRetry.length === 1 ? SupportedReasonRetry[0] : undefined }}
-          render={({ handleSubmit, submitting, invalid, form }) => (
+          render={({ handleSubmit, submitting, invalid, form, values }) => (
             <form onSubmit={handleSubmit}>
-              <Layout className="padding-top-gutter">
-                <strong><FormattedMessage id="ui-rs.actions.ask-retry.reason" /></strong>
-              </Layout>
+              <Label>
+                <FormattedMessage id="ui-rs.actions.ask-retry.reason" />
+              </Label>
               <Row>
                 <Field
                   name="reasonRetry"
@@ -78,15 +78,15 @@ const AskRetry = ({ request, performAction }) => {
                   name="itemId"
                   label={<FormattedMessage id="ui-rs.actions.ask-retry.itemId" />}
                   component={TextField}
-                  required
+                  required={values.reasonRetry === 'NotFoundAsCited'}
                   autoFocus
                 />
               </Layout>
               <Layout className="padding-top-gutter">
-                <strong><FormattedMessage id="ui-rs.actions.addNote" /></strong>
+                <Label><FormattedMessage id="ui-rs.actions.addNote" /></Label>
               </Layout>
               <Row>
-                <Col xs={11}>
+                <Col xs={12}>
                   <Field name="note" component={TextArea} />
                 </Col>
               </Row>

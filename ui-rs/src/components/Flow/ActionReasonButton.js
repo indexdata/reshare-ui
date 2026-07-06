@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Form, Field } from 'react-final-form';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useIsActionPending } from '@projectreshare/stripes-reshare';
-import { Button, Col, Icon, Layout, Modal, ModalFooter, RadioButton, Row, TextArea } from '@folio/stripes/components';
+import { Button, Col, Icon, Label, Layout, Modal, ModalFooter, RadioButton, Row, TextArea } from '@folio/stripes/components';
 import { required } from '@folio/stripes/util';
 
 import actionMeta from './actionMeta';
@@ -43,7 +43,7 @@ const ActionReasonButton = ({ action, reasons, reasonField, reasonTranslationPre
             <form onSubmit={handleSubmit}>
               <FormattedMessage id={`ui-rs.actions.${action}.confirm`} values={{ id: request.requesterRequestId || request.id, item: request.illRequest?.bibliographicInfo?.title }} />
               <Layout className="padding-top-gutter">
-                <strong><FormattedMessage id={`ui-rs.actions.${action}.reason`} /></strong>
+                <Label><FormattedMessage id={`ui-rs.actions.${action}.reason`} /></Label>
               </Layout>
               <Row>
                 <Field
@@ -64,7 +64,7 @@ const ActionReasonButton = ({ action, reasons, reasonField, reasonTranslationPre
                 />
               </Row>
               <Layout className="padding-top-gutter">
-                <strong><FormattedMessage id="ui-rs.actions.addNote" /></strong>
+                <Label><FormattedMessage id="ui-rs.actions.addNote" /></Label>
               </Layout>
               <Row>
                 <Col xs={11}>
