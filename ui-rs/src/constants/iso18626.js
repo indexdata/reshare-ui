@@ -226,6 +226,13 @@ export const ReasonRetry = [
   'ReqDelMethodNotSupp',
 ];
 
+// The subset of ReasonRetry the broker actually accepts for the ask-retry action
+// today (see crosslink action.go askRetryLenderRequest). Extend as the backend
+// enables more reasons.
+export const SupportedReasonRetry = [
+  'NotFoundAsCited',
+];
+
 export const ReasonUnfilled = [
   'NonCirculating',
   'NotAvailableForILL',
