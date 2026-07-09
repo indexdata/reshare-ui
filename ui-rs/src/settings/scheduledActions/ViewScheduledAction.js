@@ -31,7 +31,6 @@ const ViewScheduledAction = ({ match }) => {
     }),
   });
 
-  // active drives both directions: enable a disabled task, disable an active one.
   const active = data?.active;
   const toggler = useMutation({
     mutationFn: () => okapiKy.post(`broker/batch_actions/${id}/${active ? 'disable' : 'enable'}`),

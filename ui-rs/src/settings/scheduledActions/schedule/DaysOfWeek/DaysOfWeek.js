@@ -4,10 +4,7 @@ import { Button, Label } from '@folio/stripes/components';
 import { WEEK_ORDER, dayName } from '../scheduleExpression';
 import css from './DaysOfWeek.css';
 
-// Custom final-form input (see final-form custom-input docs). Value is an array
-// of cron day-of-week numbers (Sun=0 .. Sat=6) in Monday-first order. Rendered
-// as a row of toggle buttons; the short weekday name shows in the circle while
-// the full name is the accessible label, both localized via Intl.
+// Final Form value is a Monday-first array using JS day numbers (Sun=0 .. Sat=6).
 const DaysOfWeek = ({ id, label, required, input, meta }) => {
   const intl = useIntl();
   const { value = [], onChange, onBlur } = input;
@@ -16,9 +13,9 @@ const DaysOfWeek = ({ id, label, required, input, meta }) => {
   const toggle = (dow) => {
     const next = new Set(selected);
     if (next.has(dow)) next.delete(dow); else next.add(dow);
-    // Re-derive in canonical week order so the stored value is stable.
+    // Rebuild from WEEK_ORDER so toggling never changes value ordering.
     onChange(WEEK_ORDER.filter((d) => next.has(d)));
-    // Mark touched so a "select a day" error can surface once they've interacted.
+    // Surface the required-day error after the group has been used.
     onBlur?.();
   };
 

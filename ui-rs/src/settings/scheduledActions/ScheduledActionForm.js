@@ -1,5 +1,5 @@
-import React from 'react';
-import { Form, Field } from 'react-final-form';
+import React, { useState } from 'react';
+import { Form, Field, useForm } from 'react-final-form';
 import arrayMutators from 'final-form-arrays';
 import { FormattedMessage, useIntl } from 'react-intl';
 import {
@@ -14,37 +14,85 @@ import {
   Select,
   TextField,
 } from '@folio/stripes/components';
+import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 
 import DaysOfWeek from './schedule/DaysOfWeek/DaysOfWeek';
-import { isHourListValid, isMinuteValid } from './schedule/scheduleExpression';
+import { isHourListValid, isMinuteValid, isIntervalValid } from './schedule/scheduleExpression';
+import { recordToFormValues } from './model';
 import actionRegistry from './actions/actionRegistry';
 import css from './ScheduledActionForm.css';
 
-// The common form. The top row pairs the action-type selector with the query;
-// a Schedule section holds the days + times; then the per-action params block
-// chosen from the registry by the current actionName. Create/Edit supply
-// initialValues + onSubmit + labels. Renders a bare Pane — the settings
-// framework provides the enclosing Paneset.
+// Templates seed the form but are not themselves submitted.
+const TemplatePicker = ({ templates }) => {
+  const intl = useIntl();
+  const form = useForm();
+  const [selected, setSelected] = useState('');
+  if (!templates.length) return null;
+
+  const options = [
+    { value: '', label: intl.formatMessage({ id: 'ui-rs.settings.scheduledActions.template.placeholder' }) },
+    ...templates.map((t, i) => ({ value: String(i), label: t.title })),
+  ];
+
+  const onChange = (e) => {
+    const idx = e.target.value;
+    setSelected(idx);
+    if (idx === '') return;
+    // Replacing actionParams prevents parameters leaking between action types.
+    const values = recordToFormValues(templates[Number(idx)]);
+    form.batch(() => {
+      Object.entries(values).forEach(([field, value]) => form.change(field, value));
+    });
+  };
+
+  return (
+    <Row>
+      <Col xs={12} md={8}>
+        <Select
+          id="scheduled-action-template"
+          dataOptions={options}
+          value={selected}
+          onChange={onChange}
+          label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.template" />}
+        />
+      </Col>
+    </Row>
+  );
+};
+
 const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, submitting, editing, unsupportedSchedule }) => {
   const intl = useIntl();
+  // Template lookup is optional; failure leaves the manual form usable.
+  const { data: templates } = useOkapiQuery(
+    'broker/state_model/batch_actions',
+    { enabled: !editing, useErrorBoundary: false }
+  );
   const actionOptions = Object.keys(actionRegistry).map(name => ({
     value: name,
     label: intl.formatMessage({ id: `ui-rs.settings.scheduledActions.action.${name}` }),
   }));
+  const frequencyOptions = ['weekly', 'hourly', 'minutely'].map(freq => ({
+    value: freq,
+    label: intl.formatMessage({ id: `ui-rs.settings.scheduledActions.frequency.${freq}` }),
+  }));
 
-  // A schedule needs a query, at least one day and one hour, and a minute < 60
-  // (blank minute defaults to 0). Empty days would otherwise emit an RRULE that
-  // fires weekly on an arbitrary weekday rather than "every day", so we require
-  // an explicit selection.
   const msg = (id) => intl.formatMessage({ id: `ui-rs.settings.scheduledActions.validate.${id}` });
   const validate = (values) => {
     const errors = {};
     if (!values.batchQuery || !values.batchQuery.trim()) errors.batchQuery = msg('batchQuery');
-    if (!values.days || values.days.length === 0) errors.days = msg('days');
-    const hours = (values.hours ?? '').toString().trim();
-    if (!hours) errors.hours = msg('hoursRequired');
-    else if (!isHourListValid(hours)) errors.hours = msg('hoursInvalid');
-    if (!isMinuteValid(values.minute)) errors.minute = msg('minute');
+    const frequency = values.frequency ?? 'weekly';
+    if (frequency === 'minutely') {
+      if (!isIntervalValid(values.interval)) errors.interval = msg('intervalMinutes');
+    } else if (frequency === 'hourly') {
+      if (!isMinuteValid(values.minute)) errors.minute = msg('minute');
+    } else {
+      // Without BYDAY, a weekly RRULE inherits DTSTART's weekday.
+      if (!values.days || values.days.length === 0) errors.days = msg('days');
+      const hours = (values.hours ?? '').toString().trim();
+      if (!hours) errors.hours = msg('hoursRequired');
+      else if (!isHourListValid(hours)) errors.hours = msg('hoursInvalid');
+      if (!isMinuteValid(values.minute)) errors.minute = msg('minute');
+    }
     return errors;
   };
 
@@ -102,6 +150,7 @@ const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLa
                   />
                 </MessageBanner>
               )}
+              {!editing && <TemplatePicker templates={templates ?? []} />}
               <Row>
                 <Col xs={12} md={4}>
                   <Field name="actionName">
@@ -116,8 +165,7 @@ const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLa
                         onBlur={input.onBlur}
                         onFocus={input.onFocus}
                         onChange={(e) => {
-                          // params are owned by the action type; drop the prior
-                          // action's keys so we never submit foreign actionParams
+                          // Parameters belong to one action type.
                           input.onChange(e);
                           form.change('actionParams', {});
                         }}
@@ -142,41 +190,92 @@ const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLa
                   label={<FormattedMessage id="ui-rs.settings.scheduledActions.schedule" />}
                 >
                   <Row>
-                    <Col xs={12} md={8}>
-                      <Field
-                        id="scheduled-action-days"
-                        name="days"
-                        required
-                        component={DaysOfWeek}
-                        label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.days" />}
-                      />
-                    </Col>
                     <Col xs={12} md={4}>
-                      <Field
-                        id="scheduled-action-hours"
-                        name="hours"
-                        required
-                        marginBottom0
-                        aria-describedby="scheduled-action-hours-help"
-                        component={TextField}
-                        label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.hours" />}
-                      />
-                      <div id="scheduled-action-hours-help" className={css.help}>
-                        <FormattedMessage id="ui-rs.settings.scheduledActions.field.hoursHelp" />
-                      </div>
-                      <Field
-                        id="scheduled-action-minute"
-                        name="minute"
-                        marginBottom0
-                        aria-describedby="scheduled-action-minute-help"
-                        component={TextField}
-                        label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.minute" />}
-                      />
-                      <div id="scheduled-action-minute-help" className={css.help}>
-                        <FormattedMessage id="ui-rs.settings.scheduledActions.field.minuteHelp" />
-                      </div>
+                      <Field name="frequency">
+                        {({ input }) => (
+                          <Select
+                            id="scheduled-action-frequency"
+                            dataOptions={frequencyOptions}
+                            label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.frequency" />}
+                            value={input.value}
+                            onBlur={input.onBlur}
+                            onFocus={input.onFocus}
+                            onChange={input.onChange}
+                          />
+                        )}
+                      </Field>
                     </Col>
                   </Row>
+
+                  {values.frequency === 'minutely' && (
+                    <Row>
+                      <Col xs={12} md={4}>
+                        <Field
+                          id="scheduled-action-interval"
+                          name="interval"
+                          component={TextField}
+                          label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.interval" />}
+                        />
+                      </Col>
+                    </Row>
+                  )}
+
+                  {values.frequency === 'hourly' && (
+                    <Row>
+                      <Col xs={12} md={4}>
+                        <Field
+                          id="scheduled-action-minute"
+                          name="minute"
+                          marginBottom0
+                          aria-describedby="scheduled-action-minute-help"
+                          component={TextField}
+                          label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.minute" />}
+                        />
+                        <div id="scheduled-action-minute-help" className={css.help}>
+                          <FormattedMessage id="ui-rs.settings.scheduledActions.field.minuteHelp" />
+                        </div>
+                      </Col>
+                    </Row>
+                  )}
+
+                  {(values.frequency ?? 'weekly') === 'weekly' && (
+                    <Row>
+                      <Col xs={12} md={8}>
+                        <Field
+                          id="scheduled-action-days"
+                          name="days"
+                          required
+                          component={DaysOfWeek}
+                          label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.days" />}
+                        />
+                      </Col>
+                      <Col xs={12} md={4}>
+                        <Field
+                          id="scheduled-action-hours"
+                          name="hours"
+                          required
+                          marginBottom0
+                          aria-describedby="scheduled-action-hours-help"
+                          component={TextField}
+                          label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.hours" />}
+                        />
+                        <div id="scheduled-action-hours-help" className={css.help}>
+                          <FormattedMessage id="ui-rs.settings.scheduledActions.field.hoursHelp" />
+                        </div>
+                        <Field
+                          id="scheduled-action-minute"
+                          name="minute"
+                          marginBottom0
+                          aria-describedby="scheduled-action-minute-help"
+                          component={TextField}
+                          label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.minute" />}
+                        />
+                        <div id="scheduled-action-minute-help" className={css.help}>
+                          <FormattedMessage id="ui-rs.settings.scheduledActions.field.minuteHelp" />
+                        </div>
+                      </Col>
+                    </Row>
+                  )}
                 </Accordion>
 
                 {ParamsComponent && (
