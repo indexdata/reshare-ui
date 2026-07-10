@@ -9,9 +9,11 @@ import { buildBatchActionBody } from './model';
 
 const INITIAL_VALUES = {
   actionName: 'email-pullslips',
+  frequency: 'weekly',
   days: [],
   hours: '',
   minute: 0,
+  interval: '',
   batchQuery: '',
   actionParams: { includePdf: false },
 };

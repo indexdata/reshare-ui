@@ -13,7 +13,6 @@ import {
   TextField,
 } from '@folio/stripes/components';
 
-// Per-action settings for the `email-pullslips` action
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EmailField = (props) => <TextField type="email" {...props} />;
 
@@ -22,18 +21,13 @@ const EmailPullslipsParams = () => {
   const form = useForm();
   const msg = (id) => intl.formatMessage({ id: `ui-rs.settings.scheduledActions.validate.${id}` });
 
-  // Start with one empty recipient row so the field is visible and labelled up
-  // front, rather than an empty-state message. Runs on mount (including when the
-  // action is switched to email-pullslips); leaves a loaded recipient list alone.
+  // Show one recipient field instead of the repeatable field's empty state.
   useEffect(() => {
     const to = form.getState().values?.actionParams?.to;
     if (!Array.isArray(to) || to.length === 0) form.mutators.push('actionParams.to', '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // The broker requires at least one recipient and rejects malformed addresses.
-  // Surface the per-address check on each row, and the "at least one" rule on the
-  // array as a whole, rather than letting either fail at run time.
   const validateRecipientCount = (value) => ((value?.length ?? 0) === 0 ? msg('recipients') : undefined);
   const validateEmail = (value) => (value && EMAIL.test(value.trim()) ? undefined : msg('recipientsInvalid'));
   const validateRequired = (id) => (value) => (value && value.trim() ? undefined : msg(id));
@@ -95,7 +89,6 @@ const EmailPullslipsParams = () => {
 
 export { EmailPullslipsParams };
 
-// Read-only counterpart for the detail view.
 export const EmailPullslipsView = ({ actionParams }) => (
   <>
     <KeyValue

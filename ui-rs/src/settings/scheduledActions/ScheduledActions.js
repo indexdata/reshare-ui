@@ -65,10 +65,7 @@ const ScheduledActionsList = ({ match, history }) => {
   );
 };
 
-// Settings renders this page at a non-exact route, so it also receives the
-// /new, /:id and /:id/edit sub-paths; we discriminate with a nested Switch. The
-// sub-routes close via useCloseDirect, which returns to the natural previous
-// location when navigated to in-app and degrades to upNLevels otherwise.
+// The settings route is non-exact, so a nested Switch handles its sub-routes.
 const ScheduledActions = ({ match }) => (
   <Switch>
     <Route

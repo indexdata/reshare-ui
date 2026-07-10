@@ -3,9 +3,7 @@ import { Field } from 'react-final-form';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { Col, KeyValue, Row, TextField } from '@folio/stripes/components';
 
-// A Go time.ParseDuration string limited to second/minute/hour units: one or
-// more number+unit segments, e.g. "168h", "1.5h", "72h3m30s". No sign — a
-// negative aging interval is meaningless here.
+// Positive Go duration using second/minute/hour units, e.g. "72h3m30s".
 const GO_DURATION = /^([0-9]*\.?[0-9]+(s|m|h))+$/;
 
 const AgeRequestsParams = () => {
@@ -33,7 +31,6 @@ const AgeRequestsParams = () => {
 
 export { AgeRequestsParams };
 
-// Read-only counterpart for the detail view.
 export const AgeRequestsView = ({ actionParams }) => (
   <KeyValue
     label={<FormattedMessage id="ui-rs.settings.scheduledActions.params.interval" />}

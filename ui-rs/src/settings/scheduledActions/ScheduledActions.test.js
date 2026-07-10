@@ -15,10 +15,7 @@ jest.mock('@folio/stripes/core', () => require('../../test/stripesCore').makeStr
 
 const PATH = '/settings/rs/scheduled-actions';
 
-// Everything else falls back to its key (or, for the action name, the raw
-// fixture value via defaultMessage). scheduleSummary is the exception: it's an
-// ICU template the formatter feeds {days}/{times} into, so the test must supply
-// the format itself — the key-fallback would drop the interpolated values.
+// The schedule summary needs an ICU template to preserve interpolated values.
 const messages = {
   'ui-rs.settings.scheduledActions.scheduleSummary': '{days} at {times}',
 };
@@ -44,11 +41,8 @@ describe('ScheduledActions list', () => {
     renderList();
 
     await waitFor(() => expect(screen.getByText('email-pullslips')).toBeInTheDocument());
-    // Schedule RRULE is shown via the human-readable describeSchedule().
     expect(screen.getByText('Mon, Wed at 06:00, 13:00')).toBeInTheDocument();
-    // The active flag renders as a readable status.
     expect(screen.getByText('ui-rs.settings.scheduledActions.status.active')).toBeInTheDocument();
-    // The list queried the broker batch-actions endpoint.
     expect(mockOkapi.mock.calls.some(([path]) => path === 'broker/batch_actions')).toBe(true);
   });
 
@@ -67,7 +61,6 @@ describe('ScheduledActions list', () => {
 
     renderList();
 
-    // Row click opens the view page, where the menu offers Disable for an active action.
     fireEvent.click(await screen.findByText('email-pullslips'));
     fireEvent.click(await screen.findByRole('button', { name: 'stripes-components.paneMenuActionsToggleLabel' }));
     fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.scheduledActions.disable' }));

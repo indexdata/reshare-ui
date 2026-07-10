@@ -1,16 +1,11 @@
-/* The column fills its grid cell's height (the cell is stretched to the row's
-   tallest sibling), so the pills can center in whatever vertical space is left
-   below the label. With no definite parent height this resolves to auto and the
-   centering is a harmless no-op. */
+/* Fill the grid cell so the buttons can center against a taller sibling field. */
 .field {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-/* A wrapping row of day toggles (stripes Buttons). The buttons bring their own
-   primary/default styling; we own the layout: flex:1 lets the row take the
-   leftover height, and the align/justify rules center the pills both ways. */
+/* flex:1 takes the space below the label; wrapping keeps all days reachable. */
 .days {
   flex: 1 1 auto;
   display: flex;
@@ -21,15 +16,13 @@
   gap: 0.5rem;
 }
 
-/* Buttons bring their own primary/default styling; we only tighten the wide
-   default side padding back to a circle-ish footprint for short day names. */
+/* Undo the wide default button padding for compact weekday controls. */
 .days button {
   min-width: 2.5rem;
   min-height: 2.5rem;
   padding: 0 0.5rem;
 }
 
-/* Validation message, matching stripes' form-field error styling. */
 .error {
   color: var(--error);
   font-size: 0.8125rem;

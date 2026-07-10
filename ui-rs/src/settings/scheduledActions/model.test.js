@@ -1,10 +1,7 @@
 import { buildBatchActionBody, recordToFormValues } from './model';
 import { scheduleToExpression, scheduleFromExpression } from './schedule/scheduleExpression';
 
-// model.js only composes/decomposes the body around the schedule converter, so
-// these assert the wiring (right fields in the right slots, passthrough,
-// defaults) against the converter's own output rather than a literal RRULE —
-// the wire format is the converter's contract to test, not the model's.
+// Wire-format details belong to scheduleExpression tests.
 describe('scheduledActions model', () => {
   describe('buildBatchActionBody', () => {
     it('composes action type, schedule, batchQuery and namespaced params', () => {
