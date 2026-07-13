@@ -698,6 +698,7 @@
   "settings.scheduledActions.action.email-pullslips": "Email pull slips",
   "settings.scheduledActions.action.request-aging": "Age requests",
   "settings.scheduledActions.params.includePdf": "Attach pull slip PDF to email",
+  "settings.scheduledActions.params.isHtml": "Send email body as HTML",
   "settings.scheduledActions.params.to": "Recipient email addresses",
   "settings.scheduledActions.params.addRecipient": "Add recipient",
   "settings.scheduledActions.params.subject": "Subject",

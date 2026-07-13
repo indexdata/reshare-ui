@@ -15,7 +15,6 @@ const INITIAL_VALUES = {
   minute: 0,
   interval: '',
   batchQuery: '',
-  actionParams: { includePdf: false },
 };
 
 const CreateScheduledAction = () => {

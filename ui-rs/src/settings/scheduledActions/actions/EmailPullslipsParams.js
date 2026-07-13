@@ -76,6 +76,13 @@ const EmailPullslipsParams = () => {
           label={<FormattedMessage id="ui-rs.settings.scheduledActions.params.body" />}
         />
         <Field
+          id="scheduled-action-email-isHtml"
+          name="actionParams.isHtml"
+          type="checkbox"
+          component={Checkbox}
+          label={<FormattedMessage id="ui-rs.settings.scheduledActions.params.isHtml" />}
+        />
+        <Field
           id="scheduled-action-email-includePdf"
           name="actionParams.includePdf"
           type="checkbox"
@@ -102,6 +109,10 @@ export const EmailPullslipsView = ({ actionParams }) => (
     <KeyValue
       label={<FormattedMessage id="ui-rs.settings.scheduledActions.params.body" />}
       value={actionParams?.body}
+    />
+    <KeyValue
+      label={<FormattedMessage id="ui-rs.settings.scheduledActions.params.isHtml" />}
+      value={<FormattedMessage id={actionParams?.isHtml ? 'ui-rs.yes' : 'ui-rs.no'} />}
     />
     <KeyValue
       label={<FormattedMessage id="ui-rs.settings.scheduledActions.params.includePdf" />}
