@@ -29,9 +29,14 @@ const TemplatePicker = ({ templates }) => {
   const [selected, setSelected] = useState('');
   if (!templates.length) return null;
 
+  const templateLabel = (t) => intl.formatMessage({
+    id: `ui-rs.settings.scheduledActions.templates.${t.titleKey}`,
+    defaultMessage: t.title,
+  });
+
   const options = [
     { value: '', label: intl.formatMessage({ id: 'ui-rs.settings.scheduledActions.template.placeholder' }) },
-    ...templates.map((t, i) => ({ value: String(i), label: t.title })),
+    ...templates.map((t, i) => ({ value: String(i), label: templateLabel(t) })),
   ];
 
   const onChange = (e) => {

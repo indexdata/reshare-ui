@@ -12,6 +12,7 @@ jest.mock('@folio/stripes/core', () => require('../../test/stripesCore').makeStr
 
 const TEMPLATES = [
   {
+    titleKey: 'email-pullslips',
     title: 'Email pull slips ready to ship',
     actionName: 'email-pullslips',
     batchQuery: 'side = lending and state = WILL_SUPPLY',
@@ -19,6 +20,7 @@ const TEMPLATES = [
     actionParams: { to: ['staff@example.com'], subject: 'Pull slips', body: 'See attached', includePdf: true },
   },
   {
+    titleKey: 'request-aging-express',
     title: 'Request aging of express requests',
     actionName: 'request-aging',
     batchQuery: '(state = VALIDATED or state = WILL_SUPPLY) and service_level = Express',
@@ -42,6 +44,7 @@ const ATTACH_PDF = 'ui-rs.settings.scheduledActions.params.includePdf';
 const RECIPIENT_0 = 'scheduled-action-email-to-actionParams.to[0]';
 const messages = {
   'ui-rs.settings.scheduledActions.unsupportedSchedule': '{schedule}',
+  'ui-rs.settings.scheduledActions.templates.email-pullslips': 'Zettel mailen',
 };
 
 const byId = (id) => document.getElementById(id);
@@ -164,6 +167,14 @@ describe('ScheduledActionForm', () => {
     expect(byId('scheduled-action-age-interval').value).toBe('2h');
     expect(byId('scheduled-action-frequency').value).toBe('minutely');
     expect(byId('scheduled-action-interval').value).toBe('15');
+  });
+
+  it('labels templates by titleKey, falling back to the title the broker sent', async () => {
+    renderForm(jest.fn());
+
+    await waitFor(() => expect(byId('scheduled-action-template')).toBeInTheDocument());
+    expect(screen.getByRole('option', { name: 'Zettel mailen' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: TEMPLATES[1].title })).toBeInTheDocument();
   });
 
   it('in hourly mode, save gates on a query and a valid minute (no days/hours)', async () => {
