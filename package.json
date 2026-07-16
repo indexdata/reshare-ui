@@ -16,7 +16,7 @@
     "@folio/jest-config-stripes": "~3.0.2",
     "@folio/stripes": "~10.0.0",
     "eslint": "^7.32.0",
-    "history": "^4.10.1",
+    "history": "^5.3.0",
     "react": "~18.2.0",
     "react-dom": "~18.2.0",
     "react-intl": "^7.0.0",
