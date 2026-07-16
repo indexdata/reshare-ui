@@ -20,7 +20,7 @@
     "@projectreshare/stripes-reshare": "~3.0.0",
     "classnames": "^2.2.6",
     "final-form": "^4.2.0",
-    "final-form-arrays": "^3.0.2",
+    "final-form-arrays": "^4.0.1",
     "json-stable-stringify": "^1.0.1",
     "ky": "^0.23.0",
     "lodash": "^4.17.4",
