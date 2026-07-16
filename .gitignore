@@ -4,6 +4,8 @@ node_modules/
 output/
 dist/
 build/
+# development env yarn locks
+environments/*/yarn.lock
 
 # Test output
 coverage/
