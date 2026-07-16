@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import { Pane } from '@folio/stripes/components';
 import { FormattedMessage } from 'react-intl';
 import { useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
@@ -78,10 +78,11 @@ const fieldMap = [
 
 const EditLMSConfigRoute = () => {
   const { id } = useParams();
+  const location = useLocation();
 
   const operation = id ? EDIT : CREATE;
 
-  const close = useCloseDirect(operation === CREATE ? '/rsdir/entries' : `/rsdir/entries/view/${id}`);
+  const close = useCloseDirect(operation === CREATE ? `/rsdir/entries${location.search}` : `/rsdir/entries/entry-points/${id}/edit${location.search}`);
 
   const entryQuery = useOkapiQuery(`rsdir/entries/by-id/${id}`, {
     staleTime: STALE_QUERY_TIME,

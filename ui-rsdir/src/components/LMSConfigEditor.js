@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useQueryClient } from 'react-query';
-import { useOkapiKy } from '@folio/stripes/core';
+import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
 import {
   Button,
   Col,
@@ -64,6 +64,7 @@ const valuesFromEntry = (entry, fieldMapping) => fieldMapping.reduce((acc, field
 const LMSConfigEditor = ({ id, entry: initialEntry, fieldMapping = [] }) => {
   const ky = useOkapiKy();
   const intl = useIntl();
+  const callout = useContext(CalloutContext);
   const queryClient = useQueryClient();
   const [entry, setEntry] = useState(initialEntry);
   const [values, setValues] = useState(() => valuesFromEntry(initialEntry, fieldMapping));
@@ -126,6 +127,10 @@ const LMSConfigEditor = ({ id, entry: initialEntry, fieldMapping = [] }) => {
         setEntry(nextEntry);
         queryClient.setQueryData(entryPath(id), nextEntry);
         queryClient.invalidateQueries(entryPath(id));
+        callout.sendCallout({
+          type: 'success',
+          message: <FormattedMessage id="ui-rsdir.lmsConfig.edit.success" />,
+        });
       })
       .catch(error => {
         setFieldErrors(current => ({

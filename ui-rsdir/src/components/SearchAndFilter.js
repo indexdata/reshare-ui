@@ -2,13 +2,21 @@ import React from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { Button, Icon, SearchField } from '@folio/stripes/components';
 
-const SearchAndFilter = ({ resetAll, searchHandlers, searchValue, searchChanged }) => {
+const defaultSearchableIndexes = [
+  { label: 'allFields', value: '' },
+  { label: 'name', value: 'name' },
+];
+
+const SearchAndFilter = ({
+  resetAll,
+  searchHandlers,
+  searchValue,
+  searchChanged,
+  searchableIndexes = defaultSearchableIndexes,
+}) => {
   const intl = useIntl();
 
-  const searchableIndexes = [
-    { label: 'allFields', value: '' },
-    { label: 'name', value: 'name' },
-  ].map(x => ({
+  const indexes = searchableIndexes.map(x => ({
     label: intl.formatMessage({ id: `ui-rsdir.index.${x.label}` }),
     value: x.value,
   }));
@@ -21,7 +29,7 @@ const SearchAndFilter = ({ resetAll, searchHandlers, searchValue, searchChanged 
         indexName="qindex"
         onChange={searchHandlers.query}
         onClear={searchHandlers.reset}
-        searchableIndexes={searchableIndexes}
+        searchableIndexes={indexes}
         selectedIndex={searchValue.qindex}
         onChangeIndex={searchHandlers.query}
         value={searchValue.query}

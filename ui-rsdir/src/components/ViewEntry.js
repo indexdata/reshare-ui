@@ -13,20 +13,30 @@ import {
   PaneMenu,
   Row,
 } from '@folio/stripes/components';
-import { useCloseDirect, upNLevels } from '@projectreshare/stripes-reshare';
+import { useCloseDirect, upNLevels, useOkapiQuery } from '@projectreshare/stripes-reshare';
 
-const ViewEntry = ({ entry }) => {
+const ViewEntry = ({
+  entry,
+  closePath,
+  isEmbedded = false,
+  showActions = true,
+}) => {
   const location = useLocation();
   const history = useHistory();
   const intl = useIntl();
-  const close = useCloseDirect(upNLevels(location, 2));
+  const close = useCloseDirect(closePath || upNLevels(location, 2));
+  const parentQuery = useOkapiQuery(`rsdir/entries/by-id/${entry.parent}`, {
+    staleTime: 2 * 60 * 1000,
+    enabled: !!entry.parent,
+  });
+  const parentValue = parentQuery.data?.name || parentQuery.data?.id || entry.parent;
 
   const handleEdit = () => {
-    history.push(`/rsdir/entries/edit/${entry.id}`);
+    history.push(`/rsdir/entries/edit/${entry.id}${location.search}`);
   };
 
   const handleLMSEdit = () => {
-    history.push(`/rsdir/entries/lmsconfig/edit/${entry.id}`);
+    history.push(`/rsdir/entries/lmsconfig/edit/${entry.id}${location.search}`);
   };
 
   const formatSymbols = (symbols) => {
@@ -65,7 +75,7 @@ const ViewEntry = ({ entry }) => {
             <FormattedMessage id="ui-rsdir.lmsConfig.header" />
           </Headline>
         }
-        headerEnd={
+        headerEnd={showActions &&
           <Button
             id="clickable-edit-entry-lmsconfig"
             onClick={handleLMSEdit}
@@ -271,13 +281,126 @@ const ViewEntry = ({ entry }) => {
     );
   };
 
+  const content = (
+    <AccordionSet>
+      <Accordion
+        id="directory-entry-info"
+        label={<FormattedMessage id="ui-rsdir.entries.info" />}
+      >
+        <Row>
+          <Col xs={4}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.entry.name" />}
+              value={entry.name}
+            />
+          </Col>
+          <Col xs={4}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.entry.type" />}
+              value={entry.type}
+            />
+          </Col>
+          { entry.parent &&
+            <Col xs={4}>
+              <KeyValue
+                label={<FormattedMessage id="ui-rsdir.entry.parent" />}
+                value={parentValue}
+              />
+            </Col>
+          }
+        </Row>
+        <Row>
+          <Col xs={12}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.entry.description" />}
+              value={entry.description}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.entry.organizationId" />}
+              value={entry.organizationId}
+            />
+          </Col>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.entry.contactName" />}
+              value={entry.contactName}
+            />
+          </Col>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.entry.email" />}
+              value={entry.email}
+            />
+          </Col>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.entry.phoneNumber" />}
+              value={entry.phoneNumber}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <Col xs={4}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.entry.symbols" />}
+              value={formatSymbols(entry.symbols)}
+            />
+          </Col>
+          <Col xs={4}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.entry.networks" />}
+              value={formatNetworks(entry.networks)}
+            />
+          </Col>
+          <Col xs={4}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.entry.tiers" />}
+              value={formatTiers(entry.tiers)}
+            />
+          </Col>
+        </Row>
+        { entry.addresses &&
+          <Row>
+            { entry.addresses.map((address) => {
+              return (<React.Fragment key={address.id}>{formatAddress(address)}</React.Fragment>);
+            })}
+          </Row>
+        }
+        { entry.closures &&
+          <Row>
+            { entry.closures.map((it) => { return (<React.Fragment key={it.id}>{formatClosure(it)}</React.Fragment>); }) }
+          </Row>
+        }
+        { entry.lmsConfig &&
+          <Accordion
+            id="directory-entry-lms-config"
+            closedByDefault
+            label={<FormattedMessage id="ui-rsdir.viewentry.lmsConfig" />}
+          >
+            <Row>
+              { formatLMSConfig(entry.lmsConfig) }
+            </Row>
+          </Accordion>
+        }
+      </Accordion>
+    </AccordionSet>
+  );
+
+  if (isEmbedded) {
+    return content;
+  }
+
   return (
     <Pane
       defaultWidth="fill"
       paneTitle={entry.name || intl.formatMessage({ id: 'ui-rsdir.entries.info' })}
       onClose={close}
       dismissible
-      lastMenu={
+      lastMenu={showActions &&
         <PaneMenu>
           <Button
             id="clickable-edit-entry"
@@ -290,104 +413,7 @@ const ViewEntry = ({ entry }) => {
         </PaneMenu>
       }
     >
-      <AccordionSet>
-        <Accordion
-          id="directory-entry-info"
-          label={<FormattedMessage id="ui-rsdir.entries.info" />}
-        >
-          <Row>
-            <Col xs={4}>
-              <KeyValue
-                label={<FormattedMessage id="ui-rsdir.entry.name" />}
-                value={entry.name}
-              />
-            </Col>
-            <Col xs={4}>
-              <KeyValue
-                label={<FormattedMessage id="ui-rsdir.entry.type" />}
-                value={entry.type}
-              />
-            </Col>
-          </Row>
-          <Row>
-            <Col xs={12}>
-              <KeyValue
-                label={<FormattedMessage id="ui-rsdir.entry.description" />}
-                value={entry.description}
-              />
-            </Col>
-          </Row>
-          <Row>
-            <Col xs={3}>
-              <KeyValue
-                label={<FormattedMessage id="ui-rsdir.entry.organizationId" />}
-                value={entry.organizationId}
-              />
-            </Col>
-            <Col xs={3}>
-              <KeyValue
-                label={<FormattedMessage id="ui-rsdir.entry.contactName" />}
-                value={entry.contactName}
-              />
-            </Col>
-            <Col xs={3}>
-              <KeyValue
-                label={<FormattedMessage id="ui-rsdir.entry.email" />}
-                value={entry.email}
-              />
-            </Col>
-            <Col xs={3}>
-              <KeyValue
-                label={<FormattedMessage id="ui-rsdir.entry.phoneNumber" />}
-                value={entry.phoneNumber}
-              />
-            </Col>
-          </Row>
-          <Row>
-            <Col xs={4}>
-              <KeyValue
-                label={<FormattedMessage id="ui-rsdir.entry.symbols" />}
-                value={formatSymbols(entry.symbols)}
-              />
-            </Col>
-            <Col xs={4}>
-              <KeyValue
-                label={<FormattedMessage id="ui-rsdir.entry.networks" />}
-                value={formatNetworks(entry.networks)}
-              />
-            </Col>
-            <Col xs={4}>
-              <KeyValue
-                label={<FormattedMessage id="ui-rsdir.entry.tiers" />}
-                value={formatTiers(entry.tiers)}
-              />
-            </Col>
-          </Row>
-          { entry.addresses &&
-            <Row>
-              { entry.addresses.map((address) => {
-                return (<React.Fragment key={address.id}>{formatAddress(address)}</React.Fragment>);
-              })}
-            </Row>
-          }
-          { entry.closures &&
-            <Row>
-              { entry.closures.map((it) => { return (<React.Fragment key={it.id}>{formatClosure(it)}</React.Fragment>); }) }
-            </Row>
-          }
-          { entry.lmsConfig &&
-            <Accordion
-              id="directory-entry-lms-config"
-              closedByDefault
-              label={<FormattedMessage id="ui-rsdir.viewentry.lmsConfig" />}
-            >
-              <Row>
-                { formatLMSConfig(entry.lmsConfig) }
-              </Row>
-            </Accordion>
-          }
-        </Accordion>
-      </AccordionSet>
+      {content}
     </Pane>
   );
 };

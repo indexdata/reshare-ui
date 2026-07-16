@@ -38,6 +38,7 @@ const Entries = ({
 
   const resultsFormatter = {
     name: (entry) => entry.name,
+    type: (entry) => entry.type,
     symbols: (entry) => {
       if (!entry.symbols || entry.symbols.length === 0) return '';
       return entry.symbols
@@ -88,16 +89,17 @@ const Entries = ({
           autosize
           id="entries-list"
           contentData={sparseEntries}
-          visibleColumns={['name', 'symbols']}
+          visibleColumns={['name', 'type', 'symbols']}
           columnMapping={{
             name: intl.formatMessage({ id: 'ui-rsdir.entry.name' }),
+            type: intl.formatMessage({ id: 'ui-rsdir.entry.type' }),
             symbols: intl.formatMessage({ id: 'ui-rsdir.entry.symbols' }),
           }}
           formatter={resultsFormatter}
           isEmptyMessage={intl.formatMessage({ id: 'stripes-smart-components.sas.noResults.noTerms' })}
           loading={entriesQuery.isFetching}
           onNeedMoreData={fetchMore}
-          onRowClick={(_e, rowData) => history.push(`${match.url}/view/${rowData.id}${location.search}`)}
+          onRowClick={(_e, rowData) => history.push(`${match.url}/entry-points/${rowData.id}${location.search}`)}
           pageAmount={perPage}
           pagingType={MCLPagingTypes.PREV_NEXT}
           totalCount={totalCount}
