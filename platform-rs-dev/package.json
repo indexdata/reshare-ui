@@ -18,7 +18,7 @@
     "@projectreshare/request": "~2.0.0",
     "@projectreshare/rs": "~2.0.0",
     "moment": "~2.29.0",
-    "react": "~18.2.0",
+    "react": "~18.3.1",
     "react-dom": "~18.2.0",
     "react-intl": "^7.1.10",
     "react-query": "^3.13.0",
