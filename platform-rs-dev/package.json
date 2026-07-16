@@ -17,16 +17,16 @@
     "@projectreshare/supply": "~2.0.0",
     "@projectreshare/request": "~2.0.0",
     "@projectreshare/rs": "~2.0.0",
-    "moment": "~2.29.0",
-    "react": "~18.2.0",
-    "react-dom": "~18.2.0",
+    "moment": "~2.30.1",
+    "react": "~18.3.1",
+    "react-dom": "~18.3.1",
     "react-intl": "^7.1.10",
     "react-query": "^3.13.0",
     "react-redux": "^8.0.5",
     "react-router": "^5.2.0",
     "react-router-dom": "^5.2.0",
     "redux": "^4.0.5",
-    "rrule": "2.6.4"
+    "rrule": "2.8.1"
   },
   "devDependencies": {
     "@folio/stripes-cli": "~4.0.0"
