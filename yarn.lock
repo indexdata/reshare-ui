@@ -2985,15 +2985,10 @@
   resolved "https://registry.yarnpkg.com/@polka/url/-/url-1.0.0-next.29.tgz#5a40109a1ab5f84d6fd8fc928b19f367cbe7e7b1"
   integrity sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==
 
-"@rehooks/local-storage@2.4.4":
+"@rehooks/local-storage@2.4.4", "@rehooks/local-storage@^2.4.4":
   version "2.4.4"
   resolved "https://registry.yarnpkg.com/@rehooks/local-storage/-/local-storage-2.4.4.tgz#ccf40f60c2dcbab86dc88f9e3ea898d1fb8bea2d"
   integrity sha512-zE+kfOkG59n/1UTxdmbwktIosclr67Nlbf2MzUJ9mNtCSypVscNHeD1qT6JCSo5Pjj8DO893IKWNLJqKKzDL/Q==
-
-"@rehooks/local-storage@^2.4.4":
-  version "2.4.5"
-  resolved "https://registry.yarnpkg.com/@rehooks/local-storage/-/local-storage-2.4.5.tgz#92c773ce623e168274557499679582cd32749f77"
-  integrity sha512-3Q4KtiUBaKoIDRK72BWfAy50ul6hbw29f/M7tyCzlMe2FbSsiQNok0WGeBLaYj4T2PJ7JMSJlSbUGY8RNsImmw==
 
 "@simple-git/args-pathspec@^1.0.3":
   version "1.0.3"
@@ -7415,7 +7410,7 @@ graphemer@^1.4.0:
   resolved "https://registry.yarnpkg.com/graphemer/-/graphemer-1.4.0.tgz#fb2f1d55e0e3a1849aeffc90c4fa0dd53a0e66c6"
   integrity sha512-EtKwoO6kxCL9WO5xipiHTZlSzBm7WLT627TqC/uVRd0HKmq8NXyebnNYxDoBi7wt8eTWrUrKXCOVaFq9x1kgag==
 
-graphql-tag@^2.12.6, graphql-tag@^2.5.0:
+graphql-tag@^2.12.6:
   version "2.12.7"
   resolved "https://registry.yarnpkg.com/graphql-tag/-/graphql-tag-2.12.7.tgz#4c82de0af91679b1940f149819fc8351801ed130"
   integrity sha512-xnE/NFzy+0eIesvAsREJZ284zTl/wYuBAvpsFSDhRGRdRHdnE90M21Q3xAWyYInb0J756c6x0pIQ62+vtvOs1Q==
@@ -9387,6 +9382,11 @@ ky@^0.33.3:
   version "0.33.3"
   resolved "https://registry.yarnpkg.com/ky/-/ky-0.33.3.tgz#bf1ad322a3f2c3428c13cfa4b3af95e6c4a2f543"
   integrity sha512-CasD9OCEQSFIam2U8efFK81Yeg8vNMTBUqtMOHlrcWQHqUX3HeCl9Dr31u4toV7emlH8Mymk5+9p0lL6mKb/Xw==
+
+ky@^2.0.2:
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/ky/-/ky-2.0.2.tgz#baab48b2b93e7996135a1c0e3ca7a0bcf44cd6a9"
+  integrity sha512-/GmXpo9F9W+f8n4Ivr2iH+7h7wL7jLbLKWkMlpflcCRb6kGjBfTlASEXaZ9qUgNTn4VgS0P2pwxxzQ4EM6Ulgg==
 
 language-subtag-registry@^0.3.20:
   version "0.3.23"
