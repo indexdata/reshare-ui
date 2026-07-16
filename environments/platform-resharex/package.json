@@ -109,7 +109,7 @@
   "devDependencies": {
     "@folio/stripes-cli": "3.2.2",
     "@types/lodash": "^4.14.197",
-    "eslint": "^6.2.1",
+    "eslint": "^10.7.0",
     "lodash": "^4.17.5"
   },
   "resolutions": {
