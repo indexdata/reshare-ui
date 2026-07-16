@@ -2985,15 +2985,10 @@
   resolved "https://registry.yarnpkg.com/@polka/url/-/url-1.0.0-next.29.tgz#5a40109a1ab5f84d6fd8fc928b19f367cbe7e7b1"
   integrity sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==
 
-"@rehooks/local-storage@2.4.4":
+"@rehooks/local-storage@2.4.4", "@rehooks/local-storage@^2.4.4":
   version "2.4.4"
   resolved "https://registry.yarnpkg.com/@rehooks/local-storage/-/local-storage-2.4.4.tgz#ccf40f60c2dcbab86dc88f9e3ea898d1fb8bea2d"
   integrity sha512-zE+kfOkG59n/1UTxdmbwktIosclr67Nlbf2MzUJ9mNtCSypVscNHeD1qT6JCSo5Pjj8DO893IKWNLJqKKzDL/Q==
-
-"@rehooks/local-storage@^2.4.4":
-  version "2.4.5"
-  resolved "https://registry.yarnpkg.com/@rehooks/local-storage/-/local-storage-2.4.5.tgz#92c773ce623e168274557499679582cd32749f77"
-  integrity sha512-3Q4KtiUBaKoIDRK72BWfAy50ul6hbw29f/M7tyCzlMe2FbSsiQNok0WGeBLaYj4T2PJ7JMSJlSbUGY8RNsImmw==
 
 "@simple-git/args-pathspec@^1.0.3":
   version "1.0.3"
@@ -7415,7 +7410,7 @@ graphemer@^1.4.0:
   resolved "https://registry.yarnpkg.com/graphemer/-/graphemer-1.4.0.tgz#fb2f1d55e0e3a1849aeffc90c4fa0dd53a0e66c6"
   integrity sha512-EtKwoO6kxCL9WO5xipiHTZlSzBm7WLT627TqC/uVRd0HKmq8NXyebnNYxDoBi7wt8eTWrUrKXCOVaFq9x1kgag==
 
-graphql-tag@^2.12.6, graphql-tag@^2.5.0:
+graphql-tag@^2.12.6:
   version "2.12.7"
   resolved "https://registry.yarnpkg.com/graphql-tag/-/graphql-tag-2.12.7.tgz#4c82de0af91679b1940f149819fc8351801ed130"
   integrity sha512-xnE/NFzy+0eIesvAsREJZ284zTl/wYuBAvpsFSDhRGRdRHdnE90M21Q3xAWyYInb0J756c6x0pIQ62+vtvOs1Q==
@@ -11235,6 +11230,13 @@ react-final-form-arrays@^3.1.0, react-final-form-arrays@^3.1.1:
   version "3.1.4"
   resolved "https://registry.yarnpkg.com/react-final-form-arrays/-/react-final-form-arrays-3.1.4.tgz#2744941d8fd200fc648481022e515588f60bbac3"
   integrity sha512-siVFAolUAe29rMR6u8VwepoysUcUdh6MLV2OWnCtKpsPRUdT9VUgECjAPaVMAH2GROZNiVB9On1H9MMrm9gdpg==
+  dependencies:
+    "@babel/runtime" "^7.19.4"
+
+react-final-form-arrays@^5.0.0:
+  version "5.0.0"
+  resolved "https://registry.yarnpkg.com/react-final-form-arrays/-/react-final-form-arrays-5.0.0.tgz#bfe05ae9d1c002ab4e4647d666104cd22bffeb13"
+  integrity sha512-M7J73727AaK0YPJbvf/NiBKZrxnCiYZWSuRSHjg6iiA9+KrSuuRm5Y+8gLsah1ziVk4jH4eLK/Atl26LPkB1Dg==
   dependencies:
     "@babel/runtime" "^7.19.4"
 
