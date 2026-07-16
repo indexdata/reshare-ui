@@ -3018,7 +3018,6 @@
     classnames "^2.2.6"
     final-form "^4.2.0"
     final-form-arrays "^3.0.2"
-    graphql-tag "^2.5.0"
     json-stable-stringify "^1.0.1"
     ky "^0.23.0"
     lodash "^4.17.4"
@@ -3030,7 +3029,8 @@
 
 "@projectreshare/rsdir@git+ssh://git@github.com/indexdata/ui-rsdir.git#main":
   version "0.0.0"
-  resolved "git+ssh://git@github.com/indexdata/ui-rsdir.git#df701d73d9e9db0c38fc2eaaf1c3fc6a666dc37d"
+  uid cf8d714754aa924f6e5e80149a55649395e22c9a
+  resolved "git+ssh://git@github.com/indexdata/ui-rsdir.git#cf8d714754aa924f6e5e80149a55649395e22c9a"
   dependencies:
     "@projectreshare/stripes-reshare" "^2.0.0"
     final-form "^4.2.0"
@@ -6249,7 +6249,7 @@ graceful-fs@^4.1.11, graceful-fs@^4.1.15, graceful-fs@^4.1.2, graceful-fs@^4.1.6
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.2.11.tgz#4183e4e8bf08bb6e05bbb2f7d2e0c8f712ca40e3"
   integrity sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==
 
-graphql-tag@^2.12.6, graphql-tag@^2.5.0:
+graphql-tag@^2.12.6:
   version "2.12.7"
   resolved "https://registry.yarnpkg.com/graphql-tag/-/graphql-tag-2.12.7.tgz#4c82de0af91679b1940f149819fc8351801ed130"
   integrity sha512-xnE/NFzy+0eIesvAsREJZ284zTl/wYuBAvpsFSDhRGRdRHdnE90M21Q3xAWyYInb0J756c6x0pIQ62+vtvOs1Q==
@@ -9233,10 +9233,10 @@ react-window@^1.8.5:
     "@babel/runtime" "^7.0.0"
     memoize-one ">=3.1.1 <6"
 
-react@~18.2.0:
-  version "18.2.0"
-  resolved "https://registry.yarnpkg.com/react/-/react-18.2.0.tgz#555bd98592883255fa00de14f1151a917b5d77d5"
-  integrity sha512-/3IjMdb2L9QbBdWiW5e3P2/npwMBaU9mHCSCUzNln0ZCYbcfTsGbTJrU/kGemdH2IWmB2ioZ+zkxtmq6g09fGQ==
+react@~18.3.1:
+  version "18.3.1"
+  resolved "https://registry.yarnpkg.com/react/-/react-18.3.1.tgz#49ab892009c53933625bd16b2533fc754cab2891"
+  integrity sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ==
   dependencies:
     loose-envify "^1.1.0"
 
