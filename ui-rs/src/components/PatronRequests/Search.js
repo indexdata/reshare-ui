@@ -30,7 +30,9 @@ const Search = ({ resetAll, searchHandlers, searchValue, searchChanged, filterCh
   return (
     <>
       <SearchField
+        ariaLabel={intl.formatMessage({ id: 'stripes-smart-components.search' })}
         autoFocus
+        id="patron-request-search"
         indexName="qindex"
         name="query"
         onChange={searchHandlers.query}

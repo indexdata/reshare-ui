@@ -67,6 +67,7 @@ const Filters = ({ activeFilters, filterHandlers, options }) => {
           onClearFilter={() => filterHandlers.clearGroup('state')}
         >
           <MultiSelectionFilter
+            ariaLabelledBy="accordion-toggle-button-state"
             name="state"
             dataOptions={options.state}
             selectedValues={activeFilters?.state}
@@ -83,6 +84,7 @@ const Filters = ({ activeFilters, filterHandlers, options }) => {
           onClearFilter={() => filterHandlers.clearGroup('serviceType')}
         >
           <MultiSelectionFilter
+            ariaLabelledBy="accordion-toggle-button-serviceType"
             name="serviceType"
             dataOptions={options.serviceType}
             selectedValues={activeFilters?.serviceType}
@@ -99,6 +101,7 @@ const Filters = ({ activeFilters, filterHandlers, options }) => {
           onClearFilter={() => filterHandlers.clearGroup('serviceLevel')}
         >
           <MultiSelectionFilter
+            ariaLabelledBy="accordion-toggle-button-serviceLevel"
             name="serviceLevel"
             dataOptions={options.serviceLevel}
             selectedValues={activeFilters?.serviceLevel}
