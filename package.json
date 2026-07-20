@@ -5,6 +5,7 @@
     "stripes-reshare",
     "ui-request",
     "ui-rs",
+    "ui-rsdir",
     "ui-supply"
   ],
   "resolutions": {

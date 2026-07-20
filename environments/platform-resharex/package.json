@@ -85,7 +85,7 @@
     "@folio/tenant-settings": "9.0.0",
     "@folio/users": "11.0.14",
     "@projectreshare/rs": "file:../../ui-rs",
-    "@projectreshare/rsdir": "git+ssh://git@github.com/indexdata/ui-rsdir.git#main",
+    "@projectreshare/rsdir": "file:../../ui-rsdir",
     "@projectreshare/request": "file:../../ui-request",
     "@projectreshare/supply": "file:../../ui-supply",
     "final-form": "^4.20.7",

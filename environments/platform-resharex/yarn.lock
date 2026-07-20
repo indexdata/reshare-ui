@@ -3019,7 +3019,7 @@
     final-form "^4.2.0"
     final-form-arrays "^3.0.2"
     json-stable-stringify "^1.0.1"
-    ky "^0.23.0"
+    ky "^0.33.3"
     lodash "^4.17.4"
     query-string "^8.1.0"
     react-final-form "^6.3.0"
@@ -3027,10 +3027,8 @@
     react-syntax-highlighter "^15.5.0"
     xml-beautify "^1.2.3"
 
-"@projectreshare/rsdir@git+ssh://git@github.com/indexdata/ui-rsdir.git#main":
+"@projectreshare/rsdir@file:../../ui-rsdir":
   version "0.0.0"
-  uid cf8d714754aa924f6e5e80149a55649395e22c9a
-  resolved "git+ssh://git@github.com/indexdata/ui-rsdir.git#cf8d714754aa924f6e5e80149a55649395e22c9a"
   dependencies:
     "@projectreshare/stripes-reshare" "^2.0.0"
     final-form "^4.2.0"
