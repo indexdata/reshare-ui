@@ -1,0 +1,58 @@
+{
+  "name": "@projectreshare/rsdir",
+  "version": "0.0.0",
+  "description": "ReShare Directory",
+  "main": "src/index.js",
+  "repository": "",
+  "license": "Apache-2.0",
+  "scripts": {
+    "start": "stripes serve",
+    "build": "stripes build --output ./output",
+    "lint": "eslint src"
+  },
+  "devDependencies": {
+    "@folio/eslint-config-stripes": "~7.1.0",
+    "@folio/stripes-cli": "~3.2.0",
+    "eslint": "^7.0.0"
+  },
+  "dependencies": {
+    "@projectreshare/stripes-reshare": "^2.0.0",
+    "final-form": "^4.2.0",
+    "final-form-arrays": "^3.0.2",
+    "query-string": "^8.1.0",
+    "react-final-form": "^6.3.0",
+    "react-final-form-arrays": "^3.1.1"
+  },
+  "peerDependencies": {
+    "@folio/stripes": "^9.0.0",
+    "moment": "^2.29.0",
+    "react": "*",
+    "react-intl": "^6.4.7",
+    "react-query": "^3.9.0",
+    "react-router": "^5.2.0",
+    "react-router-dom": "^5.0.0"
+  },
+  "resolutions": {
+    "@rehooks/local-storage": "2.4.4",
+    "postcss-nesting" : "^10.0.0"
+  },
+  "stripes": {
+    "actsAs": [
+      "app",
+      "settings"
+    ],
+    "displayName": "ui-rsdir.meta.title",
+    "route": "/rsdir",
+    "stripesDeps": [
+      "@folio/stripes-erm-components",
+      "@projectreshare/stripes-reshare"
+    ],
+    "permissionSets": [
+      {
+        "permissionName": "module.rsdir.enabled",
+        "displayName": "UI: ReShare directory module is enabled",
+        "visible": true
+      }
+    ]
+  }
+}
