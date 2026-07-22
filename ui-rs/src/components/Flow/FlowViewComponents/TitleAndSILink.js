@@ -1,12 +1,14 @@
 import React from 'react';
 import { FormattedMessage } from 'react-intl';
+import { useLocation } from 'react-router-dom';
 
 import { Headline, Layout } from '@folio/stripes/components';
-import { useGetSIURL } from '@projectreshare/stripes-reshare';
+import { DirectLink, useGetSIURL } from '@projectreshare/stripes-reshare';
 
 import css from './Flow.css';
 
 const TitleAndSILink = ({ request }) => {
+  const location = useLocation();
   const systemInstanceIdentifier = request?.illRequest?.bibliographicInfo?.supplierUniqueRecordId;
   const getSIURL = useGetSIURL();
   const siURL = systemInstanceIdentifier ? getSIURL(systemInstanceIdentifier) : null;
@@ -27,12 +29,12 @@ const TitleAndSILink = ({ request }) => {
         {request?.illRequest?.bibliographicInfo?.title || ''}
       </Headline>
       <Layout className={css.title_links}>
-        {/* { request.precededBy &&
-          <DirectLink to={`../${request.precededBy.id}`} preserveSearch><FormattedMessage id="ui-rs.flow.info.precededByLink" /></DirectLink>
+        { request.prevReqId &&
+          <DirectLink to={location.pathname.replace(request.id, request.prevReqId)} preserveSearch><FormattedMessage id="ui-rs.flow.info.precededByLink" /></DirectLink>
         }
-        { request.succeededBy &&
-          <DirectLink to={`../${request.succeededBy.id}`} preserveSearch><FormattedMessage id="ui-rs.flow.info.succeededByLink" /></DirectLink>
-        } */}
+        { request.nextReqId &&
+          <DirectLink to={location.pathname.replace(request.id, request.nextReqId)} preserveSearch><FormattedMessage id="ui-rs.flow.info.succeededByLink" /></DirectLink>
+        }
         {inventoryLink}
       </Layout>
     </Layout>

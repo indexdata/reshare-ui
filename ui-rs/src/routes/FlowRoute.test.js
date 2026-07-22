@@ -111,9 +111,9 @@ const messages = {
   'stripes-reshare.actions.someAction.error': 'stripes-reshare.actions.someAction.error',
 };
 
-const renderFlowRoute = () => renderWithRs(
-  <FlowRoute request={requestFixture} actions={actionsFixture} />,
-  { initialEntries: ['/requests/pr-1/flow'], messages }
+const renderFlowRoute = (request = requestFixture) => renderWithRs(
+  <FlowRoute request={request} actions={actionsFixture} />,
+  { initialEntries: [`/requests/${request.id}/flow`], messages }
 );
 
 const rowContaining = (text) => {
@@ -156,6 +156,27 @@ describe('FlowRoute', () => {
 
     expect(screen.queryByText('general-chat-note')).toBeNull();
     expect(screen.queryByText('other-supplier-row-note')).toBeNull();
+  });
+
+  it('links to the previous and next request when the request is a revision', () => {
+    renderFlowRoute({
+      ...requestFixture,
+      prevReqId: 'pr-prev',
+      nextReqId: 'pr-next',
+    });
+
+    const prevLink = screen.getByText('ui-rs.flow.info.precededByLink').closest('a');
+    expect(prevLink).toHaveAttribute('href', '/requests/pr-prev/flow');
+
+    const nextLink = screen.getByText('ui-rs.flow.info.succeededByLink').closest('a');
+    expect(nextLink).toHaveAttribute('href', '/requests/pr-next/flow');
+  });
+
+  it('shows no revision links when prevReqId/nextReqId are absent', () => {
+    renderFlowRoute();
+
+    expect(screen.queryByText('ui-rs.flow.info.precededByLink')).toBeNull();
+    expect(screen.queryByText('ui-rs.flow.info.succeededByLink')).toBeNull();
   });
 
   it('invokes performAction when the generic action button is clicked', () => {
