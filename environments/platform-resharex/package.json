@@ -15,7 +15,7 @@
     "stripes": "./node_modules/.bin/stripes",
     "start": "stripes serve stripes.config.js",
     "cypress": "cypress",
-    "build-module-descriptors": "node ./build-module-descriptors.js"
+    "build-module-descriptors": "stripes mod descriptor stripes.config.js --full --strict  --output ./ModuleDescriptors"
   },
   "dependencies": {
     "@folio/acquisition-units": "5.2.0",
