@@ -12,6 +12,8 @@ export const filterConfig = [
   { name: 'terminal', cql: 'terminal_state', operator: '=', values: [] },
   { name: 'serviceType', cql: 'service_type', operator: '=', values: [] },
   { name: 'serviceLevel', cql: 'service_level', operator: '=', values: [] },
+  { name: 'supplier', cql: 'supplier_symbol', operator: '=', values: [] },
+  { name: 'requester', cql: 'requester_symbol', operator: '=', values: [] },
   { name: 'createdAt', cql: 'created_at', parse: (values) => values.join(' and '), values: [] },
   { name: 'neededAt', cql: 'needed_at', parse: (values) => values.join(' and '), values: [] },
 ];
@@ -45,7 +47,12 @@ const buildRequesterNameCql = (raw) => {
   return clauses.length ? clauses.join(' and ') : `surname="${raw.trim()}"`;
 };
 
-export const buildPatronRequestsCql = (location) => {
+export const escapeCqlTerm = (raw) => (raw || '').replace(/[\\"*?^]/g, (ch) => `\\${ch}`);
+
+// Parse the URL into the queryParams makeQueryFunction consumes, plus the matching
+// query template. Shared so the facet-options query below applies the exact same
+// search-string and synthetic-qindex handling as the main list query.
+const queryContextFromLocation = (location) => {
   const urlParams = queryString.parse(location.search);
   const requesterName = urlParams.qindex === 'requester_name';
   // The "cql" index lets power users type a raw CQL query that we pass through
@@ -67,6 +74,10 @@ export const buildPatronRequestsCql = (location) => {
     // own quotes/operators.
     queryTemplate = () => (urlParams.query || '');
   }
+  return { queryParams, queryTemplate };
+};
+
+const runCql = (queryParams, queryTemplate) => {
   const getCQL = makeQueryFunction(
     'cql.allRecords=1',
     queryTemplate,
@@ -79,3 +90,38 @@ export const buildPatronRequestsCql = (location) => {
   return getCQL(queryParams, {}, { query: queryParams }, console);
 };
 
+// Drop a single filter group (by filterConfig name) from the comma-separated
+// `name.value` filters string, leaving every other group intact.
+const dropFilterGroup = (filters, excludeName) => (
+  (filters || '')
+    .split(',')
+    .filter((pair) => pair && pair.slice(0, pair.indexOf('.')) !== excludeName)
+    .join(',')
+);
+
+export const buildPatronRequestsCql = (location) => {
+  const { queryParams, queryTemplate } = queryContextFromLocation(location);
+  return runCql(queryParams, queryTemplate);
+};
+
+// CQL for a facet's option list. Drops the facet's own selection so it never constrains its
+// own aggregation — otherwise selecting a value would leave it the only option — while other
+// filters and the search query still apply, and drops sort, since only the aggregation is
+// read. `narrow` is `{ nameField, symbolField, term }`; a non-empty term becomes a prefix
+// match on both fields.
+export const buildFacetOptionsCql = (location, excludeName, narrow) => {
+  const { queryParams, queryTemplate } = queryContextFromLocation(location);
+  const base = runCql(
+    { ...queryParams, filters: dropFilterGroup(queryParams.filters, excludeName), sort: '' },
+    queryTemplate,
+  );
+  if (!narrow?.term) return base;
+  const term = `${escapeCqlTerm(narrow.term)}*`;
+  const clause = `${narrow.nameField} = "${term}" or ${narrow.symbolField} = "${term}"`;
+  // makeQueryFunction returns null when there is no search query and no remaining
+  // filters; in that case the narrow clause stands alone rather than being `and`-ed
+  // onto a literal "null". Otherwise both sides are parenthesised: the base can be a
+  // raw user CQL query containing `or`, which an unbracketed `and` would rebind.
+  if (!base) return `(${clause})`;
+  return `(${base}) and (${clause})`;
+};

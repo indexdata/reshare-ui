@@ -5,7 +5,9 @@ import {
   Accordion,
   AccordionSet,
   FilterAccordionHeader,
+  Loading,
 } from '@folio/stripes/components';
+import css from './Filters.css';
 
 // Extract dates from stored CQL fragment, e.g. "created_at>=2024-01-01 and created_at<=2024-12-31"
 const parseDateValues = (filterStrings) => {
@@ -16,13 +18,46 @@ const parseDateValues = (filterStrings) => {
   };
 };
 
-const Filters = ({ activeFilters, filterHandlers, options }) => {
+// The server prefix-matches name and symbol independently, so marking exactly the matched
+// prefix means an unmarked field is the signal that it isn't why the row came back. Stripes'
+// Highlighter can't express that, since it marks every occurrence and cannot anchor. The
+// term is trimmed the same way the route trims it before putting it in the CQL.
+const markPrefix = (text, term) => {
+  const trimmed = term.trim();
+  if (!trimmed || !text.toLowerCase().startsWith(trimmed.toLowerCase())) return text;
+  return <><mark className={css.mark}>{text.slice(0, trimmed.length)}</mark>{text.slice(trimmed.length)}</>;
+};
+
+// Peer option row: name (when known) followed inline by the muted parenthesised symbol,
+// with the facet count right-aligned. With no name only the symbol shows, so duplicate
+// names stay unambiguous.
+const peerOptionFormatter = ({ option, searchTerm }) => {
+  const mark = (text) => markPrefix(text, searchTerm || '');
+  return (
+    <span className={css.peerOption}>
+      <span>
+        {option.name && <>{mark(option.name)} </>}
+        <span className={option.name ? css.peerSymbol : undefined}>({mark(option.symbol)})</span>
+      </span>
+      {option.count != null && <span>{option.count}</span>}
+    </span>
+  );
+};
+
+const Filters = ({ activeFilters, filterHandlers, options, peerFacet = {} }) => {
+  const { name: peerFilterName, ready: peerFacetReady, loading: peerFacetLoading, onType: onPeerFilterType } = peerFacet;
+
   const onChangeHandler = (group) => {
     filterHandlers.state({
       ...activeFilters,
       [group.name]: group.values
     });
   };
+
+  // Under asyncFiltering this is a notification, not a filter: MultiSelection ignores the
+  // return value and renders dataOptions as given, so all it does is report the typed text
+  // (debounced by 300ms on its side) so the route can requery.
+  const asyncPeerFilter = (filterText) => onPeerFilterType(filterText || '');
 
   return (
     <>
@@ -108,6 +143,38 @@ const Filters = ({ activeFilters, filterHandlers, options }) => {
             onChange={onChangeHandler}
           />
         </Accordion>
+        {peerFilterName && (
+          <Accordion
+            label={<FormattedMessage id={`ui-rs.filter.${peerFilterName}`} />}
+            id={peerFilterName}
+            name={peerFilterName}
+            separator={false}
+            header={FilterAccordionHeader}
+            displayClearButton={activeFilters?.[peerFilterName]?.length > 0}
+            onClearFilter={() => filterHandlers.clearGroup(peerFilterName)}
+          >
+            {/* Wait for the first option list before mounting the select: with no options
+                to show, MultiSelection renders its empty message and a spinner together
+                (MultiSelectOptionsList), so an open menu would read "no matching options"
+                for the whole initial load. */}
+            {peerFacetReady ? (
+              <MultiSelectionFilter
+                ariaLabelledBy={`accordion-toggle-button-${peerFilterName}`}
+                name={peerFilterName}
+                dataOptions={options[peerFilterName]}
+                selectedValues={activeFilters?.[peerFilterName]}
+                onChange={onChangeHandler}
+                formatter={peerOptionFormatter}
+                valueFormatter={({ option }) => option.label}
+                showLoading={peerFacetLoading}
+                asyncFiltering
+                filter={asyncPeerFilter}
+              />
+            ) : (
+              <Loading />
+            )}
+          </Accordion>
+        )}
       </AccordionSet>
       <Accordion
         closedByDefault

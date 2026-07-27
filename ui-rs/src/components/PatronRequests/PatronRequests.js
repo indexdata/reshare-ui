@@ -60,7 +60,13 @@ const appDetails = {
   },
 };
 
-const PatronRequests = ({ requestsQuery, perPage, filterOptions, children }) => {
+const PatronRequests = ({
+  requestsQuery,
+  perPage,
+  filterOptions,
+  peerFacet,
+  children,
+}) => {
   const appName = useContext(AppNameContext);
   const history = useHistory();
   const intl = useIntl();
@@ -151,6 +157,7 @@ const PatronRequests = ({ requestsQuery, perPage, filterOptions, children }) => 
                   activeFilters={activeFilters.state}
                   filterHandlers={getFilterHandlers()}
                   options={filterOptions}
+                  peerFacet={peerFacet}
                 />
               </Pane>
               {requestsQuery.isLoading && <LoadingPane />}
