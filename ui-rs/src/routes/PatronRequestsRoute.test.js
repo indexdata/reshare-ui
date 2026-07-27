@@ -53,9 +53,14 @@ const LocationSearch = () => {
   return <output data-testid="location-search">{location.search}</output>;
 };
 
-const patronRequestUrls = () => mockOkapi.mock.calls
-  .map(([url]) => decodeURIComponent(url))
+const patronRequestUrls = () => mockOkapi.calledUrls()
+  .map((url) => decodeURIComponent(url))
   .filter((u) => u.startsWith('broker/patron_requests'));
+
+// The paged list query, as distinct from the peer facet's own options query, which shares
+// the same pathname. Identified by what the options query is rather than by PER_PAGE:
+// limit=0 (aggregates only, no rows) is inherent to it, whereas the page size is a tunable.
+const listQueryUrls = () => patronRequestUrls().filter((u) => !u.includes('limit=0'));
 
 describe('PatronRequestsRoute', () => {
   beforeEach(() => {
@@ -70,7 +75,8 @@ describe('PatronRequestsRoute', () => {
     await waitFor(() => {
       expect(patronRequestUrls().some((u) => u.includes('terminal_state'))).toBe(true);
     });
-    const url = patronRequestUrls().at(-1);
+    // The peer facet's options query shares this pathname, so pick out the list query.
+    const url = listQueryUrls().at(-1);
     expect(url).toContain('side=borrowing');
     // terminal filter maps to terminal_state with the broker-specific single '='
     // operator (filters2cql's default would be '==').
@@ -115,4 +121,155 @@ describe('PatronRequestsRoute', () => {
   // the remaining half — a filter *control* writing the URL param — is Stripes'
   // CheckboxFilter/SearchAndSortQuery behaviour, not ours. Driving it also floods
   // the test with act() warnings from the navigate-and-refetch, for little signal.
+});
+
+// ---- Peer facet filter ---------------------------------------------------------
+
+// A patron_requests body carrying facets only when the request asked for them, as the broker
+// does. Responses are matched on pathname alone (see okapiKyMock — the query string holds
+// generated CQL that tests should not have to spell out), so without this the mock would keep
+// serving an option list even if the list query stopped requesting one, and every test below
+// would pass on a facet it never asked for.
+const facetBody = (url, facetValues) => ({
+  items: [],
+  about: {
+    count: 0,
+    ...(url.includes('facets=supplier_symbol')
+      ? { facets: [{ name: 'supplier_symbol', values: facetValues }] }
+      : {}),
+  },
+});
+
+const peerResponses = (facetValues) => ({
+  'broker/patron_requests': (url) => facetBody(url, facetValues),
+  'broker/state_model/models/returnables': { states: [] },
+});
+
+// Open the supplier peer accordion and return its combobox filter input. The input only
+// appears once the base facet has loaded (until then a spinner shows), so wait for it.
+const peerInputSelector = 'input[aria-labelledby="accordion-toggle-button-supplier"]';
+const openPeerFilter = async () => {
+  fireEvent.click(await screen.findByText('ui-rs.filter.supplier'));
+  await waitFor(() => expect(document.querySelector(peerInputSelector)).not.toBeNull());
+  const input = document.querySelector(peerInputSelector);
+  fireEvent.focus(input);
+  fireEvent.click(input);
+  return input;
+};
+
+// Visible option rows within the peer menu (scoped to its listbox so the qindex
+// <select>'s own options are not picked up).
+const peerMenuOptions = (input) => {
+  const menu = document.getElementById(input.getAttribute('aria-controls'));
+  return menu ? [...menu.querySelectorAll('[role="option"]')].map((o) => o.textContent) : [];
+};
+
+// URLSearchParams encodes CQL spaces as '+', which decodeURIComponent leaves intact;
+// normalise them back to spaces so clause assertions read naturally.
+const peerCqlUrls = () => patronRequestUrls().map((u) => u.replace(/\+/g, ' '));
+
+describe('PatronRequestsRoute peer facet', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('selecting an option filters on the symbol and shows the combined-label chip', async () => {
+    mockOkapi.setResponses(peerResponses([
+      { value: 'ISIL:US-A', label: 'Alpha Library', count: 5 },
+    ]));
+    renderList(['/requests?sort=-dateCreated']);
+    const input = await openPeerFilter();
+    await waitFor(() => expect(peerMenuOptions(input).length).toBe(1));
+    const menu = document.getElementById(input.getAttribute('aria-controls'));
+    fireEvent.click(menu.querySelector('[role="option"]'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toContain('supplier.ISIL');
+    });
+    await waitFor(() => {
+      expect(patronRequestUrls().some((u) => u.includes('supplier_symbol="ISIL:US-A"'))).toBe(true);
+    });
+    // Chip reuses the combined label (no count / dropdown layout).
+    expect(screen.getByText('Alpha Library (ISIL:US-A)')).toBeInTheDocument();
+  });
+
+  it('keeps a selected peer that the facet response omits', async () => {
+    // The facet only ever returns the server's top-N, so a selected symbol ranked below
+    // the cut has no row to resolve against. Its chip must still render (from the symbol
+    // alone) rather than silently vanishing from the filter.
+    mockOkapi.setResponses(peerResponses([
+      { value: 'ISIL:US-OTHER', label: 'Other Library', count: 5 },
+    ]));
+    renderList(['/requests?sort=-dateCreated&filters=supplier.ISIL%3AUS-A']);
+    // Scoped to the chip in the selected-values list: the symbol also appears on the
+    // appended row in the option menu, which is not what this is about.
+    await waitFor(() => {
+      expect(document.querySelector('.valueChipValue')).toHaveTextContent('(ISIL:US-A)');
+    });
+    expect(patronRequestUrls().some((u) => u.includes('supplier_symbol="ISIL:US-A"'))).toBe(true);
+  });
+
+  it('typing issues a narrowed server request over name and symbol', async () => {
+    const hundred = Array.from({ length: 100 }, (_, i) => ({ value: `ISIL:US-${i}`, label: `Lib ${i}`, count: 100 - i }));
+    mockOkapi.setResponses({
+      'broker/patron_requests': (url) => facetBody(
+        url,
+        url.includes('supplier_name') ? hundred.slice(0, 3) : hundred,
+      ),
+      'broker/state_model/models/returnables': { states: [] },
+    });
+    renderList(['/requests?sort=-dateCreated']);
+    const input = await openPeerFilter();
+    await waitFor(() => expect(peerMenuOptions(input).length).toBe(100));
+
+    fireEvent.change(input, { target: { value: 'smi' } });
+    await waitFor(() => {
+      expect(peerCqlUrls().some((u) => (
+        u.includes('(supplier_name = "smi*" or supplier_symbol = "smi*")')
+      ))).toBe(true);
+    }, { timeout: 2000 });
+
+    // Each keystroke re-queries: the term is part of the options query's key, so a narrowing
+    // that happens to fit in the rows already on screen still asks the server.
+    fireEvent.change(input, { target: { value: 'smit' } });
+    await waitFor(() => {
+      expect(peerCqlUrls().some((u) => u.includes('"smit*"'))).toBe(true);
+    }, { timeout: 2000 });
+  });
+
+  // The filter subtree is keyed on location.search, so any filter change remounts the input
+  // empty. The term must go with it: the remounted MultiSelection does eventually report ''
+  // through its debounced filter callback, but a term that outlives its input drives a
+  // narrowed request in the meantime, off text nothing on screen shows.
+  it('drops the typeahead term when a filter change remounts the input', async () => {
+    const peers = [
+      { value: 'ISIL:US-A', label: 'Alpha Library', count: 5 },
+      { value: 'ISIL:US-B', label: 'Beta Library', count: 2 },
+    ];
+    mockOkapi.setResponses({
+      'broker/patron_requests': (url) => facetBody(
+        url,
+        url.includes('supplier_name') ? peers.slice(0, 1) : peers,
+      ),
+      'broker/state_model/models/returnables': { states: [] },
+    });
+    renderList(['/requests?sort=-dateCreated']);
+    const input = await openPeerFilter();
+    await waitFor(() => expect(peerMenuOptions(input).length).toBe(2));
+
+    fireEvent.change(input, { target: { value: 'alp' } });
+    await waitFor(() => expect(peerCqlUrls().some((u) => u.includes('"alp*"'))).toBe(true), { timeout: 2000 });
+
+    // CheckboxFilter builds its id from the option's translated label, so match on the prefix.
+    fireEvent.click(document.querySelector('input[id^="clickable-filter-needsAttention-"]'));
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search').textContent).toContain('needsAttention.true');
+    });
+    // The new filter's option list is fetched unnarrowed...
+    await waitFor(() => expect(peerCqlUrls().some((u) => (
+      u.includes('needs_attention') && !u.includes('alp*')
+    ))).toBe(true));
+    // ...and the dead term never reaches the server alongside it.
+    await new Promise((r) => setTimeout(r, 400));
+    expect(peerCqlUrls().some((u) => u.includes('needs_attention') && u.includes('alp*'))).toBe(false);
+    expect(document.querySelector(peerInputSelector)).toHaveValue('');
+  });
 });
