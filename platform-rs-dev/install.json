@@ -1,0 +1,58 @@
+[ {
+  "id" : "projectreshare_request-2.0.0",
+  "action" : "enable"
+}, {
+  "id" : "projectreshare_supply-2.0.0",
+  "action" : "enable"
+}, {
+  "id" : "okapi-6.2.8",
+  "action" : "enable"
+}, {
+  "id" : "folio_developer-10.0.2",
+  "action" : "enable"
+}, {
+  "id" : "mod-permissions-6.6.1",
+  "action" : "enable"
+}, {
+  "id" : "mod-users-19.6.0",
+  "action" : "enable"
+}, {
+  "id" : "mod-authtoken-2.16.2",
+  "action" : "enable"
+}, {
+  "id" : "mod-login-7.12.1",
+  "action" : "enable"
+}, {
+  "id" : "mod-settings-1.1.0",
+  "action" : "enable"
+}, {
+  "id" : "mod-notes-6.0.0",
+  "action" : "enable"
+}, {
+  "id" : "mod-password-validator-3.3.0",
+  "action" : "enable"
+}, {
+  "id" : "mod-configuration-5.11.0",
+  "action" : "enable"
+}, {
+  "id" : "folio_tenant-settings-10.0.0",
+  "action" : "enable"
+}, {
+  "id" : "mod-users-bl-7.9.4",
+  "action" : "enable"
+}, {
+  "id" : "folio_stripes-core-11.0.15",
+  "action" : "enable"
+}, {
+  "id" : "mod-tags-2.3.0",
+  "action" : "enable"
+}, {
+  "id" : "folio_stripes-smart-components-10.0.4",
+  "action" : "enable"
+}, {
+  "id" : "folio_users-12.1.16",
+  "action" : "enable"
+}, {
+  "id" : "projectreshare_rs-2.0.0",
+  "action" : "enable"
+} ]
