@@ -12,7 +12,7 @@ import useOkapiKy from './useOkapiKy';
 // exceptions are if one observer is disabled, then it gets bypassed.  also, if
 // e.g. one of them has refetchOnWindowFocus: false , and you focus the window,
 // we only look at the stale times of observers where this flag is true. "
-const sharableQueryOptions = ['cacheTime', 'initialData', 'initialDataUpdatedAt', 'staleTime'];
+const sharableQueryOptions = ['cacheTime', 'enabled', 'initialData', 'initialDataUpdatedAt', 'staleTime'];
 const useOkapiQueryConfig = (path, { kyOpt = {}, searchParams = {}, ns = false, ...opt } = {}, keys = []) => {
   const okapiKy = useOkapiKy().extend(kyOpt);
 
