@@ -24,7 +24,7 @@ import {
 import { AppIcon, IfPermission, useStripes } from '@folio/stripes/core';
 import { SearchAndSortQuery, PersistedPaneset } from '@folio/stripes/smart-components';
 import { useIntlCallout } from '@projectreshare/stripes-reshare';
-import { MAX_RECORDS_PER_PDF } from '../../util/buildPatronRequestsCql';
+import { DEFAULT_SEARCH, MAX_RECORDS_PER_PDF } from '../../util/buildPatronRequestsCql';
 import AppNameContext from '../../AppNameContext';
 import Filters from './Filters';
 import Search from './Search';
@@ -90,13 +90,6 @@ const PatronRequests = ({
     const { isError } = await requestsQuery.fetchNextPage({ pageParam: index });
     if (!isError) setOffset(index);
   };
-  const initialSearch = '?filters=terminal.false&sort=-dateCreated';
-
-  useEffect(() => {
-    if (!location.search || location.search === '') {
-      history.push(location.pathname + initialSearch);
-    }
-  });
 
   // A refetch or pagination failure (as opposed to a cold-load failure) keeps the
   // existing results on screen, so surface it as a transient callout rather than
@@ -109,13 +102,12 @@ const PatronRequests = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestsQuery.isRefetchError, requestsQuery.errorUpdatedAt]);
 
-
   const { title, visibleColumns, createPerm } = appDetails[appName];
 
 
   return (
     <SearchAndSortQuery
-      initialSearch={initialSearch}
+      initialSearch={DEFAULT_SEARCH}
       initialSearchState={{ query: '', qindex: '' }}
       key={location.search}
       searchParamsMapping={{

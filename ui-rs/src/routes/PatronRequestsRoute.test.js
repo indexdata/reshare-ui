@@ -1,16 +1,25 @@
 import React from 'react';
 import { Route, useLocation } from 'react-router-dom';
-import { fireEvent, screen, within, waitFor } from '@folio/jest-config-stripes/testing-library/react';
+import { createMemoryHistory } from 'history';
+import { act, fireEvent, screen, within, waitFor } from '@folio/jest-config-stripes/testing-library/react';
 
 import { renderWithRs } from '../test/renderWithRs';
 import { makeOkapiKyMock } from '../test/okapiKyMock';
 import AppNameContext from '../AppNameContext';
 import PatronRequestsRoute from './PatronRequestsRoute';
+import { buildPatronRequestsCql } from '../util/buildPatronRequestsCql';
 
 const mockOkapi = makeOkapiKyMock();
 
 jest.mock('@folio/stripes-components/lib/Icon', () => require('../test/iconMock').default);
 jest.mock('@folio/stripes/core', () => require('../test/stripesCore').makeStripesCoreMock(() => mockOkapi));
+jest.mock('../util/buildPatronRequestsCql', () => {
+  const actual = jest.requireActual('../util/buildPatronRequestsCql');
+  return {
+    ...actual,
+    buildPatronRequestsCql: jest.fn(actual.buildPatronRequestsCql),
+  };
+});
 
 const requestRow = {
   id: 'pr-1',
@@ -33,20 +42,28 @@ const responses = {
   },
 };
 
-const renderList = (initialEntries = ['/requests']) => renderWithRs(
-  <AppNameContext.Provider value="request">
-    <Route
-      path="/requests"
-      render={() => (
-        <>
-          <PatronRequestsRoute appName="request" />
-          <LocationSearch />
-        </>
-      )}
-    />
-  </AppNameContext.Provider>,
-  { initialEntries }
-);
+// An explicit history, so tests can assert where the route navigates and whether it
+// pushed or replaced.
+const renderList = (initialEntries = ['/requests']) => {
+  const history = createMemoryHistory({ initialEntries });
+  return {
+    history,
+    ...renderWithRs(
+      <AppNameContext.Provider value="request">
+        <Route
+          path="/requests"
+          render={() => (
+            <>
+              <PatronRequestsRoute appName="request" />
+              <LocationSearch />
+            </>
+          )}
+        />
+      </AppNameContext.Provider>,
+      { initialEntries, history }
+    ),
+  };
+};
 
 const LocationSearch = () => {
   const location = useLocation();
@@ -68,13 +85,16 @@ describe('PatronRequestsRoute', () => {
     mockOkapi.setResponses(responses);
   });
 
-  it('applies the default hide-complete filter and date sort on a clean landing', async () => {
-    renderList(['/requests']);
-    // The useEffect pushes ?filters=terminal.false&sort=-dateCreated on the empty
-    // URL, then the route refires the query with the defaults in the cql.
+  it('normalizes a clean landing to the default hide-complete filter and date sort', async () => {
+    const { history } = renderList();
+    // The clean URL is normalized before anything queries against it.
+    await waitFor(() => expect(history.location.search)
+      .toBe('?filters=terminal.false&sort=-dateCreated'));
     await waitFor(() => {
       expect(patronRequestUrls().some((u) => u.includes('terminal_state'))).toBe(true);
     });
+    expect(patronRequestUrls().every((u) => u.includes('cql='))).toBe(true);
+    expect(history.length).toBe(1); // replaced, not pushed
     // The peer facet's options query shares this pathname, so pick out the list query.
     const url = listQueryUrls().at(-1);
     expect(url).toContain('side=borrowing');
@@ -170,6 +190,23 @@ const peerCqlUrls = () => patronRequestUrls().map((u) => u.replace(/\+/g, ' '));
 
 describe('PatronRequestsRoute peer facet', () => {
   beforeEach(() => jest.clearAllMocks());
+
+  it('settles after the async filter reports an unchanged empty term', async () => {
+    mockOkapi.setResponses(peerResponses([
+      { value: 'ISIL:US-A', label: 'Alpha Library', count: 5 },
+    ]));
+    renderList(['/requests?sort=-dateCreated']);
+    const input = await openPeerFilter();
+    await waitFor(() => expect(peerMenuOptions(input).length).toBe(1));
+
+    // MultiSelection reports its initial empty term after a 300 ms debounce; once that
+    // callback has landed, the route must stop re-rendering.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 350)));
+    const settledRenderCount = buildPatronRequestsCql.mock.calls.length;
+    await act(() => new Promise((resolve) => setTimeout(resolve, 350)));
+
+    expect(buildPatronRequestsCql).toHaveBeenCalledTimes(settledRenderCount);
+  });
 
   it('selecting an option filters on the symbol and shows the combined-label chip', async () => {
     mockOkapi.setResponses(peerResponses([

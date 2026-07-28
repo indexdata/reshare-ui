@@ -3,6 +3,8 @@ import queryString from 'query-string';
 
 export const MAX_RECORDS_PER_PDF = 100;
 
+export const DEFAULT_SEARCH = '?filters=terminal.false&sort=-dateCreated';
+
 export const filterConfig = [
   { name: 'state', cql: 'state', values: [] },
   { name: 'needsAttention', cql: 'needs_attention', operator: '=', values: [] },
@@ -30,6 +32,8 @@ export const sortMap = {
   supplierSymbol: 'supplier_symbol',
   hrid: 'requester_req_id',
 };
+
+const silentLogger = { log: () => {} };
 
 // The "requester_name" index is not a real CQL field. Treat the whole query as a
 // surname, unless a comma indicates "Surname, Given" (e.g. "Smith, John"), and emit
@@ -87,7 +91,7 @@ const runCql = (queryParams, queryTemplate) => {
     undefined,
     { rightTrunc: false, escape: true },
   );
-  return getCQL(queryParams, {}, { query: queryParams }, console);
+  return getCQL(queryParams, {}, { query: queryParams }, silentLogger);
 };
 
 // Drop a single filter group (by filterConfig name) from the comma-separated

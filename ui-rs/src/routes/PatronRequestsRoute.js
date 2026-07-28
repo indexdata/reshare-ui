@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useInfiniteQuery } from 'react-query';
 import { useIntl } from 'react-intl';
-import { useLocation } from 'react-router-dom';
+import { Redirect, useLocation } from 'react-router-dom';
 import queryString from 'query-string';
 import { useOkapiKy, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import PatronRequests from '../components/PatronRequests';
 import { ServiceType, ServiceLevel } from '../constants/iso18626';
-import { buildPatronRequestsCql, buildFacetOptionsCql } from '../util/buildPatronRequestsCql';
+import { buildPatronRequestsCql, buildFacetOptionsCql, DEFAULT_SEARCH } from '../util/buildPatronRequestsCql';
 
 const PER_PAGE = 100;
 
@@ -27,7 +27,7 @@ const selectedFilterValues = (location, filterName) => {
     .map((pair) => pair.slice(prefix.length));
 };
 
-const PatronRequestsRoute = ({ appName, children }) => {
+const PatronRequestsQueries = ({ appName, children }) => {
   const intl = useIntl();
   const ky = useOkapiKy();
   const location = useLocation();
@@ -51,7 +51,12 @@ const PatronRequestsRoute = ({ appName, children }) => {
   // location.search here is the one this render closed over, not the current one:
   // MultiSelection captures the callback at mount, so a debounced call landing after a
   // navigation stamps the old location and the check above discards it.
-  const setPeerTerm = (term) => setPeer({ search: location.search, term });
+  const setPeerTerm = (term) => setPeer((current) => {
+    // Bail out unchanged: MultiSelection re-reports the same term on every render, and a
+    // fresh object each time would loop through the debounce forever.
+    if (current.search === location.search && current.term === term) return current;
+    return { search: location.search, term };
+  });
 
   const prQuery = useInfiniteQuery(
     {
@@ -148,6 +153,18 @@ const PatronRequestsRoute = ({ appName, children }) => {
       {children}
     </PatronRequests>
   );
+};
+
+const PatronRequestsRoute = ({ appName, children }) => {
+  const location = useLocation();
+
+  // Normalize the clean URL before the queries mount, so no unfiltered list and facet
+  // fetch goes out only to be discarded a tick later.
+  if (!location.search) {
+    return <Redirect to={`${location.pathname}${DEFAULT_SEARCH}`} />;
+  }
+
+  return <PatronRequestsQueries appName={appName}>{children}</PatronRequestsQueries>;
 };
 
 export default PatronRequestsRoute;
