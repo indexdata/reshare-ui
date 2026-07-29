@@ -1,0 +1,10 @@
+.fieldEditor {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gutter-static-one-third);
+}
+
+.fieldInput {
+  flex: 1;
+  min-width: 0;
+}
