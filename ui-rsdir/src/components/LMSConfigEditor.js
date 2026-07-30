@@ -103,6 +103,7 @@ const LMSConfigEditor = ({ id, entry: initialEntry, fieldMapping = [] }) => {
     if (isNewEntry) {
       editingFieldsRef.current = {};
       setEditingFields({});
+      setSavingFields({});
       setFieldErrors({});
     }
 
