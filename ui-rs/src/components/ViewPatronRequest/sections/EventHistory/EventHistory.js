@@ -23,7 +23,6 @@ const EventHistory = ({ record }) => {
     `broker/patron_requests/${record.id}/events`,
     {
       enabled: !!record?.id,
-      parseResponse: false,
       staleTime: 2 * 60 * 1000,
       notifyOnChangeProps: 'tracked',
     }

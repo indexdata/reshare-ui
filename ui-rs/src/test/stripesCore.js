@@ -4,21 +4,21 @@ import React from 'react';
 // module, which only exists when the app is running. Route tests mock the module
 // with `makeStripesCoreMock`, covering only the named exports our routes touch.
 
-// ReShare app-shell flags read via useStripes().config.reshare.
+// ReShare app-shell flags read via useStripes().config.reshare. One stub serves
+// every route test; a test needing different flags mocks useStripes itself.
 const reshareConfigStub = {
   showCost: true,
-  useTiers: true,
   sharedIndex: { type: 'folio', ui: 'https://shared-index.example' },
 };
 
 // `getOkapiKy` is a getter, not the ky mock itself: the jest.mock factory that
 // calls this is hoisted above the test's module-scope `const mockOkapi = ...`, so
 // the value must be read lazily (at render) rather than captured here.
-const makeStripesCoreMock = (getOkapiKy, { config = reshareConfigStub } = {}) => ({
+const makeStripesCoreMock = (getOkapiKy) => ({
   useStripes: () => ({
     currency: 'USD',
     hasPerm: () => true,
-    config: { reshare: config },
+    config: { reshare: reshareConfigStub },
   }),
   useOkapiKy: () => getOkapiKy(),
   CalloutContext: React.createContext(null),
@@ -32,4 +32,4 @@ const makeStripesCoreMock = (getOkapiKy, { config = reshareConfigStub } = {}) =>
   Pluggable: () => null,
 });
 
-export { reshareConfigStub, makeStripesCoreMock };
+export { makeStripesCoreMock };

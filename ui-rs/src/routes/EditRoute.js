@@ -2,81 +2,67 @@ import React, { useContext } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { Form } from 'react-final-form';
 import { useMutation, useQueryClient } from 'react-query';
-import { Prompt, useHistory, useLocation } from 'react-router-dom';
+import { Prompt, Redirect, useHistory, useLocation } from 'react-router-dom';
 import { Button, Pane, Paneset, PaneFooter, KeyValue } from '@folio/stripes/components';
 import { CalloutContext } from '@folio/stripes/core';
-import { useCloseDirect, useOkapiKy } from '@projectreshare/stripes-reshare';
+import { useCloseDirect, useOkapiKy, useOkapiQuery, upNLevels } from '@projectreshare/stripes-reshare';
 import PatronRequestForm from '../components/PatronRequestForm';
 import useOptions from '../components/PatronRequestForm/useOptions';
-import { formToBroker } from '../components/PatronRequestForm/formMapping';
+import { brokerToForm, formToBroker } from '../components/PatronRequestForm/formMapping';
+import { EDIT } from '../components/PatronRequestForm/operations';
+import isRequestEditable from '../util/isRequestEditable';
 import handleSISelect from '../components/PatronRequestForm/handleSISelect';
 
-const CreateRoute = () => {
+const EditRoute = ({ match }) => {
+  const id = match.params?.id;
   const history = useHistory();
   const routerLocation = useLocation();
   const callout = useContext(CalloutContext);
   const queryClient = useQueryClient();
   const okapiKy = useOkapiKy();
-  const close = useCloseDirect();
+  const requestView = upNLevels(routerLocation, 1);
+  const close = useCloseDirect(requestView);
+
+  const { data: request, isSuccess: hasRequestLoaded } = useOkapiQuery(
+    `broker/patron_requests/${id}`,
+    { staleTime: 30 * 1000, notifyOnChangeProps: 'tracked' }
+  );
+
+  const { data: stateModel, isSuccess: hasModelLoaded } = useOkapiQuery(
+    `broker/state_model/models/${request?.stateModel}`,
+    { staleTime: 30 * 60 * 1000, cacheTime: 8 * 60 * 60 * 1000, enabled: hasRequestLoaded }
+  );
+
   const { options, isSuccess: optionsLoaded } = useOptions();
 
-  const creator = useMutation({
-    mutationFn: (newRecord) => okapiKy
-      .post('broker/patron_requests', { json: newRecord }),
-    onSuccess: async (res) => {
-      const created = await res.json();
+  const editor = useMutation({
+    mutationFn: (updatedRecord) => okapiKy
+      .put(`broker/patron_requests/${id}`, { json: updatedRecord }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries(`broker/patron_requests/${id}`);
       await queryClient.invalidateQueries('broker/patron_requests');
-
-      if (created?.id) {
-        // Creation may start at either requests/create or
-        // requests/create/:systemInstanceId. In both cases, replace it with
-        // the new request's route and retain any list/aside query parameters.
-        const requestsPath = routerLocation.pathname.replace(/\/create(?:\/[^/]+)?$/, '');
-        history.replace(`${requestsPath}/${created.id}${routerLocation.search}`);
-      } else {
-        // Fall back to the request list if the server did not return an id.
-        close();
-      }
+      history.replace(requestView);
     },
   });
 
-  // Render nothing until the form's select data is loaded, so the whole form
-  // paints at once. Below every hook call, as it returns early.
-  if (!optionsLoaded) return null;
+  if (!hasRequestLoaded || !hasModelLoaded || !optionsLoaded) return null;
 
-  const initialValues = {
-    // TODO: Broker API
-    // copyrightType: defaultCopyrightSetting,
-    serviceInfo: { serviceType: 'Loan' },
-    ...(options.locations?.length === 1 && {
-      pickupLocation: options.locations[0].value,
-    }),
-  };
-
-  const reg = /.+\/create\/(\d+)/;
-  const sysIdMatch = reg.exec(routerLocation?.pathname);
-  const autopopulate = !!sysIdMatch;
-
-  if (autopopulate) {
-    initialValues.systemInstanceIdentifier = sysIdMatch[1];
+  if (!isRequestEditable(stateModel, request)) {
+    return <Redirect to={requestView} />;
   }
 
+  const initialValues = brokerToForm(request);
+
   const submit = async submittedRecord => {
-    const newRecord = formToBroker(submittedRecord);
-    // TODO: pending tiers, which will supply the level for the chosen tier.
-    // Create only: an edit leaves whatever level the request already carries.
-    newRecord.illRequest.serviceInfo = {
-      ...newRecord.illRequest.serviceInfo,
-      serviceLevel: { '#text': 'Standard' },
-    };
+    const updatedRecord = formToBroker(submittedRecord, { operation: EDIT });
     try {
-      await creator.mutateAsync(newRecord);
+      await editor.mutateAsync(updatedRecord);
     } catch (err) {
       callout.sendCallout({
         type: 'error',
         message: (
           <KeyValue
-            label={<FormattedMessage id="ui-rs.create.error" />}
+            label={<FormattedMessage id="ui-rs.edit.error" />}
             value={err?.message || ''}
           />
         ),
@@ -97,7 +83,7 @@ const CreateRoute = () => {
               <PaneFooter
                 renderStart={
                   <Button
-                    id="clickable-cancel-create-request"
+                    id="clickable-cancel-edit-request"
                     buttonStyle="default mega"
                     marginBottom0
                     onClick={close}
@@ -113,18 +99,17 @@ const CreateRoute = () => {
                     buttonStyle="primary mega"
                     marginBottom0
                   >
-                    <FormattedMessage id="ui-rs.createPatronRequest" />
+                    <FormattedMessage id="ui-rs.save" />
                   </Button>
                 }
               />
             }
-            paneTitle={<FormattedMessage id="ui-rs.createPatronRequest" />}
+            paneTitle={<FormattedMessage id="ui-rs.editPatronRequest" />}
           >
             <form onSubmit={handleSubmit}>
               <PatronRequestForm
                 selectOptions={options}
                 onSISelect={form.mutators.handleSISelect}
-                autopopulate={autopopulate}
               />
             </form>
             <FormattedMessage id="ui-rs.confirmDirtyNavigate">
@@ -137,4 +122,4 @@ const CreateRoute = () => {
   );
 };
 
-export default CreateRoute;
+export default EditRoute;

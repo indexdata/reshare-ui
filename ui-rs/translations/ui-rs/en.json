@@ -69,6 +69,7 @@
   "information.volume": "Volume",
   "createPatronRequest": "Create patron request",
   "create.error": "Error creating patron request",
+  "edit.error": "Error editing patron request",
   "rerequestPatronRequest": "Create revised request",
   "revalidatePatronRequest": "Resubmit request",
   "closeNewPatronRequest": "Close new patron request",

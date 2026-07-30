@@ -12,11 +12,7 @@ const mockOkapi = makeOkapiKyMock();
 jest.mock('@folio/stripes-components/lib/Icon', () => require('../test/iconMock').default);
 jest.mock('@folio/stripes-components/lib/TextArea', () => require('../test/textAreaMock').default);
 
-// Tiers not ported yet
-jest.mock('@folio/stripes/core', () => require('../test/stripesCore').makeStripesCoreMock(
-  () => mockOkapi,
-  { config: { ...require('../test/stripesCore').reshareConfigStub, useTiers: false } },
-));
+jest.mock('@folio/stripes/core', () => require('../test/stripesCore').makeStripesCoreMock(() => mockOkapi));
 
 // CalloutContext is consumed by the route + stripes-reshare hooks; on the happy
 // path sendCallout is never called, but provide it so an unexpected error path
@@ -43,6 +39,15 @@ const setField = (name, value) => fireEvent.change(
   fieldByName(name), { target: { value } }
 );
 
+// Everything the form validates before submit leaves its pristine/invalid state
+// (serviceType defaults to Loan, so it needs no filling).
+const fillRequiredFields = () => {
+  setField('patronInfo.givenName', 'Ada');
+  setField('patronInfo.surname', 'Lovelace');
+  setField('bibliographicInfo.title', 'Test Title');
+  setField('bibliographicInfo.author', 'Some Author');
+};
+
 describe('CreateRoute', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -52,14 +57,10 @@ describe('CreateRoute', () => {
     const history = createMemoryHistory({ initialEntries: ['/requests/create?foo=bar'] });
     renderCreate({ history });
 
-    // Submit is disabled while pristine; fill the required fields (serviceType
-    // defaults to Loan) plus an ISBN to exercise the identifier transform.
-    setField('patronInfo.givenName', 'Ada');
-    setField('patronInfo.surname', 'Lovelace');
-    setField('bibliographicInfo.title', 'Test Title');
-    setField('bibliographicInfo.author', 'Some Author');
+    // Submit is disabled while pristine; fill the required fields plus an ISBN
+    // to exercise the identifier transform.
+    fillRequiredFields();
     setField('identifiers.ISBN', '9781234567890');
-    setField("serviceInfo.serviceLevel['#text']", 'Standard');
     setField('internalNote', 'Staff only note');
 
     fireEvent.click(document.querySelector('button[type="submit"]'));
@@ -102,12 +103,7 @@ describe('CreateRoute', () => {
 
     renderCreate();
 
-    setField('patronInfo.givenName', 'Ada');
-    setField('patronInfo.surname', 'Lovelace');
-    setField('bibliographicInfo.title', 'Test Title');
-    setField('bibliographicInfo.author', 'Some Author');
-    setField("serviceInfo.serviceLevel['#text']", 'Standard');
-
+    fillRequiredFields();
     fireEvent.click(document.querySelector('button[type="submit"]'));
 
     await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));

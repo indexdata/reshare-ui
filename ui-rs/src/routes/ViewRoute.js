@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { Route, Switch } from 'react-router-dom';
 import { Button, ButtonGroup, IconButton, Icon, Layout, Pane, PaneMenu, Paneset, Tooltip } from '@folio/stripes/components';
@@ -10,6 +10,8 @@ import ViewPatronRequest from '../components/ViewPatronRequest';
 import { ChatPane } from '../components/chat';
 import { useNotificationCounts } from '../components/chat/useNotifications';
 import useRequestAside from '../util/useRequestAside';
+import isRequestEditable from '../util/isRequestEditable';
+import AppNameContext from '../AppNameContext';
 import EditInternalNote from '../components/EditInternalNote';
 import ManualClose from '../components/ManualClose';
 import css from './ViewRoute.css';
@@ -29,17 +31,24 @@ const subheading = (req, params) => {
 const ViewRoute = ({ location, location: { pathname }, match }) => {
   const id = match.params?.id;
   const intl = useIntl();
+  const appName = useContext(AppNameContext);
   const close = useCloseDirect(upNLevels(location, 2));
 
   const { data: request, isSuccess: hasRequestLoaded } = useOkapiQuery(
     `broker/patron_requests/${id}`,
-    { parseResponse: false, staleTime: 2 * 60 * 1000, notifyOnChangeProps: 'tracked' }
+    { staleTime: 2 * 60 * 1000, notifyOnChangeProps: 'tracked' }
   );
   const { data: actionsData } = useOkapiQuery(
     `broker/patron_requests/${id}/actions`,
-    { parseResponse: false, staleTime: 2 * 60 * 1000 }
+    { staleTime: 2 * 60 * 1000 }
   );
   const actions = actionsData?.actions ?? [];
+
+  const { data: stateModel } = useOkapiQuery(
+    `broker/state_model/models/${request?.stateModel}`,
+    { staleTime: 30 * 60 * 1000, cacheTime: 8 * 60 * 60 * 1000, enabled: appName === 'request' && hasRequestLoaded }
+  );
+  const canEdit = appName === 'request' && isRequestEditable(stateModel, request);
 
   const { AsidePane, toggle, isOpen } = useRequestAside(ASIDE_SLOTS);
   const { isSuccess: countsLoaded, unseen, total } = useNotificationCounts(request?.id);
@@ -70,6 +79,19 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
         dismissible
         actionMenu={({ onToggle }) => (
           <>
+            {canEdit &&
+              <DirectLink
+                component={Button}
+                buttonStyle="dropdownItem"
+                onClick={onToggle}
+                to={`${match.url}/edit`}
+                preserveSearch
+              >
+                <Icon icon="edit">
+                  <FormattedMessage id="ui-rs.editPatronRequest" />
+                </Icon>
+              </DirectLink>
+            }
             <EditInternalNote request={request} />
             <ManualClose request={request} />
             <DirectLink

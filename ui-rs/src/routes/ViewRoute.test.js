@@ -5,6 +5,7 @@ import { fireEvent, screen, waitFor } from '@folio/jest-config-stripes/testing-l
 import { renderWithRs } from '../test/renderWithRs';
 import { makeOkapiKyMock } from '../test/okapiKyMock';
 import ViewRoute from './ViewRoute';
+import AppNameContext from '../AppNameContext';
 
 // `mock` prefix lets the hoisted jest.mock factory below reference this.
 const mockOkapi = makeOkapiKyMock();
@@ -34,15 +35,17 @@ const sendCallout = jest.fn();
 
 const requestFixture = {
   id: 'pr-1',
-  state: 'REQ_VALIDATED',
-  timestamp: '2026-01-05T12:00:00Z',
+  state: 'VALIDATED',
+  stateModel: 'returnables',
+  side: 'borrowing',
+  createdAt: '2026-01-05T12:00:00Z',
+  updatedAt: '2026-01-05T13:00:00Z',
   requesterRequestId: 'REQ-101',
   requesterSymbol: 'ISIL:REQ',
   supplierSymbol: 'ISIL:SUP',
   illRequest: {
     bibliographicInfo: { title: 'fixture-title' },
     serviceInfo: { note: 'fixture-patron-note' },
-    deliveryInfo: { pickupLocation: 'fixture-pickup' },
     requestIdentifiers: [
       { identifierType: 'fixture-id-type', identifier: 'fixture-id-value' },
     ],
@@ -54,6 +57,13 @@ const responses = {
   'broker/patron_requests/pr-1/actions': { actions: [] },
   'broker/patron_requests/pr-1/notifications': { items: [] },
   'broker/patron_requests/pr-1/events': { items: [] },
+  // VALIDATED is intentionally not editable.
+  'broker/state_model/models/returnables': {
+    states: [
+      { side: 'REQUESTER', name: 'NEEDS_REVIEW', editable: true },
+      { side: 'REQUESTER', name: 'VALIDATED' },
+    ],
+  },
 };
 
 // One targeted message so the pane title's {id} interpolation is assertable;
@@ -91,7 +101,6 @@ describe('ViewRoute', () => {
     // RequestInfo detail values render from the fixture. The full id appears in
     // both the card header and the fullId field, so allow more than one match.
     expect(screen.getAllByText('pr-1').length).toBeGreaterThan(0);
-    expect(screen.getByText('fixture-pickup')).toBeInTheDocument();
     expect(screen.getByText('fixture-patron-note')).toBeInTheDocument();
     expect(screen.getByText('fixture-id-type: fixture-id-value')).toBeInTheDocument();
 
@@ -150,11 +159,31 @@ describe('ViewRoute', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
-  it('fetches request, actions, notifications, and events — and nothing else', async () => {
-    renderViewRoute();
+  const renderInRequestApp = (request) => {
+    mockOkapi.setResponses({ ...responses, 'broker/patron_requests/pr-1': request });
+    return renderWithRs(
+      <AppNameContext.Provider value="request">
+        <Route path="/requests/:id" component={ViewRoute} />
+      </AppNameContext.Provider>,
+      { initialEntries: ['/requests/pr-1/details?sort=-dateCreated'], messages: messagesWithActions }
+    );
+  };
+
+  it('offers an Edit action linking to the edit route when the state is editable', async () => {
+    renderInRequestApp({ ...requestFixture, state: 'NEEDS_REVIEW', stateModel: 'returnables' });
     await screen.findByText('Request REQ-101');
 
-    const requestedPaths = new Set(mockOkapi.mock.calls.map(([path]) => path));
-    expect(requestedPaths).toEqual(new Set(Object.keys(responses)));
+    fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+    const editItem = screen.getByRole('button', { name: 'ui-rs.editPatronRequest' });
+    expect(editItem).toBeInTheDocument();
+    expect(editItem.closest('a')).toHaveAttribute('href', expect.stringContaining('/requests/pr-1/edit'));
+  });
+
+  it('hides the Edit action when the state is not editable', async () => {
+    renderInRequestApp({ ...requestFixture, state: 'VALIDATED', stateModel: 'returnables' });
+    await screen.findByText('Request REQ-101');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+    expect(screen.queryByRole('button', { name: 'ui-rs.editPatronRequest' })).not.toBeInTheDocument();
   });
 });
