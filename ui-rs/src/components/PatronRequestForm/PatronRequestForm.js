@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { FormattedMessage } from 'react-intl';
-import { Field, useForm, useFormState } from 'react-final-form';
+import { Field, useFormState } from 'react-final-form';
 import {
   AccordionSet,
   Accordion,
@@ -16,75 +16,19 @@ import {
 import { required } from '@folio/stripes/util';
 import { Pluggable, useStripes } from '@folio/stripes/core';
 
-const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
-  serviceLevels, publicationTypes, locations, requesters, tiersByRequester, onSISelect, operation, patronRequest }) => {
-  const { change } = useForm();
+const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect }) => {
+  const { copyrightTypes, publicationTypes, locations } = selectOptions;
   const { values } = useFormState();
   const isCopyReq = values?.serviceInfo?.serviceType === 'Copy';
   const stripes = useStripes();
-  const EDIT = 'update';
-
-  const currentRequester = values.requesterSymbol?.value ?? requesters[0];
-  const tiers = tiersByRequester?.[currentRequester]?.filter(tier => tier.type === values.serviceType?.value) ?? [];
-  const showCost = stripes.config?.reshare?.showCost;
-  const useTiers = stripes.config?.reshare?.useTiers;
-  const resetTier = () => { if (useTiers) change('tier', undefined); };
-  const tier = useTiers && values.tier ? tiers.find(t => t.id === values.tier) : undefined;
-  useEffect(() => {
-    // When using tiers we want the cost/level from the selected tier except when we're editing as we may then be
-    // displaying a higher cost from an accepted condition and won't be able to select a different tier as that's
-    // not editable once a request is submitted.
-    if (tier && operation !== EDIT) {
-      if (showCost) change('maximumCostsMonetaryValue', tier?.cost);
-      change('serviceLevel.value', tier?.level?.toLowerCase());
-    }
-  }, [change, operation, showCost, tier]);
 
   // TODO: Broker API
-  // const freePickupLocation = useSetting('free_text_pickup_location');
   // const ncipBorrowerCheck = useSetting('borrower_check', 'hostLMSIntegration');
-  // const routingAdapterSetting = useSetting('routing_adapter');
-  const freePickupLocation = { value: 'no', isSuccess: true };
   const ncipBorrowerCheck = { value: 'none', isSuccess: true };
-  const routingAdapterSetting = { value: 'disabled', isSuccess: true };
 
-  useEffect(() => {
-    if (locations?.length === 1) {
-      change('pickupLocationSlug', locations[0]?.value);
-    }
-  }, [locations, change]);
+  if (ncipBorrowerCheck.isSuccess !== true) return null;
 
-  if ([freePickupLocation, ncipBorrowerCheck, routingAdapterSetting].some(v => v.isSuccess !== true)) return null;
-
-  function applyDisabledToFields(children) {
-    return React.Children.map(children, child => {
-      if (!React.isValidElement(child)) return child;
-
-      if (child.type === Field) {
-        const { name, disabled } = child.props;
-
-        // Only apply if "disabled" is not already set
-        if (disabled === undefined && name !== undefined) {
-          return React.cloneElement(child, {
-            disabled: !enabledFields.includes(name),
-            // Can't fulfil the validation if you can't change the field from its current value
-            validate: undefined,
-          });
-        }
-        return child;
-      }
-
-      // If it has children, recursively process them
-      if (child.props && child.props.children) {
-        const newChildren = applyDisabledToFields(child.props.children);
-        return React.cloneElement(child, {}, newChildren);
-      }
-
-      return child;
-    });
-  }
-
-  const requestForm = (
+  return (
     <AccordionSet>
       <Row>
         <Col xs={4}>
@@ -104,32 +48,20 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
             component={Datepicker}
           />
         </Col>
-        { freePickupLocation.value !== 'yes' &&
         <Col xs={4}>
           <Field
-            name={routingAdapterSetting?.value === 'disabled' ? 'pickupLocation' : 'pickupLocationSlug'}
+            name="pickupLocation"
             label={<FormattedMessage id="ui-rs.information.pickupLocation" />}
             placeholder=" "
             component={Select}
             dataOptions={locations}
           />
         </Col>
-        }
-        { freePickupLocation.value === 'yes' &&
-        <Col xs={4}>
-          <Field
-            name="pickupLocation"
-            label={<FormattedMessage id="ui-rs.information.pickupLocation" />}
-            component={TextField}
-          />
-        </Col>
-        }
         <Col xs={2}>
           <Label><FormattedMessage id="ui-rs.information.serviceType" /></Label>
           <Field
             component={RadioButton}
             inline
-            onClick={resetTier}
             label={<FormattedMessage id="ui-rs.information.serviceType.Loan" />}
             name="serviceInfo.serviceType"
             type="radio"
@@ -138,7 +70,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
           <Field
             component={RadioButton}
             inline
-            onClick={resetTier}
             label={<FormattedMessage id="ui-rs.information.serviceType.Copy" />}
             name="serviceInfo.serviceType"
             type="radio"
@@ -179,36 +110,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
         </Col> */}
       </Row>
       )}
-      { (requesters.length > 1 && operation !== EDIT) && (
-        <Row>
-          <Col xs={3}>
-            <Field
-              name="requesterSymbol"
-              label={<FormattedMessage id="ui-rs.information.requestingInstitution" />}
-              placeholder=" "
-              component={Select}
-              dataOptions={requesters}
-              required
-              validate={required}
-            />
-          </Col>
-        </Row>
-      )}
-      { ((patronRequest?.stateModel?.shortcode === 'SLNPRequester' || patronRequest?.stateModel?.shortcode === 'SLNPNonReturnableRequester')
-        && operation === EDIT) && (
-        <Row>
-          <Col xs={3}>
-            <Field
-              name="requesterSymbol"
-              label={<FormattedMessage id="ui-rs.information.requestingInstitution" />}
-              component={TextField}
-              disabled
-            />
-          </Col>
-        </Row>
-      )
-
-      }
       <Row>
         <Col xs={3}>
           <Field
@@ -227,47 +128,18 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
             rows={5}
           />
         </Col>
-        <Col xs={3}>
-          {/* TODO: Broker API */}
-          {/* {useTiers &&
-            <Row>
-              <Col xs={12}>
-                <Field
-                  name="tier"
-                  placeholder=" "
-                  label={<FormattedMessage id="ui-rs.information.tier" />}
-                  component={Select}
-                  dataOptions={tiers}
-                  required
-                  validate={required}
-                />
-              </Col>
-            </Row>
-          } */}
-          <Row>
-            <Col xs={6}>
-              <Field
-                name="serviceInfo.serviceLevel['#text']"
-                label={<FormattedMessage id="ui-rs.information.serviceLevel" />}
-                placeholder=" "
-                component={Select}
-                dataOptions={serviceLevels}
-                disabled={useTiers}
-                validate={required}
-              />
-            </Col>
-            {showCost &&
-              <Col xs={6}>
-                <Field
-                  name="billingInfo.maximumCosts.monetaryValue"
-                  label={<FormattedMessage id="ui-rs.information.maximumCost" />}
-                  component={TextField}
-                  disabled={useTiers}
-                />
-              </Col>
-            }
-          </Row>
-        </Col>
+        {/* TODO: tiers pending directory endpoint to fetch entry corresponding to tenant */}
+        {/* <Col xs={3}>
+          <Field
+            name="tier"
+            placeholder=" "
+            label={<FormattedMessage id="ui-rs.information.tier" />}
+            component={Select}
+            dataOptions={tiers}
+            required
+            validate={required}
+          />
+        </Col> */}
         {isCopyReq &&
         <Col xs={3}>
           <Field
@@ -283,8 +155,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
         }
       </Row>
 
-
-
       <Accordion
         label={<FormattedMessage id="ui-rs.information.heading.requestedTitle" />}
         displayWhenOpen={<Pluggable
@@ -293,7 +163,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
           searchButtonStyle="primary marginBottom0"
           searchLabel={<FormattedMessage id="ui-rs.requestform.populateFromSI" />}
           selectInstance={onSISelect}
-
         />}
       >
         <Row>
@@ -303,8 +172,8 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
               label={<FormattedMessage id="ui-rs.information.systemInstanceIdentifier" />}
               component={TextField}
               endControl={
-                // The padding on endControl the necessitates this margin when using Button rather than IconButton
-                // will be removed soon, perhaps Quesnelia
+                // TextField endControl still has right padding as of Sunflower; offset it
+                // when using Button rather than IconButton so the button sits flush.
                 <span style={{ marginRight: '-6px' }}>
                   <Pluggable
                     type="rs-siquery"
@@ -452,12 +321,6 @@ const PatronRequestForm = ({ autopopulate, copyrightTypes, enabledFields,
       </Accordion>
     </AccordionSet>
   );
-
-  if (Array.isArray(enabledFields)) {
-    return applyDisabledToFields(requestForm);
-  } else {
-    return requestForm;
-  }
 };
 
 export default PatronRequestForm;

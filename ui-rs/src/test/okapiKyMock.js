@@ -41,14 +41,11 @@ const makeOkapiKyMock = () => {
   // Mutations (e.g. the create-request flow) call `okapiKy.post(path, { json })`
   // directly rather than through `useOkapiQuery`, and read the created record back
   // via `res.json()`. Expose post/put as jest.fns so the call + payload are
-  // assertable; each resolves a ky-style response whose `.json()` yields the body.
-  // `setPostResponse`/`setPutResponse` let a test override the returned body.
-  let postBody = { id: 'new-1' };
-  let putBody = {};
-  okapiKy.post = jest.fn(async () => ({ json: async () => postBody }));
-  okapiKy.put = jest.fn(async () => ({ json: async () => putBody }));
-  okapiKy.setPostResponse = (body) => { postBody = body; };
-  okapiKy.setPutResponse = (body) => { putBody = body; };
+  // assertable; each resolves a ky-style response whose `.json()` yields a body.
+  // A test needing a different body or a failure uses jest's own
+  // mockResolvedValueOnce/mockRejectedValueOnce.
+  okapiKy.post = jest.fn(async () => ({ json: async () => ({ id: 'new-1' }) }));
+  okapiKy.put = jest.fn(async () => ({ json: async () => ({}) }));
 
   return okapiKy;
 };

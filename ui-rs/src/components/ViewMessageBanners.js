@@ -9,7 +9,7 @@ const ViewMessageBanners = ({ request }) => {
   const { data } = useNotificationList(request?.id);
 
   const lastCostStates = ['RES_COPY_AWAIT_PICKING', 'RES_AWAIT_SHIP'];
-  const lastChanceForCost = stripes.config?.reshare?.useTiers && stripes.config?.reshare?.showCost && lastCostStates.includes(request?.state?.code);
+  const lastChanceForCost = stripes.config?.reshare?.showCost && lastCostStates.includes(request?.state?.code);
 
   const relevantConditions = (data?.items || [])
     .filter(n => n.kind === 'condition' && n.fromSymbol === request?.supplierSymbol);
