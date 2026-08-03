@@ -1,14 +1,16 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useQueryClient } from 'react-query';
 import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
 import {
   Button,
-  Col,
-  Row,
+  Card,
+  IconButton,
   Select,
   TextField,
 } from '@folio/stripes/components';
+
+import css from './LMSConfigEditor.css';
 
 const entryPath = id => `rsdir/entries/by-id/${id}`;
 
@@ -68,8 +70,11 @@ const LMSConfigEditor = ({ id, entry: initialEntry, fieldMapping = [] }) => {
   const queryClient = useQueryClient();
   const [entry, setEntry] = useState(initialEntry);
   const [values, setValues] = useState(() => valuesFromEntry(initialEntry, fieldMapping));
+  const [editingFields, setEditingFields] = useState({});
   const [savingFields, setSavingFields] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
+  const editingFieldsRef = useRef({});
+  const previousIdRef = useRef(id);
 
   const booleanOptions = useMemo(() => [
     { label: '', value: '' },
@@ -78,15 +83,73 @@ const LMSConfigEditor = ({ id, entry: initialEntry, fieldMapping = [] }) => {
   ], [intl]);
 
   useEffect(() => {
+    const nextValues = valuesFromEntry(initialEntry, fieldMapping);
+    const isNewEntry = previousIdRef.current !== id;
+
     setEntry(initialEntry);
-    setValues(valuesFromEntry(initialEntry, fieldMapping));
-  }, [fieldMapping, initialEntry]);
+    setValues(current => {
+      if (isNewEntry) {
+        return nextValues;
+      }
+
+      return fieldMapping.reduce((acc, field) => ({
+        ...acc,
+        [field.fieldName]: editingFieldsRef.current[field.fieldName] ?
+          current[field.fieldName] ?? '' :
+          nextValues[field.fieldName],
+      }), {});
+    });
+
+    if (isNewEntry) {
+      editingFieldsRef.current = {};
+      setEditingFields({});
+      setFieldErrors({});
+    }
+
+    previousIdRef.current = id;
+  }, [fieldMapping, id, initialEntry]);
+
+  const committedValue = fieldName => toEditorValue(entry?.lmsConfig?.[fieldName]);
+
+  const setFieldEditing = (fieldName, isEditing) => {
+    const nextEditingFields = {
+      ...editingFieldsRef.current,
+      [fieldName]: isEditing,
+    };
+
+    editingFieldsRef.current = nextEditingFields;
+    setEditingFields(nextEditingFields);
+  };
 
   const handleChange = fieldName => event => {
     setValues(current => ({
       ...current,
       [fieldName]: event.target.value,
     }));
+  };
+
+  const editField = fieldName => {
+    setValues(current => ({
+      ...current,
+      [fieldName]: committedValue(fieldName),
+    }));
+    setFieldErrors(current => ({
+      ...current,
+      [fieldName]: undefined,
+    }));
+    setFieldEditing(fieldName, true);
+  };
+
+  const cancelEditingField = fieldName => {
+    setValues(current => ({
+      ...current,
+      [fieldName]: committedValue(fieldName),
+    }));
+    setFieldErrors(current => ({
+      ...current,
+      [fieldName]: undefined,
+    }));
+    setFieldEditing(fieldName, false);
   };
 
   const saveField = field => {
@@ -125,6 +188,11 @@ const LMSConfigEditor = ({ id, entry: initialEntry, fieldMapping = [] }) => {
         };
 
         setEntry(nextEntry);
+        setValues(current => ({
+          ...current,
+          [fieldName]: toEditorValue(nextEntry?.lmsConfig?.[fieldName]),
+        }));
+        setFieldEditing(fieldName, false);
         queryClient.setQueryData(entryPath(id), nextEntry);
         queryClient.invalidateQueries(entryPath(id));
         callout.sendCallout({
@@ -147,12 +215,12 @@ const LMSConfigEditor = ({ id, entry: initialEntry, fieldMapping = [] }) => {
     const { fieldName, valueType, required, validChoices = [] } = field;
     const type = normalizedValueType(valueType);
     const commonProps = {
+      'aria-label': intl.formatMessage({ id: fieldLabelId(fieldName), defaultMessage: fieldName }),
       id: `lms-config-${fieldName}`,
       error: fieldErrors[fieldName],
-      label: intl.formatMessage({ id: fieldLabelId(fieldName), defaultMessage: fieldName }),
       onChange: handleChange(fieldName),
       required,
-      value: values[fieldName] || '',
+      value: values[fieldName] ?? '',
     };
 
     if (validChoices.length > 0) {
@@ -183,23 +251,50 @@ const LMSConfigEditor = ({ id, entry: initialEntry, fieldMapping = [] }) => {
 
   return (
     <div>
-      {fieldMapping.map(field => (
-        <Row bottom="xs" key={field.fieldName}>
-          <Col xs={8}>
-            {renderFieldInput(field)}
-          </Col>
-          <Col xs={4}>
-            <Button
-              buttonStyle="primary"
-              disabled={savingFields[field.fieldName]}
-              id={`save-lms-config-${field.fieldName}`}
-              onClick={() => saveField(field)}
-            >
-              <FormattedMessage id="stripes-components.saveAndClose.save" defaultMessage="Save" />
-            </Button>
-          </Col>
-        </Row>
-      ))}
+      {fieldMapping.map(field => {
+        const { fieldName } = field;
+        const isEditing = editingFields[fieldName];
+        const isSaving = savingFields[fieldName];
+
+        return (
+          <Card
+            roundedBorder
+            key={fieldName}
+            headerStart={intl.formatMessage({ id: fieldLabelId(fieldName), defaultMessage: fieldName })}
+            headerEnd={
+              <Button
+                buttonStyle={isEditing ? 'primary' : undefined}
+                disabled={isSaving}
+                id={`${isEditing ? 'save' : 'edit'}-lms-config-${fieldName}`}
+                onClick={() => (isEditing ? saveField(field) : editField(fieldName))}
+              >
+                {isEditing ?
+                  <FormattedMessage id="stripes-components.saveAndClose.save" defaultMessage="Save" /> :
+                  <FormattedMessage id="ui-rsdir.edit" defaultMessage="Edit" />
+                }
+              </Button>
+            }
+          >
+            {isEditing ?
+              <div className={css.fieldEditor}>
+                <div className={css.fieldInput}>
+                  {renderFieldInput(field)}
+                </div>
+                <IconButton
+                  aria-label={intl.formatMessage({ id: 'ui-rsdir.cancel', defaultMessage: 'Cancel' })}
+                  disabled={isSaving}
+                  icon="times"
+                  iconSize="small"
+                  id={`cancel-lms-config-${fieldName}`}
+                  onClick={() => cancelEditingField(fieldName)}
+                  size="small"
+                />
+              </div> :
+              committedValue(fieldName)
+            }
+          </Card>
+        );
+      })}
       {!entry?.lmsConfig &&
         <div>
           <FormattedMessage
