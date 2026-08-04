@@ -20,7 +20,7 @@ export function recordToFormValues(record = {}) {
 
 export function buildCreateTemplateBody(values = {}) {
   const created = {
-    title: values.title,
+    title: (values.title ?? '').trim(),
     purpose: values.purpose,
     body: values.body,
     contentType: values.contentType,
