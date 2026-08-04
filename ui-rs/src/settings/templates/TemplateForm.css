@@ -1,0 +1,11 @@
+/* Stripes fields have no help-text slot. Align this custom caption with their
+   left edge (--input-vertical-padding) and bottom rhythm
+   (--control-margin-bottom); marginBottom0 on the field lets the caption own the
+   gap below it. */
+.help {
+  padding: 0 var(--input-vertical-padding);
+  color: var(--color-text-p2);
+  font-size: 0.8125rem;
+  margin-top: 0.25rem;
+  margin-bottom: var(--control-margin-bottom);
+}

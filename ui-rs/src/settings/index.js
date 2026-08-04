@@ -3,6 +3,7 @@ import { FormattedMessage } from 'react-intl';
 import { Settings } from '@folio/stripes/smart-components';
 
 import ScheduledActions from './scheduledActions';
+import Templates from './templates';
 
 const sections = [
   {
@@ -12,6 +13,11 @@ const sections = [
         route: 'scheduled-actions',
         label: <FormattedMessage id="ui-rs.settings.scheduledActions.heading" />,
         component: ScheduledActions,
+      },
+      {
+        route: 'templates',
+        label: <FormattedMessage id="ui-rs.settings.templates.heading" />,
+        component: Templates,
       },
     ],
   },

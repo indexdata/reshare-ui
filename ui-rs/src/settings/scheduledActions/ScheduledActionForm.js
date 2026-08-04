@@ -22,21 +22,23 @@ import { recordToFormValues } from './model';
 import actionRegistry from './actions/actionRegistry';
 import css from './ScheduledActionForm.css';
 
-// Templates seed the form but are not themselves submitted.
-const TemplatePicker = ({ templates }) => {
+// Built-in batch actions that seed the form but are not themselves submitted. Called
+// presets rather than templates: the email params block now picks a message template,
+// which is a different thing entirely.
+const PresetPicker = ({ presets }) => {
   const intl = useIntl();
   const form = useForm();
   const [selected, setSelected] = useState('');
-  if (!templates.length) return null;
+  if (!presets.length) return null;
 
-  const templateLabel = (t) => intl.formatMessage({
-    id: `ui-rs.settings.scheduledActions.templates.${t.titleKey}`,
-    defaultMessage: t.title,
+  const presetLabel = (p) => intl.formatMessage({
+    id: `ui-rs.settings.scheduledActions.preset.${p.titleKey}`,
+    defaultMessage: p.title,
   });
 
   const options = [
-    { value: '', label: intl.formatMessage({ id: 'ui-rs.settings.scheduledActions.template.placeholder' }) },
-    ...templates.map((t, i) => ({ value: String(i), label: templateLabel(t) })),
+    { value: '', label: intl.formatMessage({ id: 'ui-rs.settings.scheduledActions.preset.placeholder' }) },
+    ...presets.map((p, i) => ({ value: String(i), label: presetLabel(p) })),
   ];
 
   const onChange = (e) => {
@@ -44,7 +46,7 @@ const TemplatePicker = ({ templates }) => {
     setSelected(idx);
     if (idx === '') return;
     // Replacing actionParams prevents parameters leaking between action types.
-    const values = recordToFormValues(templates[Number(idx)]);
+    const values = recordToFormValues(presets[Number(idx)]);
     form.batch(() => {
       Object.entries(values).forEach(([field, value]) => form.change(field, value));
     });
@@ -54,11 +56,11 @@ const TemplatePicker = ({ templates }) => {
     <Row>
       <Col xs={12} md={8}>
         <Select
-          id="scheduled-action-template"
+          id="scheduled-action-preset"
           dataOptions={options}
           value={selected}
           onChange={onChange}
-          label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.template" />}
+          label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.preset" />}
         />
       </Col>
     </Row>
@@ -67,8 +69,8 @@ const TemplatePicker = ({ templates }) => {
 
 const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, submitting, editing, unsupportedSchedule }) => {
   const intl = useIntl();
-  // Template lookup is optional; failure leaves the manual form usable.
-  const { data: templates } = useOkapiQuery(
+  // Preset lookup is optional; failure leaves the manual form usable.
+  const { data: presets } = useOkapiQuery(
     'broker/state_model/batch_actions',
     { enabled: !editing, useErrorBoundary: false }
   );
@@ -155,7 +157,7 @@ const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLa
                   />
                 </MessageBanner>
               )}
-              {!editing && <TemplatePicker templates={templates ?? []} />}
+              {!editing && <PresetPicker presets={presets ?? []} />}
               <Row>
                 <Col xs={12} md={4}>
                   <Field name="actionName">

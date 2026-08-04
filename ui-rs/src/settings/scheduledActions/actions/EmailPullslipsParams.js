@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Field, useForm } from 'react-final-form';
+import React, { useEffect, useMemo } from 'react';
+import { Field, useField, useForm } from 'react-final-form';
 import { FieldArray } from 'react-final-form-arrays';
 import { FormattedMessage, useIntl } from 'react-intl';
 import {
@@ -9,12 +9,77 @@ import {
   Label,
   RepeatableField,
   Row,
-  TextArea,
+  Select,
   TextField,
 } from '@folio/stripes/components';
+import { useOkapiQuery } from '@projectreshare/stripes-reshare';
+
+import { templateLabelOptions } from '../../templates/mapping';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EmailField = (props) => <TextField type="email" {...props} />;
+
+// The sender resolves the template itself, by owner + purpose + label + audience, and
+// hardcodes these two; only the label is stored on the action.
+const TEMPLATE_SCOPE = { purpose: 'email', audience: 'staff' };
+
+// A label naming no template fails the send, so only labels that exist are offered.
+const TemplateLabelField = ({ invalidMessage }) => {
+  const intl = useIntl();
+  // No fallback for a failed fetch: an empty list here has to mean "none exist",
+  // or the form would invite creating a duplicate and clear a valid stored label.
+  const { data, isLoading } = useOkapiQuery('broker/templates', {
+    searchParams: { limit: 100 },
+  });
+  const options = useMemo(
+    () => templateLabelOptions(data?.items, TEMPLATE_SCOPE),
+    [data],
+  );
+  const { input, meta } = useField('actionParams.templateLabel', {
+    validate: (value) => (value ? undefined : invalidMessage),
+  });
+
+  // A preset suggests labels the broker never creates, so one may name nothing here.
+  const { value, onChange } = input;
+  useEffect(() => {
+    if (isLoading || !value) return;
+    if (!options.some(opt => opt.value === value)) onChange('');
+  }, [isLoading, options, value, onChange]);
+
+  // Nothing to offer yet: a select rendered now would take a choice it can't hold.
+  // The field is registered above, so save stays blocked meanwhile.
+  if (isLoading) return null;
+
+  if (options.length === 0) {
+    return (
+      <>
+        <Label required>
+          <FormattedMessage id="ui-rs.settings.scheduledActions.params.templateLabel" />
+        </Label>
+        <div>
+          <FormattedMessage id="ui-rs.settings.scheduledActions.params.templateLabelNone" />
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <Select
+      id="scheduled-action-email-templateLabel"
+      required
+      dataOptions={[
+        { value: '', label: intl.formatMessage({ id: 'ui-rs.settings.scheduledActions.params.templateLabelPlaceholder' }) },
+        ...options,
+      ]}
+      label={<FormattedMessage id="ui-rs.settings.scheduledActions.params.templateLabel" />}
+      value={value}
+      onChange={onChange}
+      onBlur={input.onBlur}
+      onFocus={input.onFocus}
+      error={meta.touched ? meta.error : undefined}
+    />
+  );
+};
 
 const EmailPullslipsParams = () => {
   const intl = useIntl();
@@ -30,7 +95,6 @@ const EmailPullslipsParams = () => {
 
   const validateRecipientCount = (value) => ((value?.length ?? 0) === 0 ? msg('recipients') : undefined);
   const validateEmail = (value) => (value && EMAIL.test(value.trim()) ? undefined : msg('recipientsInvalid'));
-  const validateRequired = (id) => (value) => (value && value.trim() ? undefined : msg(id));
 
   return (
     <Row>
@@ -58,30 +122,7 @@ const EmailPullslipsParams = () => {
         />
       </Col>
       <Col xs={12} md={6}>
-        <Field
-          id="scheduled-action-email-subject"
-          name="actionParams.subject"
-          component={TextField}
-          required
-          validate={validateRequired('subject')}
-          label={<FormattedMessage id="ui-rs.settings.scheduledActions.params.subject" />}
-        />
-        <Field
-          id="scheduled-action-email-body"
-          name="actionParams.body"
-          component={TextArea}
-          rows={5}
-          required
-          validate={validateRequired('body')}
-          label={<FormattedMessage id="ui-rs.settings.scheduledActions.params.body" />}
-        />
-        <Field
-          id="scheduled-action-email-isHtml"
-          name="actionParams.isHtml"
-          type="checkbox"
-          component={Checkbox}
-          label={<FormattedMessage id="ui-rs.settings.scheduledActions.params.isHtml" />}
-        />
+        <TemplateLabelField invalidMessage={msg('templateLabel')} />
         <Field
           id="scheduled-action-email-includePdf"
           name="actionParams.includePdf"
@@ -103,16 +144,8 @@ export const EmailPullslipsView = ({ actionParams }) => (
       value={(Array.isArray(actionParams?.to) ? actionParams.to : []).join(', ')}
     />
     <KeyValue
-      label={<FormattedMessage id="ui-rs.settings.scheduledActions.params.subject" />}
-      value={actionParams?.subject}
-    />
-    <KeyValue
-      label={<FormattedMessage id="ui-rs.settings.scheduledActions.params.body" />}
-      value={actionParams?.body}
-    />
-    <KeyValue
-      label={<FormattedMessage id="ui-rs.settings.scheduledActions.params.isHtml" />}
-      value={<FormattedMessage id={actionParams?.isHtml ? 'ui-rs.yes' : 'ui-rs.no'} />}
+      label={<FormattedMessage id="ui-rs.settings.scheduledActions.params.templateLabel" />}
+      value={actionParams?.templateLabel}
     />
     <KeyValue
       label={<FormattedMessage id="ui-rs.settings.scheduledActions.params.includePdf" />}
