@@ -19,15 +19,12 @@ import { templateLabelOptions } from '../../templates/mapping';
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EmailField = (props) => <TextField type="email" {...props} />;
 
-// The sender resolves the template itself, by owner + purpose + label + audience, and
+// The broker resolves the template itself, by owner + purpose + label + audience, and
 // hardcodes these two; only the label is stored on the action.
 const TEMPLATE_SCOPE = { purpose: 'email', audience: 'staff' };
 
-// A label naming no template fails the send, so only labels that exist are offered.
 const TemplateLabelField = ({ invalidMessage }) => {
   const intl = useIntl();
-  // No fallback for a failed fetch: an empty list here has to mean "none exist",
-  // or the form would invite creating a duplicate and clear a valid stored label.
   const { data, isLoading } = useOkapiQuery('broker/templates', {
     searchParams: { limit: 100 },
   });
@@ -39,15 +36,13 @@ const TemplateLabelField = ({ invalidMessage }) => {
     validate: (value) => (value ? undefined : invalidMessage),
   });
 
-  // A preset suggests labels the broker never creates, so one may name nothing here.
+  // Presets may initialize a label the broker does not provide; clear it after options load.
   const { value, onChange } = input;
   useEffect(() => {
     if (isLoading || !value) return;
     if (!options.some(opt => opt.value === value)) onChange('');
   }, [isLoading, options, value, onChange]);
 
-  // Nothing to offer yet: a select rendered now would take a choice it can't hold.
-  // The field is registered above, so save stays blocked meanwhile.
   if (isLoading) return null;
 
   if (options.length === 0) {
