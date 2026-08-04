@@ -1,0 +1,8 @@
+/* Plain-text bodies are authored with meaningful line breaks; keep them, but wrap
+   long lines rather than scrolling the pane sideways. */
+.bodyText {
+  margin: 0;
+  font-family: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

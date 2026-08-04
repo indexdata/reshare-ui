@@ -46,6 +46,8 @@ const makeOkapiKyMock = () => {
   // mockResolvedValueOnce/mockRejectedValueOnce.
   okapiKy.post = jest.fn(async () => ({ json: async () => ({ id: 'new-1' }) }));
   okapiKy.put = jest.fn(async () => ({ json: async () => ({}) }));
+  // DELETE responds 204 with no body, so nothing here resolves a json payload.
+  okapiKy.delete = jest.fn(async () => ({}));
 
   return okapiKy;
 };
