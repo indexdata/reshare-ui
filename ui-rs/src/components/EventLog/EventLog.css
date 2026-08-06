@@ -1,0 +1,93 @@
+.eventCard {
+  background-color: #ffe7ff;
+}
+
+.eventCardHeader {
+  background-color: #f4cdf4;
+  font-weight: var(--text-weight-bold);
+}
+
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 12rem;
+}
+
+.filterCount {
+  white-space: nowrap;
+  font-weight: var(--text-weight-regular);
+  color: var(--color-text-p2);
+  font-size: var(--font-size-small);
+}
+
+.summaryDivider {
+  border-top: 1px solid var(--color-border-p2);
+  margin: 0.5rem 0;
+}
+
+.entryList {
+  display: flex;
+  flex-direction: column;
+}
+
+.entry + .entry {
+  border-top: 1px solid var(--color-border-p2);
+}
+
+.entryHeader {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.entryHeader:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.entryHeader:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.entryCaret {
+  display: inline-flex;
+  align-items: center;
+}
+
+.entryTitle {
+  font-weight: var(--text-weight-medium);
+  white-space: nowrap;
+}
+
+.entrySummary {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--color-text-p2);
+}
+
+.entryTime {
+  white-space: nowrap;
+  color: var(--color-text-p2);
+  font-size: var(--font-size-small);
+}
+
+.matchLine {
+  background-color: var(--highlighter-fill);
+}
+
+.entryBody {
+  padding: 0.5rem 0.5rem 0.75rem;
+  background-color: rgba(255, 255, 255, 0.5);
+}

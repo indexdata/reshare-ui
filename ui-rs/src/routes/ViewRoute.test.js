@@ -14,7 +14,7 @@ jest.mock('@folio/stripes-components/lib/Icon', () => require('../test/iconMock'
 jest.mock('@folio/stripes-components/lib/TextArea', () => require('../test/textAreaMock').default);
 
 // react-syntax-highlighter ships ESM jest can't parse and only renders event
-// payloads (EventHistoryDetails), which an empty-history fixture never reaches.
+// payloads (EventLogDetails), which an empty-history fixture never reaches.
 // Stub both entry points at the leaf to remove the externality without losing
 // coverage this route test cares about.
 jest.mock('react-syntax-highlighter', () => ({

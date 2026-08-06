@@ -2,9 +2,10 @@ import { FormattedMessage } from 'react-intl';
 import { LightAsync as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { github } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import XmlBeautify from 'xml-beautify';
-import { Accordion, AccordionSet, Col, KeyValue, Row } from '@folio/stripes/components';
-import formattedDateTime from '../../../../util/formattedDateTime';
-import css from './EventHistory.css';
+import { Accordion, AccordionSet, KeyValue, Layout } from '@folio/stripes/components';
+import formattedDateTime from '../../util/formattedDateTime';
+import formatError from './formatError';
+import css from './EventLog.css';
 
 const githubStyle = { ...github, hljs: { ...github.hljs, background: 'transparent' } };
 
@@ -41,17 +42,17 @@ const PayloadAccordion = ({ labelId, value }) => {
   );
 };
 
-const formatError = (err) => {
-  if (!err) return null;
-  if (typeof err === 'string') return err;
-  if (err.Message) {
-    return err.Cause ? `${err.Message}: ${err.Cause}` : err.Message;
-  }
-  return JSON.stringify(err, null, 2);
-};
-
-const EventHistoryDetails = ({ event }) => {
+const EventLogDetails = ({ event, filterQuery }) => {
   const { eventData = {}, resultData = {} } = event;
+
+  // lineProps receives a usable line number only when line numbers are shown.
+  const rawJson = JSON.stringify(event, null, 2);
+  const rawLines = rawJson.split('\n');
+  const matchLineProps = (lineNumber) => (
+    rawLines[lineNumber - 1]?.toLowerCase().includes(filterQuery)
+      ? { className: css.matchLine }
+      : {}
+  );
 
   const customData = eventData.customData || {};
   const resultCustomData = resultData.customData || {};
@@ -72,69 +73,43 @@ const EventHistoryDetails = ({ event }) => {
     ['ui-rs.eventHistory.lmsOutgoing', lmsOutgoing],
   ].filter(([, v]) => v);
 
-  return (
-    <div className={css.eventBody}>
-      {/* 1. Metadata */}
-      <Row>
-        <Col xs={2}>
-          <KeyValue
-            label={<FormattedMessage id="ui-rs.eventHistory.timestamp" />}
-            value={formattedDateTime(event.timestamp)}
-          />
-        </Col>
-        <Col xs={2}>
-          <KeyValue
-            label={<FormattedMessage id="ui-rs.eventHistory.eventName" />}
-            value={event.eventName}
-          />
-        </Col>
-        <Col xs={1}>
-          <KeyValue
-            label={<FormattedMessage id="ui-rs.eventHistory.eventType" />}
-            value={event.eventType}
-          />
-        </Col>
-        <Col xs={1}>
-          <KeyValue
-            label={<FormattedMessage id="ui-rs.eventHistory.eventStatus" />}
-            value={event.eventStatus}
-          />
-        </Col>
-        <Col xs={3}>
-          <KeyValue
-            label={<FormattedMessage id="ui-rs.eventHistory.eventId" />}
-            value={event.id}
-          />
-        </Col>
-        {event.parentID && (
-          <Col xs={2}>
-            <KeyValue
-              label={<FormattedMessage id="ui-rs.eventHistory.parentId" />}
-              value={event.parentID}
-            />
-          </Col>
-        )}
-        {eventData.user && (
-          <Col xs={2}>
-            <KeyValue
-              label={<FormattedMessage id="ui-rs.eventHistory.actor" />}
-              value={eventData.user}
-            />
-          </Col>
-        )}
-      </Row>
+  const metadata = [
+    ['timestamp', 'ui-rs.eventHistory.timestamp', formattedDateTime(event.timestamp)],
+    ['eventName', 'ui-rs.eventHistory.eventName', event.eventName],
+    ['eventType', 'ui-rs.eventHistory.eventType', event.eventType],
+    ['eventStatus', 'ui-rs.eventHistory.eventStatus', event.eventStatus],
+    ['eventId', 'ui-rs.eventHistory.eventId', event.id],
+    event.parentID && ['parentId', 'ui-rs.eventHistory.parentId', event.parentID],
+    eventData.user && ['actor', 'ui-rs.eventHistory.actor', eventData.user],
+  ].filter(Boolean);
 
-      {/* 2. Problem / Error */}
+  return (
+    <>
+      {/* Metadata */}
+      <Layout
+        className="display-flex flex-wrap--wrap flex-align-items-start"
+        style={{ columnGap: 'var(--gutter)' }}
+      >
+        {metadata.map(([key, labelId, value]) => (
+          <KeyValue
+            key={key}
+            label={<FormattedMessage id={labelId} />}
+            value={value}
+          />
+        ))}
+      </Layout>
+
+      {/* Errors and notes */}
       {eventError && (
         <div>
           <h4><FormattedMessage id="ui-rs.eventHistory.error" /></h4>
-          <pre style={{ textWrap: 'wrap' }}>{formatError(eventError)}</pre>
+          <pre style={{ textWrap: 'wrap' }}>{formatError(eventError, true)}</pre>
         </div>
       )}
       {problem && (
         <div>
           <h4><FormattedMessage id="ui-rs.eventHistory.problem" /></h4>
-          <pre style={{ textWrap: 'wrap' }}>{formatError(problem)}</pre>
+          <pre style={{ textWrap: 'wrap' }}>{formatError(problem, true)}</pre>
         </div>
       )}
       {note && !eventError && !problem && (
@@ -144,7 +119,7 @@ const EventHistoryDetails = ({ event }) => {
         />
       )}
 
-      {/* 3. Action Info */}
+      {/* Action */}
       {event.eventName === 'invoke-action' && eventData.action && (
         <KeyValue
           label={<FormattedMessage id="ui-rs.eventHistory.action" />}
@@ -152,7 +127,7 @@ const EventHistoryDetails = ({ event }) => {
         />
       )}
 
-      {/* 4. Message Payloads (open accordions) */}
+      {/* Message payloads */}
       {payloads.length > 0 && (
         <AccordionSet>
           {payloads.map(([labelId, value]) => (
@@ -161,19 +136,26 @@ const EventHistoryDetails = ({ event }) => {
         </AccordionSet>
       )}
 
-      {/* 5. Raw Event (closed accordion) */}
+      {/* Raw event */}
       <AccordionSet>
         <Accordion
           closedByDefault
           label={<FormattedMessage id="ui-rs.eventHistory.rawEvent" />}
         >
-          <SyntaxHighlighter language="json" style={githubStyle} wrapLongLines>
-            {JSON.stringify(event, null, 2)}
+          <SyntaxHighlighter
+            language="json"
+            style={githubStyle}
+            wrapLongLines
+            showLineNumbers
+            lineNumberStyle={{ color: '#707070' }}
+            lineProps={filterQuery ? matchLineProps : undefined}
+          >
+            {rawJson}
           </SyntaxHighlighter>
         </Accordion>
       </AccordionSet>
-    </div>
+    </>
   );
 };
 
-export default EventHistoryDetails;
+export default EventLogDetails;
