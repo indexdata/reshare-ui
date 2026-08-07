@@ -1,9 +1,8 @@
 import { useLocation } from 'react-router-dom';
 import { FormattedMessage } from 'react-intl';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
-import { Accordion, AccordionSet, Card, Loading } from '@folio/stripes/components';
-import EventHistoryRow from './EventHistoryRow';
-import css from './EventHistory.css';
+import { Accordion, Loading } from '@folio/stripes/components';
+import EventLog from '../../../EventLog';
 
 const EventHistory = ({ record }) => {
   const location = useLocation();
@@ -15,11 +14,7 @@ const EventHistory = ({ record }) => {
     }
   };
 
-  const {
-    data: events = [],
-    isLoading,
-    isSuccess,
-  } = useOkapiQuery(
+  const { data: events = [], isLoading } = useOkapiQuery(
     `broker/patron_requests/${record.id}/events`,
     {
       enabled: !!record?.id,
@@ -28,52 +23,22 @@ const EventHistory = ({ record }) => {
     }
   );
 
-  // TODO: Remove once broker fixes StructToMap to flatten Go embedded structs.
-  // Wire shape is currently { CommonEventData: { action, incomingMessage, ... }, customData: {...} }
-  // but should be flat: { action, incomingMessage, ..., customData: {...} }
-  const flattenPayload = (data) => {
-    if (!data) return {};
-    const { CommonEventData, ...rest } = data;
-    return { ...CommonEventData, ...rest };
-  };
-  const normalizeEvent = (event) => ({
-    ...event,
-    eventData: flattenPayload(event.eventData),
-    resultData: flattenPayload(event.resultData),
-  });
-
   const eventList = (Array.isArray(events?.items) ? events.items : [])
     .slice()
-    .reverse()
-    .map(normalizeEvent);
-
-  let content;
-  if (isLoading) {
-    content = <Loading />;
-  } else if (isSuccess && eventList.length === 0) {
-    content = <FormattedMessage id="ui-rs.eventHistory.empty" />;
-  } else {
-    content = (
-      <AccordionSet>
-        {eventList.map((event) => (
-          <EventHistoryRow key={event.id} event={event} />
-        ))}
-      </AccordionSet>
-    );
-  }
+    .reverse();
 
   return (
     <div ref={scrollRef}>
       <Accordion label={<FormattedMessage id="ui-rs.information.heading.eventHistory" />}>
-        <Card
-          id="event-history-card"
-          headerStart={<FormattedMessage id="ui-rs.reverseChronological" />}
-          roundedBorder
-          cardClass={css.eventCard}
-          headerClass={css.eventCardHeader}
-        >
-          {content}
-        </Card>
+        {isLoading ? <Loading /> : (
+          <EventLog
+            key={record.id}
+            cardId="event-history-card"
+            header={<FormattedMessage id="ui-rs.reverseChronological" />}
+            events={eventList}
+            emptyMessageId="ui-rs.eventHistory.empty"
+          />
+        )}
       </Accordion>
     </div>
   );
