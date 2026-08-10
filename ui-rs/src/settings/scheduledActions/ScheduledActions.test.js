@@ -13,7 +13,16 @@ jest.mock('@folio/stripes/core', () => require('../../test/stripesCore').makeStr
   () => mockOkapi,
 ));
 
+// The view pane pulls in EventLog, and Jest cannot parse react-syntax-highlighter's
+// ESM entry points — the import alone is enough to break the suite.
+jest.mock('react-syntax-highlighter', () => ({
+  LightAsync: ({ children }) => require('react').createElement('pre', null, children),
+}));
+jest.mock('react-syntax-highlighter/dist/esm/styles/hljs', () => ({ github: { hljs: {} } }));
+
 const PATH = '/settings/rs/scheduled-actions';
+
+const NO_EVENTS = { about: { count: 0 }, items: [] };
 
 // The schedule summary needs an ICU template to preserve interpolated values.
 const messages = {
@@ -57,6 +66,7 @@ describe('ScheduledActions list', () => {
     mockOkapi.setResponses({
       'broker/batch_actions': { about: { count: 1 }, items: [action] },
       'broker/batch_actions/a1': action,
+      'broker/batch_actions/a1/events': NO_EVENTS,
     });
 
     renderList();
@@ -66,5 +76,75 @@ describe('ScheduledActions list', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.scheduledActions.disable' }));
 
     await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledWith('broker/batch_actions/a1/disable'));
+  });
+
+  describe('event history', () => {
+    const action = {
+      id: 'a1',
+      actionName: 'request-aging',
+      schedule: 'FREQ=WEEKLY;BYDAY=MO;BYHOUR=6;BYMINUTE=0',
+      batchQuery: 'state==REQ',
+      active: true,
+    };
+
+    const openView = async (events) => {
+      mockOkapi.setResponses({
+        'broker/batch_actions': { about: { count: 1 }, items: [action] },
+        'broker/batch_actions/a1': action,
+        'broker/batch_actions/a1/events': events,
+      });
+      renderList();
+      fireEvent.click(await screen.findByText('request-aging'));
+    };
+
+    it('lists events newest-first with result notes as summaries', async () => {
+      await openView({
+        about: { count: 3 },
+        items: [
+          {
+            id: 'ev-bg',
+            timestamp: '2026-05-02T06:01:00Z',
+            eventName: 'invoke-background-action',
+            eventType: 'TASK',
+            eventStatus: 'SUCCESS',
+            parentID: 'ev-2',
+            eventData: { action: 'Cancel', batchActionData: { taskId: 'a1' } },
+            resultData: { note: 'patron request closed' },
+          },
+          {
+            id: 'ev-2',
+            timestamp: '2026-05-02T06:00:00Z',
+            eventName: 'invoke-batch-action',
+            eventType: 'TASK',
+            eventStatus: 'SUCCESS',
+            eventData: { batchActionData: { taskId: 'a1' } },
+            resultData: { note: 'processed patron request count: 4' },
+          },
+          {
+            id: 'ev-1',
+            timestamp: '2026-05-01T06:00:00Z',
+            eventName: 'invoke-batch-action',
+            eventType: 'TASK',
+            eventStatus: 'ERROR',
+            eventData: { batchActionData: { taskId: 'a1' } },
+            resultData: { eventError: { Message: 'invalid cql selector' } },
+          },
+        ],
+      });
+
+      expect(await screen.findByText('ui-rs.eventHistory.event.invokeBackgroundAction: Cancel')).toBeInTheDocument();
+      const events = screen.getAllByText('ui-rs.eventHistory.event.invokeBatchAction');
+      expect(events).toHaveLength(2);
+      expect(screen.getByText('patron request closed')).toBeInTheDocument();
+      expect(screen.getByText('processed patron request count: 4')).toBeInTheDocument();
+      expect(screen.getByText(/invalid cql selector/)).toBeInTheDocument();
+      expect(events[0].closest('button')).toHaveTextContent('processed patron request count: 4');
+    });
+
+    it('reports an action with no events', async () => {
+      await openView(NO_EVENTS);
+
+      expect(await screen.findByText('ui-rs.settings.scheduledActions.events.empty')).toBeInTheDocument();
+    });
   });
 });

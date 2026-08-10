@@ -1,10 +1,11 @@
 import React, { useContext, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useMutation, useQueryClient } from 'react-query';
-import { Button, Col, ConfirmationModal, KeyValue, Pane, Row } from '@folio/stripes/components';
+import { Accordion, Button, Col, ConfirmationModal, KeyValue, Loading, Pane, Row } from '@folio/stripes/components';
 import { CalloutContext } from '@folio/stripes/core';
 import { DirectLink, useOkapiKy, useOkapiQuery, useCloseDirect } from '@projectreshare/stripes-reshare';
 
+import EventLog from '../../components/EventLog';
 import { describeSchedule } from './schedule/scheduleExpression';
 import actionRegistry from './actions/actionRegistry';
 
@@ -18,6 +19,14 @@ const ViewScheduledAction = ({ match }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const { data, isSuccess } = useOkapiQuery(`broker/batch_actions/${id}`);
+
+  // This endpoint already returns newest-first.
+  const eventsQuery = useOkapiQuery(`broker/batch_actions/${id}/events`, {
+    staleTime: 2 * 60 * 1000,
+    useErrorBoundary: false,
+    notifyOnChangeProps: 'tracked',
+  });
+  const events = Array.isArray(eventsQuery.data?.items) ? eventsQuery.data.items : [];
 
   const remover = useMutation({
     mutationFn: () => okapiKy.delete(`broker/batch_actions/${id}`),
@@ -102,6 +111,22 @@ const ViewScheduledAction = ({ match }) => {
           {ParamsView && <ParamsView actionParams={data.actionParams} />}
         </Col>
       </Row>
+      <Accordion
+        id="batch-action-events"
+        label={<FormattedMessage id="ui-rs.settings.scheduledActions.events.heading" />}
+      >
+        {eventsQuery.isLoading && <Loading />}
+        {eventsQuery.isError && <FormattedMessage id="ui-rs.settings.scheduledActions.events.error" />}
+        {eventsQuery.isSuccess && (
+          <EventLog
+            key={id}
+            cardId="batch-action-events-card"
+            header={<FormattedMessage id="ui-rs.settings.scheduledActions.events.description" />}
+            events={events}
+            emptyMessageId="ui-rs.settings.scheduledActions.events.empty"
+          />
+        )}
+      </Accordion>
       <ConfirmationModal
         open={confirmDelete}
         heading={<FormattedMessage id="ui-rs.settings.scheduledActions.delete.heading" />}
