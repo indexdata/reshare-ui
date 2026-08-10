@@ -70,6 +70,38 @@ describe('EventLog', () => {
     expect(rows()).toHaveLength(3);
   });
 
+  it('titles batch-action events and summarizes any event carrying a result note', () => {
+    renderLog([
+      makeEvent({
+        id: 'ev-batch',
+        eventName: 'invoke-batch-action',
+        resultData: { note: 'processed patron request count: 4' },
+      }),
+      makeEvent({
+        id: 'ev-bg',
+        eventName: 'invoke-background-action',
+        eventData: { action: 'Cancel' },
+        resultData: { note: 'patron email sent successfully' },
+      }),
+    ]);
+
+    expect(screen.getByText('ui-rs.eventHistory.event.invokeBatchAction')).toBeInTheDocument();
+    expect(screen.getByText('processed patron request count: 4')).toBeInTheDocument();
+    expect(screen.getByText('ui-rs.eventHistory.event.invokeBackgroundAction: Cancel')).toBeInTheDocument();
+    expect(screen.getByText('patron email sent successfully')).toBeInTheDocument();
+  });
+
+  it('shows an error instead of a result note when both are present', () => {
+    renderLog([makeEvent({
+      eventStatus: 'ERROR',
+      eventName: 'invoke-batch-action',
+      resultData: { note: 'processed patron request count: 0', eventError: { Message: 'invalid cql selector' } },
+    })]);
+
+    expect(screen.getByText(/invalid cql selector/)).toBeInTheDocument();
+    expect(screen.queryByText('processed patron request count: 0')).not.toBeInTheDocument();
+  });
+
   it('distinguishes no matches from an empty log', () => {
     renderLog(events);
     fireEvent.change(filterBox(), { target: { value: 'nothing-matches-this' } });

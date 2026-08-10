@@ -24,10 +24,14 @@ const STATUS_LABEL_IDS = {
 
 const EVENT_TITLE_IDS = {
   'invoke-action': 'ui-rs.eventHistory.event.invokeAction',
+  'invoke-batch-action': 'ui-rs.eventHistory.event.invokeBatchAction',
+  'invoke-background-action': 'ui-rs.eventHistory.event.invokeBackgroundAction',
   'patron-request-message': 'ui-rs.eventHistory.event.patronRequestMessage',
   'lms-requester-message': 'ui-rs.eventHistory.event.lmsRequesterMessage',
   'lms-supplier-message': 'ui-rs.eventHistory.event.lmsSupplierMessage',
 };
+
+const ACTION_IN_TITLE = ['invoke-action', 'invoke-background-action'];
 
 const find18626ErrorValue = (data) => {
   const msg = data?.incomingMessage;
@@ -42,7 +46,7 @@ const getEventTitle = (intl, event) => {
   const action = eventData.action;
   const id = EVENT_TITLE_IDS[eventName];
   const base = id ? intl.formatMessage({ id }) : eventName;
-  if (eventName === 'invoke-action' && action) {
+  if (ACTION_IN_TITLE.includes(eventName) && action) {
     return `${base}: ${action}`;
   }
   return base;
@@ -76,7 +80,7 @@ const summarizeIso18626 = (fmt, messages) => {
 };
 
 const getEventSummary = (intl, event) => {
-  const { eventData = {}, resultData = {}, eventStatus, eventName } = event;
+  const { eventData = {}, resultData = {}, eventStatus } = event;
   const fmt = (id, values) => intl.formatMessage({ id: `ui-rs.${id}` }, values);
 
   if (eventStatus === 'ERROR' || eventStatus === 'PROBLEM') {
@@ -91,7 +95,7 @@ const getEventSummary = (intl, event) => {
   ]);
   if (iso) return iso;
 
-  if (eventName === 'invoke-action' && resultData.note) return resultData.note;
+  if (resultData.note) return resultData.note;
   return null;
 };
 
