@@ -704,7 +704,7 @@
   "settings.scheduledActions.status.active": "Active",
   "settings.scheduledActions.status.inactive": "Inactive",
   "settings.scheduledActions.events.heading": "Recent events",
-  "settings.scheduledActions.events.description": "Retained events are shown most recent first. This is not a complete history.",
+  "settings.scheduledActions.events.description": "Most recent first, not a complete history.",
   "settings.scheduledActions.events.empty": "This action has no events.",
   "settings.scheduledActions.events.error": "Unable to load events.",
   "settings.scheduledActions.field.active": "Status",
