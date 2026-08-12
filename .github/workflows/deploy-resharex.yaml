@@ -47,18 +47,6 @@ jobs:
           cache: yarn
           cache-dependency-path: environments/platform-resharex/yarn.lock
 
-      # temporary, so we can clone from git on a private repo
-      - name: Set up SSH for private git deps
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.UI_RSDIR_DEPLOY_KEY }}
-
-      - name: Trust github.com host key
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-      # END temporary, so we can clone from git on a private repo
-
       - name: Install Yarn
         run: npm install -g yarn
 
@@ -68,11 +56,6 @@ jobs:
 
       - name: Do yarn install
         run: yarn install
-        working-directory: ./environments/platform-resharex
-
-      # temporary, upgrade rsdir because yarn lock is stale
-      - name: Update ui-rsdir and install dependencies
-        run: yarn upgrade @projectreshare/rsdir
         working-directory: ./environments/platform-resharex
 
       - name: Upload yarn.lock
