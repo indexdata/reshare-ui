@@ -13,9 +13,9 @@ import {
 } from '@folio/stripes/components';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 
-const entryTiersPath = id => `rsdir/entries/by-id/${id}/tiers`;
-const tiersPath = 'rsdir/tiers';
-const entryPath = id => `rsdir/entries/by-id/${id}`;
+const entryTiersPath = id => `directory/entries/by-id/${id}/tiers`;
+const tiersPath = 'directory/tiers';
+const entryPath = id => `directory/entries/by-id/${id}`;
 
 const normalizeList = data => {
   if (Array.isArray(data)) {
@@ -65,7 +65,7 @@ const EntryTiersEditor = ({ id }) => {
     await queryClient.invalidateQueries(entryTiersPath(id));
     await queryClient.invalidateQueries(tiersPath);
     await queryClient.invalidateQueries(entryPath(id));
-    await queryClient.invalidateQueries(['rsdir/entries']);
+    await queryClient.invalidateQueries(['directory/entries']);
   };
 
   const addTier = useMutation({

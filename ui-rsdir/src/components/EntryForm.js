@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { Field, useForm, useFormState } from 'react-final-form';
 import {
@@ -22,6 +22,10 @@ const types = [
   {
     label: 'Consortium',
     value: 'Consortium'
+  },
+  {
+    label: 'Branch',
+    value: 'Branch'
   }
 ];
 
@@ -39,32 +43,31 @@ const parseParent = value => value || undefined;
 
 const formatParent = value => value || '';
 
+const validateParent = (value, values) => (
+  values.type === 'Branch' ? required(value) : undefined
+);
+
 const ParentField = () => {
   const intl = useIntl();
   const form = useForm();
   const { values } = useFormState({ subscription: { values: true } });
   const isConsortium = values.type === 'Consortium';
-  const consortiumEntriesPath = useMemo(() => {
-    const params = new URLSearchParams();
+  const isBranch = values.type === 'Branch';
+  const parentType = isBranch ? 'Institution' : values.type === 'Institution' ? 'Consortium' : undefined;
+  const previousTypeRef = useRef(values.type);
 
-    /*
-    params.append('q', 'type=Consortium');
-    params.append('limit', '1000');
-    */
-    return `rsdir/entries?${params.toString()}`;
-  }, []);
-
-  const consortiumEntriesQuery = useOkapiQuery(consortiumEntriesPath, {
+  const parentEntriesQuery = useOkapiQuery('directory/entries', {
+    enabled: !!parentType,
     staleTime: 2 * 60 * 1000,
     searchParams: {
-      q: 'type=Consortium',
+      cql: `type=${parentType}`,
       limit: '1000',
     },
   });
 
-  const consortiumEntries = useMemo(
-    () => normalizeList(consortiumEntriesQuery.data),
-    [consortiumEntriesQuery.data]
+  const parentEntries = useMemo(
+    () => normalizeList(parentEntriesQuery.data),
+    [parentEntriesQuery.data]
   );
 
   const parentOptions = useMemo(() => [
@@ -72,29 +75,35 @@ const ParentField = () => {
       label: intl.formatMessage({ id: 'ui-rsdir.entry.parent.select' }),
       value: '',
     },
-    ...consortiumEntries
+    ...parentEntries
       .filter(entry => entry.id)
       .map(entry => ({
         label: entryLabel(entry),
         value: entry.id,
       })),
-  ], [consortiumEntries, intl]);
+  ], [intl, parentEntries]);
 
   useEffect(() => {
-    if (isConsortium && values.parent) {
+    const typeChanged = previousTypeRef.current !== values.type;
+
+    if (values.parent && (isConsortium || typeChanged)) {
       form.change('parent', undefined);
     }
-  }, [form, isConsortium, values.parent]);
+
+    previousTypeRef.current = values.type;
+  }, [form, isConsortium, values.parent, values.type]);
 
   return (
     <Field
       name="parent"
       component={Select}
       dataOptions={parentOptions}
-      disabled={isConsortium || !consortiumEntriesQuery.isSuccess}
+      disabled={!parentType || !parentEntriesQuery.isSuccess}
       format={formatParent}
       label={<FormattedMessage id="ui-rsdir.entry.parent" />}
       parse={parseParent}
+      required={isBranch}
+      validate={validateParent}
     />
   );
 };

@@ -13,9 +13,9 @@ import {
 } from '@folio/stripes/components';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 
-const entryNetworksPath = id => `rsdir/entries/by-id/${id}/networks`;
-const networksPath = 'rsdir/networks';
-const entryPath = id => `rsdir/entries/by-id/${id}`;
+const entryNetworksPath = id => `directory/entries/by-id/${id}/networks`;
+const networksPath = 'directory/networks';
+const entryPath = id => `directory/entries/by-id/${id}`;
 
 const normalizeList = data => {
   if (Array.isArray(data)) {
@@ -65,7 +65,7 @@ const EntryNetworksEditor = ({ id }) => {
     await queryClient.invalidateQueries(entryNetworksPath(id));
     await queryClient.invalidateQueries(networksPath);
     await queryClient.invalidateQueries(entryPath(id));
-    await queryClient.invalidateQueries(['rsdir/entries']);
+    await queryClient.invalidateQueries(['directory/entries']);
   };
 
   const addNetwork = useMutation({

@@ -1,0 +1,173 @@
+.fieldEditor {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gutter-static-one-third);
+}
+
+.fieldInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.fieldLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gutter-static-one-third);
+}
+
+.structuredValues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gutter-static-one-third);
+}
+
+.structuredValue {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: var(--gutter-static-one-third) var(--gutter-static-two-thirds);
+  color: var(--color-text);
+  background-color: var(--color-fill-table-row-even);
+  border: 1px solid var(--color-border-p2);
+  border-radius: var(--radius);
+}
+
+.structuredValueText {
+  overflow-wrap: anywhere;
+}
+
+.structuredAdd {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gutter-static-one-third);
+  margin-top: var(--gutter-static-two-thirds);
+}
+
+.structuredInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.stringMapKey {
+  font-weight: 600;
+}
+
+.stringMapSeparator {
+  margin-right: var(--gutter-static-one-third);
+}
+
+.stringMapAddButton {
+  padding-top: 18px;
+}
+
+.subFields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gutter-static-two-thirds);
+}
+
+.subField {
+  padding-bottom: var(--gutter-static-two-thirds);
+  border-bottom: 1px solid var(--color-border-p2);
+}
+
+.subField:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.subField .subFields {
+  margin-left: var(--gutter-static-one-third);
+  padding-left: var(--gutter-static-two-thirds);
+  border-left: 1px solid var(--color-border-p2);
+}
+
+.subFieldLabel {
+  margin-bottom: var(--gutter-static-one-third);
+  font-weight: 600;
+}
+
+.subFieldError {
+  color: var(--error);
+}
+
+.objectArrayValues {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gutter-static-one-third);
+}
+
+.objectArrayValue {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gutter-static-one-third);
+  padding: var(--gutter-static-two-thirds);
+  color: var(--color-text);
+  background-color: var(--color-fill-table-row-even);
+  border: 1px solid var(--color-border-p2);
+  border-radius: var(--radius);
+}
+
+.objectArrayComponents {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: var(--gutter-static-one-third);
+}
+
+.objectArrayComponent {
+  display: grid;
+  grid-template-columns: minmax(8rem, auto) 1fr;
+  gap: var(--gutter-static-one-third);
+  align-items: start;
+}
+
+.objectArrayComponentLabel {
+  font-weight: 600;
+}
+
+.objectArrayComponentValue {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.objectArrayComponent .subFieldError {
+  grid-column: 2;
+}
+
+.objectArrayAdd {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gutter-static-two-thirds);
+  margin-top: var(--gutter-static-two-thirds);
+  padding: var(--gutter-static-two-thirds);
+  border: 1px solid var(--color-border-p2);
+  border-radius: var(--radius);
+}
+
+.objectArrayAddField {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .structuredAdd {
+    flex-wrap: wrap;
+  }
+
+  .structuredInput {
+    flex-basis: 100%;
+  }
+
+  .stringMapAddButton {
+    padding-top: 0;
+  }
+
+  .objectArrayComponent {
+    grid-template-columns: 1fr;
+  }
+
+  .objectArrayComponent .subFieldError {
+    grid-column: 1;
+  }
+}

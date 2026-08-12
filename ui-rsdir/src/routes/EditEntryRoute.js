@@ -23,24 +23,24 @@ const EditEntryRoute = () => {
 
   const op = id ? EDIT : CREATE;
 
-  const close = useCloseDirect(op === CREATE ? `/rsdir/entries${location.search}` : `/rsdir/entries/entry-points/${id}/edit${location.search}`);
+  const close = useCloseDirect(op === CREATE ? `/directory/entries${location.search}` : `/directory/entries/entry-points/${id}/edit${location.search}`);
 
-  const entryQuery = useOkapiQuery(`rsdir/entries/by-id/${id}`, {
+  const entryQuery = useOkapiQuery(`directory/entries/by-id/${id}`, {
     staleTime: 2 * 60 * 1000,
     enabled: !!id,
   });
 
   const creator = useMutation({
     mutationFn: (newRecord) => okapiKy
-      .post('rsdir/entries', { json: newRecord })
+      .post('directory/entries', { json: newRecord })
       .then((res) => res.json()),
     onSuccess: async (createdEntry) => {
-      await queryClient.invalidateQueries(['rsdir/entries']);
+      await queryClient.invalidateQueries(['directory/entries']);
       callout.sendCallout({
         type: 'success',
         message: <FormattedMessage id="ui-rsdir.create.success" />
       });
-      history.push(`/rsdir/entries/view/${createdEntry.id}`);
+      history.push(`/directory/entries/view/${createdEntry.id}`);
     },
     onError: async (err) => {
       callout.sendCallout({
@@ -57,10 +57,10 @@ const EditEntryRoute = () => {
 
   const updater = useMutation({
     mutationFn: (modifiedFields) => okapiKy
-      .patch(`rsdir/entries/by-id/${id}`, { json: modifiedFields }),
+      .patch(`directory/entries/by-id/${id}`, { json: modifiedFields }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries(`rsdir/entries/by-id/${id}`);
-      await queryClient.invalidateQueries(['rsdir/entries']);
+      await queryClient.invalidateQueries(`directory/entries/by-id/${id}`);
+      await queryClient.invalidateQueries(['directory/entries']);
       callout.sendCallout({
         type: 'success',
         message: <FormattedMessage id="ui-rsdir.edit.success" />

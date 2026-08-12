@@ -8,7 +8,7 @@ import EntryOwnedTiersEditor from '../components/EntryOwnedTiersEditor';
 const ManageEntryTiersRoute = () => {
   const { id } = useParams();
   const location = useLocation();
-  const close = useCloseDirect(`/rsdir/entries/entry-points/${id}${location.search}`);
+  const close = useCloseDirect(`/directory/entries/entry-points/${id}${location.search}`);
 
   return (
     <Pane

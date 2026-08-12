@@ -8,78 +8,56 @@ const CREATE = 'create';
 const EDIT = 'edit';
 const STALE_QUERY_TIME = 2 * 60 * 1000;
 const entryPath = id => `directory/entries/by-id/${id}`;
-const fieldLabelId = fieldName => `ui-rsdir.lmsConfig.${fieldName}`;
+const fieldLabelId = fieldName => `ui-rsdir.illConfig.${fieldName}`;
 const fieldMap = [
   {
-    fieldName: 'address',
+    fieldName: 'iso18626Url',
     valueType: 'string',
-    required: true
   },
   {
-    fieldName: 'fromAgency',
+    fieldName: 'iso18626Vendor',
     valueType: 'string',
-    required: true
+    validChoices: ['Alma', 'ReShare', 'CrossLink', 'ILLiad', 'Unknown'],
   },
   {
-    fieldName: 'fromAgencyAuthentication',
-    valueType: 'string'
+    fieldName: 'lendersOfLastResort',
+    valueType: 'stringArray',
   },
   {
-    fieldName: 'toAgency',
-    valueType: 'string'
-  },
-  {
-    fieldName: 'lookupUserEnabled',
+    fieldName: 'includeRequestingAgencyInfo',
     valueType: 'boolean',
   },
   {
-    fieldName: 'acceptItemEnabled',
-    valueType: 'boolean',
-    defaultDesc: 'Is Accept Item Enabled?'
-  },
-  {
-    fieldName: 'checkInItemEnabled',
+    fieldName: 'includeSupplierInfo',
     valueType: 'boolean',
   },
   {
-    fieldName: 'checkOutItemEnabled',
+    fieldName: 'includeReturnInfo',
     valueType: 'boolean',
   },
   {
-    fieldName: 'itemLocation',
-    valueType: 'string',
-  },
-  {
-    fieldName: 'requestItemRequestType',
-    valueType: 'string',
-  },
-  {
-    fieldName: 'requestItemRequestScopeType',
-    valueType: 'string',
-  },
-  {
-    fieldName: 'requestItemPickupLocationEnabled',
+    fieldName: 'includeVendorNote',
     valueType: 'boolean',
   },
   {
-    fieldName: 'requestItemBibIdCode',
+    fieldName: 'useOfferedCosts',
+    valueType: 'boolean',
+  },
+  {
+    fieldName: 'noteFieldSeparator',
     valueType: 'string',
   },
   {
-    fieldName: 'requesterPickupLocation',
+    fieldName: 'supplierPatronPattern',
     valueType: 'string',
   },
   {
-    fieldName: 'supplierPickupLocation',
-    valueType: 'string',
+    fieldName: 'duplicateCheckWindowHours',
+    valueType: 'integer',
   },
-  {
-    fieldName: 'requesterPatronPattern',
-    valueType: 'string'
-  }
 ];
 
-const EditLMSConfigRoute = () => {
+const EditIllConfigRoute = () => {
   const { id } = useParams();
   const location = useLocation();
 
@@ -97,27 +75,27 @@ const EditLMSConfigRoute = () => {
   return (
     <Pane
       defaultWidth="fill"
-      paneTitle={<FormattedMessage id="ui-rsdir.lmsConfig.edit" />}
+      paneTitle={<FormattedMessage id="ui-rsdir.illConfig.edit" />}
       onClose={close}
       dismissible
     >
       <SettingsConfigEditor
-        configKey="lmsConfig"
-        controlIdPrefix="lms-config"
+        configKey="illConfig"
+        controlIdPrefix="ill-config"
         emptyMessage={
           <FormattedMessage
-            id="ui-rsdir.lmsConfig.empty"
-            defaultMessage="No LMS configuration has been saved for this entry."
+            id="ui-rsdir.illConfig.empty"
+            defaultMessage="No ILL configuration has been saved for this entry."
           />
         }
         fieldLabelId={fieldLabelId}
         fieldMapping={fieldMap}
         initialResource={entryQuery.data}
         resourcePath={entryPath(id)}
-        successMessage={<FormattedMessage id="ui-rsdir.lmsConfig.edit.success" />}
+        successMessage={<FormattedMessage id="ui-rsdir.illConfig.edit.success" />}
       />
     </Pane>
   );
 };
 
-export default EditLMSConfigRoute;
+export default EditIllConfigRoute;

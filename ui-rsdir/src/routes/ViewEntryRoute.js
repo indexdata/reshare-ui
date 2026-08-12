@@ -7,7 +7,7 @@ const ViewEntryRoute = () => {
   const { id } = useParams();
   const location = useLocation();
 
-  const entryQuery = useOkapiQuery(`rsdir/entries/by-id/${id}`, {
+  const entryQuery = useOkapiQuery(`directory/entries/by-id/${id}`, {
     staleTime: 2 * 60 * 1000,
     cacheTime: 8 * 60 * 60 * 1000,
     keepPreviousData: true,
@@ -15,7 +15,7 @@ const ViewEntryRoute = () => {
 
   if (!entryQuery.isSuccess) return null;
 
-  return <ViewEntry entry={entryQuery.data} closePath={`/rsdir/entries/entry-points/${id}${location.search}`} />;
+  return <ViewEntry entry={entryQuery.data} closePath={`/directory/entries/entry-points/${id}${location.search}`} />;
 };
 
 export default ViewEntryRoute;
