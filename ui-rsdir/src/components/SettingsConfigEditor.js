@@ -206,8 +206,10 @@ const SettingsConfigEditor = ({
   resourcePath,
   successMessage,
 }) => {
-  fieldMapping.forEach(field => validateFieldDefinition(field));
-
+  useMemo(() => {
+    fieldMapping.forEach(field => validateFieldDefinition(field));
+    return null;
+  }, [fieldMapping]);
   const ky = useOkapiKy();
   const intl = useIntl();
   const callout = useContext(CalloutContext);
@@ -1247,7 +1249,7 @@ const SettingsConfigEditor = ({
     return (
       <div className={css.objectArrayValues}>
         {arrayValues.map((objectValue, index) => (
-          <div className={css.objectArrayValue} key={`${JSON.stringify(objectValue)}-${index}`}>
+          <div className={css.objectArrayValue} key={`${controlPath}-${index}`}>
             <div className={css.objectArrayComponents}>
               {field.objectMap.map(child => {
                 const childPath = `${path}.${index}.${child.fieldName}`;
