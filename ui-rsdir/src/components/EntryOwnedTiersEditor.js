@@ -16,9 +16,9 @@ import {
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 import TierForm from './TierForm';
 
-const entryPath = id => `rsdir/entries/by-id/${id}`;
-const entryTiersPath = id => `rsdir/entries/by-id/${id}/tiers`;
-const tiersPath = 'rsdir/tiers';
+const entryPath = id => `directory/entries/by-id/${id}`;
+const entryTiersPath = id => `directory/entries/by-id/${id}/tiers`;
+const tiersPath = 'directory/tiers';
 const tierPath = id => `${tiersPath}/${id}`;
 const defaultTierValues = {
   level: 'standard',
@@ -64,7 +64,7 @@ const EntryOwnedTiersEditor = ({ id }) => {
     await queryClient.invalidateQueries(tiersPath);
     await queryClient.invalidateQueries([tiersPath]);
     await queryClient.invalidateQueries(entryPath(id));
-    await queryClient.invalidateQueries(['rsdir/entries']);
+    await queryClient.invalidateQueries(['directory/entries']);
 
     if (tierId) {
       await queryClient.invalidateQueries(tierPath(tierId));

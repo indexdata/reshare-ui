@@ -33,7 +33,7 @@
       "settings"
     ],
     "displayName": "ui-rsdir.meta.title",
-    "route": "/rsdir",
+    "route": "/directory",
     "stripesDeps": [
       "@folio/stripes-erm-components",
       "@projectreshare/stripes-reshare"

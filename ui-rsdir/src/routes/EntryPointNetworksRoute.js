@@ -6,7 +6,7 @@ import ManageEntryNetworksRoute from './ManageEntryNetworksRoute';
 
 const EntryPointNetworksRoute = () => {
   const { id } = useParams();
-  const entryQuery = useOkapiQuery(`rsdir/entries/by-id/${id}`, {
+  const entryQuery = useOkapiQuery(`directory/entries/by-id/${id}`, {
     staleTime: 2 * 60 * 1000,
     enabled: !!id,
   });

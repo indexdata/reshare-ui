@@ -43,13 +43,13 @@ const EntriesRoute = ({ children }) => {
 
   const entriesQuery = useInfiniteQuery(
     {
-      queryKey: ['rsdir/entries', cql, '@projectreshare/rsdir'],
+      queryKey: ['directory/entries', cql, '@projectreshare/rsdir'],
       queryFn: ({ pageParam = 0 }) => {
         const params = new URLSearchParams();
-        if (cql) params.append('q', cql);
+        if (cql) params.append('cql', cql);
         params.append('limit', PER_PAGE);
         params.append('offset', pageParam);
-        const url = `rsdir/entries?${params.toString()}`;
+        const url = `directory/entries?${params.toString()}`;
         return ky(url).json();
       },
       useErrorBoundary: true,

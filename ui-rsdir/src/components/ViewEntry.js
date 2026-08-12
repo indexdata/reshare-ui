@@ -25,18 +25,18 @@ const ViewEntry = ({
   const history = useHistory();
   const intl = useIntl();
   const close = useCloseDirect(closePath || upNLevels(location, 2));
-  const parentQuery = useOkapiQuery(`rsdir/entries/by-id/${entry.parent}`, {
+  const parentQuery = useOkapiQuery(`directory/entries/by-id/${entry.parent}`, {
     staleTime: 2 * 60 * 1000,
     enabled: !!entry.parent,
   });
   const parentValue = parentQuery.data?.name || parentQuery.data?.id || entry.parent;
 
   const handleEdit = () => {
-    history.push(`/rsdir/entries/edit/${entry.id}${location.search}`);
+    history.push(`/directory/entries/edit/${entry.id}${location.search}`);
   };
 
   const handleLMSEdit = () => {
-    history.push(`/rsdir/entries/lmsconfig/edit/${entry.id}${location.search}`);
+    history.push(`/directory/entries/lmsconfig/edit/${entry.id}${location.search}`);
   };
 
   const formatSymbols = (symbols) => {

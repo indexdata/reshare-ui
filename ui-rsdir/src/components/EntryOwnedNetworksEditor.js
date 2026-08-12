@@ -16,9 +16,9 @@ import {
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 import NetworkForm from './NetworkForm';
 
-const entryPath = id => `rsdir/entries/by-id/${id}`;
-const entryNetworksPath = id => `rsdir/entries/by-id/${id}/networks`;
-const networksPath = 'rsdir/networks';
+const entryPath = id => `directory/entries/by-id/${id}`;
+const entryNetworksPath = id => `directory/entries/by-id/${id}/networks`;
+const networksPath = 'directory/networks';
 const networkPath = id => `${networksPath}/${id}`;
 const defaultNetworkValues = { priority: 0.0 };
 
@@ -60,7 +60,7 @@ const EntryOwnedNetworksEditor = ({ id }) => {
     await queryClient.invalidateQueries(networksPath);
     await queryClient.invalidateQueries([networksPath]);
     await queryClient.invalidateQueries(entryPath(id));
-    await queryClient.invalidateQueries(['rsdir/entries']);
+    await queryClient.invalidateQueries(['directory/entries']);
 
     if (networkId) {
       await queryClient.invalidateQueries(networkPath(networkId));

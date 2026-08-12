@@ -4,6 +4,9 @@ import { Route } from '@folio/stripes/core';
 import EntriesRoute from './EntriesRoute';
 import ViewEntryRoute from './ViewEntryRoute';
 import EditEntryRoute from './EditEntryRoute';
+import EditCatalogConfigRoute from './EditCatalogConfigRoute';
+import EditHoldingsPolicyRoute from './EditHoldingsPolicyRoute';
+import EditIllConfigRoute from './EditIllConfigRoute';
 import EditLMSConfigRoute from './EditLMSConfigRoute';
 import EditEntryNetworksRoute from './EditEntryNetworksRoute';
 import EditEntryTiersRoute from './EditEntryTiersRoute';
@@ -25,11 +28,17 @@ const DirectoryRoute = ({ match: { path } }) => {
         <Route path={`${path}/entries/create`} component={EditEntryRoute} />
         <Route path={`${path}/entries/entry-points/:id`} component={EntryPointsRoute} />
         <Route path={`${path}/entries/entry-points/:id/edit/entry`} component={EditEntryRoute} />
+        <Route path={`${path}/entries/entry-points/:id/edit/catalogconfig`} component={EditCatalogConfigRoute} />
+        <Route path={`${path}/entries/entry-points/:id/edit/holdingspolicy`} component={EditHoldingsPolicyRoute} />
+        <Route path={`${path}/entries/entry-points/:id/edit/illconfig`} component={EditIllConfigRoute} />
         <Route path={`${path}/entries/entry-points/:id/edit/lmsconfig`} component={EditLMSConfigRoute} />
         <Route path={`${path}/entries/entry-points/:id/edit/networks`} component={EntryPointNetworksRoute} />
         <Route path={`${path}/entries/entry-points/:id/edit/tiers`} component={EntryPointTiersRoute} />
         <Route path={`${path}/entries/view/:id`} component={ViewEntryRoute} />
         <Route path={`${path}/entries/edit/:id`} component={EditEntryRoute} />
+        <Route path={`${path}/entries/catalogconfig/edit/:id`} component={EditCatalogConfigRoute} />
+        <Route path={`${path}/entries/holdingspolicy/edit/:id`} component={EditHoldingsPolicyRoute} />
+        <Route path={`${path}/entries/illconfig/edit/:id`} component={EditIllConfigRoute} />
         <Route path={`${path}/entries/lmsconfig/edit/:id`} component={EditLMSConfigRoute} />
         <Route path={`${path}/entries/networks/manage/:id`} component={ManageEntryNetworksRoute} />
         <Route path={`${path}/entries/networks/edit/:id`} component={EditEntryNetworksRoute} />

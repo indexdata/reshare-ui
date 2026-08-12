@@ -11,13 +11,13 @@ import {
 import { useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import ViewEntry from './ViewEntry';
 
-const entryPath = id => `rsdir/entries/by-id/${id}`;
+const entryPath = id => `directory/entries/by-id/${id}`;
 
 const EntryPoints = ({ id }) => {
   const history = useHistory();
   const intl = useIntl();
   const location = useLocation();
-  const close = useCloseDirect(`/rsdir/entries${location.search}`);
+  const close = useCloseDirect(`/directory/entries${location.search}`);
   const entryQuery = useOkapiQuery(entryPath(id), {
     staleTime: 2 * 60 * 1000,
     cacheTime: 8 * 60 * 60 * 1000,
@@ -31,7 +31,7 @@ const EntryPoints = ({ id }) => {
 
   const entry = entryQuery.data;
   const title = intl.formatMessage({ id: 'ui-rsdir.entryPoints.title' }, { name: entry.name });
-  const basePath = `/rsdir/entries/entry-points/${id}`;
+  const basePath = `/directory/entries/entry-points/${id}`;
   const editBasePath = `${basePath}/edit`;
   const isEditTab = location.pathname.startsWith(editBasePath);
   const tiersPath = `${editBasePath}/tiers`;
@@ -99,6 +99,24 @@ const EntryPoints = ({ id }) => {
               to={`${editBasePath}/lmsconfig${location.search}`}
             >
               <FormattedMessage id="ui-rsdir.entryPoints.section.lmsConfig" />
+            </NavListItem>
+            <NavListItem
+              id="clickable-entry-point-catalog-config"
+              to={`${editBasePath}/catalogconfig${location.search}`}
+            >
+              <FormattedMessage id="ui-rsdir.entryPoints.section.catalogConfig" />
+            </NavListItem>
+            <NavListItem
+              id="clickable-entry-point-holdings-policy"
+              to={`${editBasePath}/holdingspolicy${location.search}`}
+            >
+              <FormattedMessage id="ui-rsdir.entryPoints.section.holdingsPolicy" />
+            </NavListItem>
+            <NavListItem
+              id="clickable-entry-point-ill-config"
+              to={`${editBasePath}/illconfig${location.search}`}
+            >
+              <FormattedMessage id="ui-rsdir.entryPoints.section.illConfig" />
             </NavListItem>
             <NavListItem
               id="clickable-entry-point-tiers"

@@ -15,7 +15,7 @@ import NetworkForm from '../components/NetworkForm';
 
 const CREATE = 'create';
 const EDIT = 'edit';
-const networksPath = 'rsdir/networks';
+const networksPath = 'directory/networks';
 const networkPath = id => `${networksPath}/${id}`;
 const defaultNetworkValues = { priority: 0.0 };
 
@@ -28,7 +28,7 @@ const EditNetworkRoute = () => {
   const okapiKy = useOkapiKy();
 
   const op = id ? EDIT : CREATE;
-  const listPath = `/rsdir/networks${location.search}`;
+  const listPath = `/directory/networks${location.search}`;
   const close = useCloseDirect(listPath);
 
   const networkQuery = useOkapiQuery(networkPath(id), {
@@ -38,7 +38,7 @@ const EditNetworkRoute = () => {
 
   const invalidateNetworkQueries = async () => {
     await queryClient.invalidateQueries(networksPath);
-    await queryClient.invalidateQueries(['rsdir/networks']);
+    await queryClient.invalidateQueries(['directory/networks']);
     if (id) {
       await queryClient.invalidateQueries(networkPath(id));
     }
@@ -56,7 +56,7 @@ const EditNetworkRoute = () => {
       });
 
       if (createdNetwork?.id) {
-        history.push(`/rsdir/networks/edit/${createdNetwork.id}${location.search}`);
+        history.push(`/directory/networks/edit/${createdNetwork.id}${location.search}`);
       } else {
         close();
       }

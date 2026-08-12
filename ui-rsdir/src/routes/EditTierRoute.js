@@ -15,7 +15,7 @@ import TierForm from '../components/TierForm';
 
 const CREATE = 'create';
 const EDIT = 'edit';
-const tiersPath = 'rsdir/tiers';
+const tiersPath = 'directory/tiers';
 const tierPath = id => `${tiersPath}/${id}`;
 const defaultTierValues = {
   level: 'standard',
@@ -32,7 +32,7 @@ const EditTierRoute = () => {
   const okapiKy = useOkapiKy();
 
   const op = id ? EDIT : CREATE;
-  const listPath = `/rsdir/tiers${location.search}`;
+  const listPath = `/directory/tiers${location.search}`;
   const close = useCloseDirect(listPath);
 
   const tierQuery = useOkapiQuery(tierPath(id), {
@@ -42,7 +42,7 @@ const EditTierRoute = () => {
 
   const invalidateTierQueries = async () => {
     await queryClient.invalidateQueries(tiersPath);
-    await queryClient.invalidateQueries(['rsdir/tiers']);
+    await queryClient.invalidateQueries(['directory/tiers']);
     if (id) {
       await queryClient.invalidateQueries(tierPath(id));
     }
@@ -60,7 +60,7 @@ const EditTierRoute = () => {
       });
 
       if (createdTier?.id) {
-        history.push(`/rsdir/tiers/edit/${createdTier.id}${location.search}`);
+        history.push(`/directory/tiers/edit/${createdTier.id}${location.search}`);
       } else {
         close();
       }
