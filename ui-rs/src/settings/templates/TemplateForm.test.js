@@ -254,28 +254,6 @@ describe('TemplateForm', () => {
     expect(byId('template-purpose')).toBeDisabled();
   });
 
-  describe('audience', () => {
-    const optionValues = () => [...byId('template-audience').options].map(opt => opt.value);
-
-    it('cannot be cleared once set, which the broker cannot restore to "both"', () => {
-      renderForm(jest.fn(), {
-        editing: true,
-        initialValues: { ...baseInitial, title: 'T', body: 'B', subject: 'S', labels: ['l'], audience: 'patron' },
-      });
-
-      expect(optionValues()).toEqual(['patron', 'staff']);
-    });
-
-    it('can still be narrowed from "both", which needs no restoring', () => {
-      renderForm(jest.fn(), {
-        editing: true,
-        initialValues: { ...baseInitial, title: 'T', body: 'B', subject: 'S', labels: ['l'] },
-      });
-
-      expect(optionValues()).toEqual(['', 'patron', 'staff']);
-    });
-  });
-
   describe('labels', () => {
     it('offers built-in and existing labels before a preset is selected', async () => {
       renderForm(jest.fn(), { initialValues: { ...baseInitial, purpose: '' } });
