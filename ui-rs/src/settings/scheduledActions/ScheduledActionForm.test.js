@@ -1,7 +1,8 @@
 import React from 'react';
 import { fireEvent, screen, waitFor } from '@folio/jest-config-stripes/testing-library/react';
 
-import { renderWithRs } from '../../test/renderWithRs';
+import { quietQueryLog } from '../../test/quietQueryLog';
+import { renderWithRs, settleQueries } from '../../test/renderWithRs';
 import { makeOkapiKyMock } from '../../test/okapiKyMock';
 import ScheduledActionForm from './ScheduledActionForm';
 
@@ -75,19 +76,27 @@ const fillEmail = async () => {
   fireEvent.change(byId(TEMPLATE_SELECT), { target: { value: 'pullslip-email' } });
 };
 
-const renderForm = (onSubmit, { initialValues = baseInitial, ...props } = {}) => renderWithRs(
-  <ScheduledActionForm
-    initialValues={initialValues}
-    onSubmit={onSubmit}
-    onClose={() => {}}
-    title="Test"
-    submitLabelId="ui-rs.create"
-    {...props}
-  />,
-  { messages },
-);
+// Presets and template options are fetched on mount. Settle so they land inside the test
+// that started them rather than after it.
+const renderForm = async (onSubmit, { initialValues = baseInitial, ...props } = {}) => {
+  const rendered = renderWithRs(
+    <ScheduledActionForm
+      initialValues={initialValues}
+      onSubmit={onSubmit}
+      onClose={() => {}}
+      title="Test"
+      submitLabelId="ui-rs.create"
+      {...props}
+    />,
+    { messages },
+  );
+  await settleQueries(rendered.queryClient);
+  return rendered;
+};
 
 describe('ScheduledActionForm', () => {
+  quietQueryLog(/^Unexpected Okapi request/); // one test drops the preset responses on purpose
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockOkapi.setResponses({
@@ -97,7 +106,7 @@ describe('ScheduledActionForm', () => {
   });
 
   it('disables save until the query, an hour and a day are valid', async () => {
-    renderForm(jest.fn());
+    await renderForm(jest.fn());
 
     expect(save()).toBeDisabled();
     await fillEmail();
@@ -114,7 +123,7 @@ describe('ScheduledActionForm', () => {
 
   it('includes the schedule fields and email params in the submit payload', async () => {
     const onSubmit = jest.fn();
-    renderForm(onSubmit);
+    await renderForm(onSubmit);
 
     fillRequired();
     fireEvent.change(byId('scheduled-action-minute'), { target: { value: '30' } });
@@ -135,7 +144,7 @@ describe('ScheduledActionForm', () => {
   });
 
   it('keeps save disabled until a valid recipient and a template are provided', async () => {
-    renderForm(jest.fn());
+    await renderForm(jest.fn());
 
     fillRequired();
     await waitFor(() => expect(save()).toBeDisabled());
@@ -147,14 +156,14 @@ describe('ScheduledActionForm', () => {
     await waitFor(() => expect(save()).toBeDisabled());
   });
 
-  it('warns with the cleared expression when the schedule is unsupported', () => {
-    renderForm(jest.fn(), { unsupportedSchedule: 'FREQ=MONTHLY;BYMONTHDAY=1' });
+  it('warns with the cleared expression when the schedule is unsupported', async () => {
+    await renderForm(jest.fn(), { unsupportedSchedule: 'FREQ=MONTHLY;BYMONTHDAY=1' });
     expect(screen.getByText('FREQ=MONTHLY;BYMONTHDAY=1')).toBeInTheDocument();
   });
 
   it('swaps the params block and discards the prior action\'s params on action change', async () => {
     const onSubmit = jest.fn();
-    renderForm(onSubmit);
+    await renderForm(onSubmit);
 
     fireEvent.click(screen.getByLabelText(ATTACH_PDF));
     fireEvent.change(byId('scheduled-action-actionName'), { target: { value: 'request-aging' } });
@@ -171,7 +180,7 @@ describe('ScheduledActionForm', () => {
   });
 
   it('fills the whole form (query, action, params and schedule) from a preset', async () => {
-    renderForm(jest.fn());
+    await renderForm(jest.fn());
 
     await waitFor(() => expect(byId('scheduled-action-preset')).toBeInTheDocument());
 
@@ -185,7 +194,7 @@ describe('ScheduledActionForm', () => {
   });
 
   it('labels presets by titleKey, falling back to the title the broker sent', async () => {
-    renderForm(jest.fn());
+    await renderForm(jest.fn());
 
     await waitFor(() => expect(byId('scheduled-action-preset')).toBeInTheDocument());
     expect(screen.getByRole('option', { name: 'Zettel mailen' })).toBeInTheDocument();
@@ -195,7 +204,7 @@ describe('ScheduledActionForm', () => {
   // Which templates qualify is mapping.test.js's job; this only passes if the scope
   // handed to it (email, staff) reached the query.
   it('takes a preset\'s suggested template label when a template carries it', async () => {
-    renderForm(jest.fn());
+    await renderForm(jest.fn());
 
     await waitFor(() => expect(byId('scheduled-action-preset')).toBeInTheDocument());
     fireEvent.change(byId('scheduled-action-preset'), { target: { value: '0' } });
@@ -209,7 +218,7 @@ describe('ScheduledActionForm', () => {
       'broker/state_model/batch_actions': PRESETS,
       'broker/templates': { items: [{ id: 't3', title: 'Nightly', purpose: 'email', audience: 'staff', labels: ['nightly'] }] },
     });
-    renderForm(jest.fn());
+    await renderForm(jest.fn());
 
     await waitFor(() => expect(byId('scheduled-action-preset')).toBeInTheDocument());
     fireEvent.change(byId('scheduled-action-preset'), { target: { value: '0' } });
@@ -224,7 +233,7 @@ describe('ScheduledActionForm', () => {
       'broker/state_model/batch_actions': PRESETS,
       'broker/templates': { items: [] },
     });
-    renderForm(jest.fn());
+    await renderForm(jest.fn());
 
     await waitFor(() => expect(screen.getByText(TEMPLATE_NONE)).toBeInTheDocument());
     expect(byId(TEMPLATE_SELECT)).toBeNull();
@@ -235,7 +244,7 @@ describe('ScheduledActionForm', () => {
   });
 
   it('in hourly mode, save gates on a query and a valid minute (no days/hours)', async () => {
-    renderForm(jest.fn());
+    await renderForm(jest.fn());
     fireEvent.change(byId('scheduled-action-actionName'), { target: { value: 'request-aging' } });
     await waitFor(() => expect(byId('scheduled-action-age-interval')).toBeInTheDocument());
 
@@ -254,7 +263,7 @@ describe('ScheduledActionForm', () => {
 
   it('in minutely mode, save requires a positive interval and submits it', async () => {
     const onSubmit = jest.fn();
-    renderForm(onSubmit);
+    await renderForm(onSubmit);
     fireEvent.change(byId('scheduled-action-actionName'), { target: { value: 'request-aging' } });
     await waitFor(() => expect(byId('scheduled-action-age-interval')).toBeInTheDocument());
     fireEvent.change(byId('scheduled-action-batchQuery'), { target: { value: 'state==REQ' } });
@@ -277,20 +286,19 @@ describe('ScheduledActionForm', () => {
     expect(values.interval).toBe('15');
   });
 
+  // Only the defaults go missing. Templates are left in place because that query does not
+  // set useErrorBoundary: false, so losing it takes the form down rather than degrading it.
   it('renders without a preset picker when the defaults endpoint is unavailable', async () => {
-    // Silence the expected react-query error for the missing mock response.
-    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    mockOkapi.setResponses({});
-    renderForm(jest.fn());
+    mockOkapi.setResponses({ 'broker/templates': TEMPLATES });
+    await renderForm(jest.fn());
 
     await waitFor(() => expect(byId('scheduled-action-actionName')).toBeInTheDocument());
     expect(byId('scheduled-action-preset')).toBeNull();
     expect(byId('scheduled-action-batchQuery').value).toBe('');
-    errorSpy.mockRestore();
   });
 
   it('omits the preset picker when editing', async () => {
-    renderForm(jest.fn(), { editing: true });
+    await renderForm(jest.fn(), { editing: true });
 
     await waitFor(() => expect(byId('scheduled-action-actionName')).toBeInTheDocument());
     expect(byId('scheduled-action-preset')).toBeNull();

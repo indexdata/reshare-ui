@@ -26,11 +26,21 @@ jobs:
       - name: Do yarn install
         run: yarn install --frozen-lockfile
 
+      # Jest prints a `● Console` block per test file that logged something, but they
+      # scroll away. Annotate the PR instead, without failing the gate.
       - name: Test stripes-reshare
-        run: yarn workspace @projectreshare/stripes-reshare test --ci
+        shell: bash # for -o pipefail, so tee cannot mask a jest failure
+        run: |
+          yarn workspace @projectreshare/stripes-reshare test --ci 2>&1 | tee jest.log
+          n=$(grep -c '● Console' jest.log || true)
+          [ "$n" -gt 0 ] && echo "::warning::stripes-reshare: console output in $n test file(s)" || true
 
       - name: Test ui-rs
-        run: yarn workspace @projectreshare/rs test --ci
+        shell: bash
+        run: |
+          yarn workspace @projectreshare/rs test --ci 2>&1 | tee jest.log
+          n=$(grep -c '● Console' jest.log || true)
+          [ "$n" -gt 0 ] && echo "::warning::ui-rs: console output in $n test file(s)" || true
 
       # PR-only: pushes to main already build the full deploy
       # platform in deploy-resharex.yaml, this lets PRs verify

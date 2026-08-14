@@ -2,7 +2,7 @@ import React from 'react';
 import { IntlProvider } from 'react-intl';
 import { MemoryRouter, Router } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
-import { render } from '@folio/jest-config-stripes/testing-library/react';
+import { render, waitFor } from '@folio/jest-config-stripes/testing-library/react';
 
 // onError for IntlProvider: let assertions key off translation ids by swallowing
 // only missing-translation noise, while still surfacing real formatting errors.
@@ -28,20 +28,32 @@ const renderWithRs = (ui, {
 } = {}) => {
   const RouterProvider = history ? Router : MemoryRouter;
   const routerProps = history ? { history } : { initialEntries };
+  const queryClient = makeQueryClient();
 
-  return render(
-    <QueryClientProvider client={makeQueryClient()}>
-      <RouterProvider {...routerProps}>
-        <IntlProvider
-          locale="en"
-          messages={messages}
-          onError={ignoreMissingTranslations}
-        >
-          {ui}
-        </IntlProvider>
-      </RouterProvider>
-    </QueryClientProvider>
-  );
+  return {
+    // For settleQueries. Not awaited in here: asserting on loading state needs the
+    // un-settled render.
+    queryClient,
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider {...routerProps}>
+          <IntlProvider
+            locale="en"
+            messages={messages}
+            onError={ignoreMissingTranslations}
+          >
+            {ui}
+          </IntlProvider>
+        </RouterProvider>
+      </QueryClientProvider>
+    ),
+  };
 };
 
-export { renderWithRs, ignoreMissingTranslations, makeQueryClient };
+// Zero-in-flight is momentary: like a useIsFetching() spinner it blinks between chained
+// queries, so anything starting only after another resolves needs its own wait.
+const settleQueries = (queryClient) => waitFor(
+  () => expect(queryClient.isFetching()).toBe(0)
+);
+
+export { renderWithRs, settleQueries, ignoreMissingTranslations, makeQueryClient };

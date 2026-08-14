@@ -1,7 +1,8 @@
 import React from 'react';
 import { act, fireEvent, screen, waitFor } from '@folio/jest-config-stripes/testing-library/react';
 
-import { renderWithRs } from '../../test/renderWithRs';
+import { quietQueryLog } from '../../test/quietQueryLog';
+import { renderWithRs, settleQueries } from '../../test/renderWithRs';
 import { makeOkapiKyMock } from '../../test/okapiKyMock';
 import { lastEditor } from '../../test/editorMock';
 import TemplateForm from './TemplateForm';
@@ -65,18 +66,27 @@ const fillRequired = () => {
   fireEvent.change(byId('template-label-labels[0]'), { target: { value: 'received-notification' } });
 };
 
-const renderForm = (onSubmit, { initialValues = baseInitial, ...props } = {}) => renderWithRs(
-  <TemplateForm
-    initialValues={initialValues}
-    onSubmit={onSubmit}
-    onClose={() => {}}
-    title="Test"
-    submitLabelId="ui-rs.create"
-    {...props}
-  />,
-);
+// Presets and stored labels are fetched on mount and only seed optional controls, so most
+// tests here have no reason to wait for them. Settle so they land inside the test that
+// started them rather than after it.
+const renderForm = async (onSubmit, { initialValues = baseInitial, ...props } = {}) => {
+  const rendered = renderWithRs(
+    <TemplateForm
+      initialValues={initialValues}
+      onSubmit={onSubmit}
+      onClose={() => {}}
+      title="Test"
+      submitLabelId="ui-rs.create"
+      {...props}
+    />,
+  );
+  await settleQueries(rendered.queryClient);
+  return rendered;
+};
 
 describe('TemplateForm', () => {
+  quietQueryLog(/^Unexpected Okapi request/); // one test drops the preset responses on purpose
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockOkapi.setResponses({
@@ -86,7 +96,7 @@ describe('TemplateForm', () => {
   });
 
   it('disables save until title, subject, body and a label are present', async () => {
-    renderForm(jest.fn());
+    await renderForm(jest.fn());
 
     expect(save()).toBeDisabled();
     fillRequired();
@@ -95,7 +105,7 @@ describe('TemplateForm', () => {
 
   it('submits the entered values', async () => {
     const onSubmit = jest.fn();
-    renderForm(onSubmit);
+    await renderForm(onSubmit);
 
     fillRequired();
     await waitFor(() => expect(save()).not.toBeDisabled());
@@ -111,7 +121,7 @@ describe('TemplateForm', () => {
   });
 
   it('requires no subject for a pull slip template, which never uses one', async () => {
-    renderForm(jest.fn());
+    await renderForm(jest.fn());
 
     fireEvent.change(byId('template-title'), { target: { value: 'Slip' } });
     fireEvent.change(byId('template-body'), { target: { value: 'Body' } });
@@ -125,7 +135,7 @@ describe('TemplateForm', () => {
   // Only that the HTML branch mounts: with the editor stubbed, nothing here can say
   // anything about rich-text behaviour, which is verified by hand for now.
   it('renders a body field for an HTML template', async () => {
-    renderForm(jest.fn(), {
+    await renderForm(jest.fn(), {
       editing: true,
       initialValues: { ...baseInitial, title: 'T', subject: 'S', body: '<p>Hi</p>', labels: ['l'], contentType: 'html' },
     });
@@ -137,8 +147,8 @@ describe('TemplateForm', () => {
   describe('switching content type', () => {
     const setType = (value) => fireEvent.change(byId('template-contentType'), { target: { value } });
 
-    it('escapes plain text so it survives the move into the editor', () => {
-      renderForm(jest.fn());
+    it('escapes plain text so it survives the move into the editor', async () => {
+      await renderForm(jest.fn());
 
       fireEvent.change(byId('template-body'), { target: { value: 'Dear <name>,' } });
       setType('html');
@@ -146,8 +156,8 @@ describe('TemplateForm', () => {
       expect(byId('template-body').value).toBe('Dear &lt;name&gt;,');
     });
 
-    it('leaves markup alone on the way back through text', () => {
-      renderForm(jest.fn(), {
+    it('leaves markup alone on the way back through text', async () => {
+      await renderForm(jest.fn(), {
         editing: true,
         initialValues: { ...baseInitial, title: 'T', subject: 'S', labels: ['l'], contentType: 'html', body: '<p>Hello</p>' },
       });
@@ -159,8 +169,8 @@ describe('TemplateForm', () => {
       expect(byId('template-body').value).toBe('<p>Hello</p>');
     });
 
-    it('does not escape the escapes when toggled repeatedly', () => {
-      renderForm(jest.fn());
+    it('does not escape the escapes when toggled repeatedly', async () => {
+      await renderForm(jest.fn());
 
       fireEvent.change(byId('template-body'), { target: { value: 'R&D' } });
       setType('html');
@@ -172,14 +182,14 @@ describe('TemplateForm', () => {
   });
 
   describe('editing HTML source', () => {
-    it('is not offered for a plain text template, which is already its own source', () => {
-      renderForm(jest.fn());
+    it('is not offered for a plain text template, which is already its own source', async () => {
+      await renderForm(jest.fn());
 
       expect(byId('template-body-source')).toBeNull();
     });
 
-    it('shows the markup unescaped', () => {
-      renderForm(jest.fn(), { editing: true, initialValues: htmlValues });
+    it('shows the markup unescaped', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: htmlValues });
 
       fireEvent.click(byId('template-body-source'));
 
@@ -188,7 +198,7 @@ describe('TemplateForm', () => {
     });
 
     it('confirms before returning to the editor, which cannot hold every markup', async () => {
-      renderForm(jest.fn(), { editing: true, initialValues: htmlValues });
+      await renderForm(jest.fn(), { editing: true, initialValues: htmlValues });
 
       fireEvent.click(byId('template-body-source'));
       fireEvent.change(byId('template-body'), { target: { value: '<table><tr><td>x</td></tr></table>' } });
@@ -202,7 +212,7 @@ describe('TemplateForm', () => {
     });
 
     it('keeps the source open when the confirmation is declined', async () => {
-      renderForm(jest.fn(), { editing: true, initialValues: htmlValues });
+      await renderForm(jest.fn(), { editing: true, initialValues: htmlValues });
 
       fireEvent.click(byId('template-body-source'));
       fireEvent.click(byId('template-body-source'));
@@ -217,7 +227,7 @@ describe('TemplateForm', () => {
   // the form reacts to it, not whether Quill would really rewrite this markup.
   describe('changes the editor makes by itself', () => {
     const renderHtml = async () => {
-      renderForm(jest.fn(), { editing: true, initialValues: htmlValues });
+      await renderForm(jest.fn(), { editing: true, initialValues: htmlValues });
       await waitFor(() => expect(byId('template-body')).toBeInTheDocument());
     };
 
@@ -248,8 +258,8 @@ describe('TemplateForm', () => {
     });
   });
 
-  it('fixes the purpose of an existing template', () => {
-    renderForm(jest.fn(), { editing: true, initialValues: { ...baseInitial, title: 'T', body: 'B', subject: 'S', labels: ['l'] } });
+  it('fixes the purpose of an existing template', async () => {
+    await renderForm(jest.fn(), { editing: true, initialValues: { ...baseInitial, title: 'T', body: 'B', subject: 'S', labels: ['l'] } });
 
     expect(byId('template-purpose')).toBeDisabled();
   });
@@ -278,7 +288,7 @@ describe('TemplateForm', () => {
 
   describe('labels', () => {
     it('offers built-in and existing labels before a preset is selected', async () => {
-      renderForm(jest.fn(), { initialValues: { ...baseInitial, purpose: '' } });
+      await renderForm(jest.fn(), { initialValues: { ...baseInitial, purpose: '' } });
 
       await waitFor(() => expect(byId('template-known-label')).toBeInTheDocument());
       expect(byId('template-preset').value).toBe('');
@@ -288,7 +298,7 @@ describe('TemplateForm', () => {
     });
 
     it('fills the blank row when a known label is picked', async () => {
-      renderForm(jest.fn());
+      await renderForm(jest.fn());
 
       await waitFor(() => expect(byId('template-known-label')).toBeInTheDocument());
       fireEvent.change(byId('template-known-label'), { target: { value: 'pullslip-email' } });
@@ -297,7 +307,7 @@ describe('TemplateForm', () => {
     });
 
     it('does not add a label twice', async () => {
-      renderForm(jest.fn());
+      await renderForm(jest.fn());
 
       await waitFor(() => expect(byId('template-known-label')).toBeInTheDocument());
       fireEvent.change(byId('template-known-label'), { target: { value: 'pullslip-email' } });
@@ -308,7 +318,7 @@ describe('TemplateForm', () => {
 
     it('accepts a label the broker has never heard of', async () => {
       const onSubmit = jest.fn();
-      renderForm(onSubmit);
+      await renderForm(onSubmit);
 
       fillRequired();
       fireEvent.change(byId('template-label-labels[0]'), { target: { value: 'locally-invented' } });
@@ -322,7 +332,7 @@ describe('TemplateForm', () => {
 
   describe('built-in presets', () => {
     it('seeds every field from the selected preset', async () => {
-      renderForm(jest.fn());
+      await renderForm(jest.fn());
 
       await waitFor(() => expect(byId('template-preset')).toBeInTheDocument());
       fireEvent.change(byId('template-preset'), { target: { value: '0' } });
@@ -335,24 +345,21 @@ describe('TemplateForm', () => {
     });
 
     it('is not offered when editing, where seeding would overwrite the record', async () => {
-      renderForm(jest.fn(), { editing: true, initialValues: { ...baseInitial, title: 'T', body: 'B', subject: 'S', labels: ['l'] } });
+      await renderForm(jest.fn(), { editing: true, initialValues: { ...baseInitial, title: 'T', body: 'B', subject: 'S', labels: ['l'] } });
 
       await waitFor(() => expect(byId('template-known-label')).toBeInTheDocument());
       expect(byId('template-preset')).toBeNull();
     });
 
     it('leaves the form usable when the presets cannot be fetched', async () => {
-      // Silence the expected react-query error for the missing mock response.
-      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       mockOkapi.setResponses({});
-      renderForm(jest.fn());
+      await renderForm(jest.fn());
 
       fillRequired();
       await waitFor(() => expect(save()).not.toBeDisabled());
       // Without presets or existing templates there are no suggestions; labels stay free text.
       expect(byId('template-preset')).toBeNull();
       expect(byId('template-known-label')).toBeNull();
-      errorSpy.mockRestore();
     });
   });
 });
