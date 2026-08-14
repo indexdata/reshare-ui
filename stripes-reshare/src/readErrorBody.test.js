@@ -7,11 +7,13 @@ const makeResponse = ({ contentType, json, text }) => ({
   clone: () => ({ json, text }),
 });
 
-// TEMPORARY: deliberate console noise to confirm the CI warning annotation
-// fires. Revert before merge.
-console.log('deliberate console noise for CI annotation check');
-
 describe('readErrorBody', () => {
+  // TEMPORARY: deliberate failure to confirm a red jest run still fails the CI
+  // step through the `| tee jest.log` pipeline. Revert before merge.
+  it('fails on purpose', () => {
+    expect(1).toBe(2);
+  });
+
   it('reads the message from a JSON `error` body', async () => {
     const text = jest.fn();
     const response = makeResponse({
