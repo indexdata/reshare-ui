@@ -304,8 +304,10 @@ describe('PatronRequestsRoute peer facet', () => {
     await waitFor(() => expect(peerCqlUrls().some((u) => (
       u.includes('needs_attention') && !u.includes('alp*')
     ))).toBe(true));
-    // ...and the dead term never reaches the server alongside it.
-    await new Promise((r) => setTimeout(r, 400));
+    // ...and the dead term never reaches the server alongside it. The wait has to be
+    // inside act: it spans the remounted input's 300 ms debounce, and everything that
+    // callback sets off (peer term, refetch, MCL and filter re-render) lands within it.
+    await act(() => new Promise((r) => setTimeout(r, 400)));
     expect(peerCqlUrls().some((u) => u.includes('needs_attention') && u.includes('alp*'))).toBe(false);
     expect(document.querySelector(peerInputSelector)).toHaveValue('');
   });

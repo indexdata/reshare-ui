@@ -6,6 +6,18 @@ global.$RefreshSig$ = () => type => type;
 // children fixed dimensions so MCL rows render and can be asserted.
 jest.mock('react-virtualized-auto-sizer', () => ({ children }) => children({ width: 1000, height: 600 }));
 
+// Sunflower's stripes-components passes a null ref value to HotKeys on its
+// initial render, causing HotKeys to fall back to ReactDOM.findDOMNode(). Keep
+// keyboard-shortcut plumbing out of these component tests and avoid that
+// dependency-only deprecation warning.
+// TODO: Consider removing this when moving to Trillium; fixed in
+// @folio/stripes-components >= 13.1.0.
+jest.mock('@folio/stripes-components/lib/HotKeys', () => {
+  const Passthrough = ({ children }) => children;
+
+  return { HotKeys: Passthrough, FocusTrap: Passthrough };
+});
+
 // jsdom doesn't implement ResizeObserver; Stripes' TextArea constructs one to
 // auto-grow on input. Minimal no-op stub so forms with a TextArea can render.
 if (typeof global.ResizeObserver === 'undefined') {

@@ -3,6 +3,7 @@ import { Route } from 'react-router-dom';
 import { createMemoryHistory } from 'history';
 import { fireEvent, waitFor } from '@folio/jest-config-stripes/testing-library/react';
 
+import { quietQueryLog } from '../test/quietQueryLog';
 import { renderWithRs } from '../test/renderWithRs';
 import { makeOkapiKyMock } from '../test/okapiKyMock';
 import EditRoute from './EditRoute';
@@ -75,6 +76,8 @@ const fieldByName = (name) => Array.from(document.querySelectorAll('[name]'))
 const setField = (name, value) => fireEvent.change(fieldByName(name), { target: { value } });
 
 describe('EditRoute', () => {
+  quietQueryLog(/^Boom$/); // the failure test rejects the PUT on purpose
+
   beforeEach(() => {
     jest.clearAllMocks();
   });

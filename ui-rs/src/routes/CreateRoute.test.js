@@ -3,6 +3,7 @@ import { Route } from 'react-router-dom';
 import { createMemoryHistory } from 'history';
 import { fireEvent, waitFor } from '@folio/jest-config-stripes/testing-library/react';
 
+import { quietQueryLog } from '../test/quietQueryLog';
 import { renderWithRs } from '../test/renderWithRs';
 import { makeOkapiKyMock } from '../test/okapiKyMock';
 import CreateRoute from './CreateRoute';
@@ -49,6 +50,8 @@ const fillRequiredFields = () => {
 };
 
 describe('CreateRoute', () => {
+  quietQueryLog(/^Boom$/); // the failure test rejects the POST on purpose
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
