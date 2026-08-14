@@ -7,6 +7,10 @@ const makeResponse = ({ contentType, json, text }) => ({
   clone: () => ({ json, text }),
 });
 
+// TEMPORARY: deliberate console noise to confirm the CI warning annotation
+// fires. Revert before merge.
+console.log('deliberate console noise for CI annotation check');
+
 describe('readErrorBody', () => {
   it('reads the message from a JSON `error` body', async () => {
     const text = jest.fn();
