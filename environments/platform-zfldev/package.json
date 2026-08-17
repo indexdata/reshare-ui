@@ -1,0 +1,50 @@
+{
+  "name": "@projectreshare/platform-resharex",
+  "version": "2.0.0",
+  "description": "Top-level platform for ReShare UI",
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "registry": "https://repository.folio.org/repository/npm-folio/"
+  },
+  "scripts": {
+    "build": "export STRIPES_TRANSPILE_TOKENS=\"@k-int @projectreshare\"; export NODE_OPTIONS=\"--max-old-space-size=4096 $NODE_OPTIONS\"; stripes build stripes.config.js",
+    "buildconsortial": "export STRIPES_TRANSPILE_TOKENS=\"@k-int @projectreshare\"; export NODE_OPTIONS=\"--max-old-space-size=4096 $NODE_OPTIONS\"; stripes build consortial.stripes.config.js",
+    "deploy": "sh -c 'find $0 -type f -exec gzip \"{}\" \\; -exec mv \"{}.gz\" \"{}\" \\; ; aws --profile indexdata-dev s3 sync ${0}/ s3://reshare-bundles/${0} --acl public-read --content-encoding gzip --delete'",
+    "upload": "sh -c 'aws --profile indexdata-dev s3 sync ${0}/ s3://reshare-bundles/${0} --acl public-read --content-encoding gzip --delete'",
+    "update-translations": "sh -c 'sed -i.bak 's/FOLIO/ReShare/g' ${0}/translations/en* && rm -f ${0}/translations/en*.bak'",
+    "stripes": "./node_modules/.bin/stripes",
+    "start": "stripes serve stripes.config.js",
+    "cypress": "cypress",
+    "build-module-descriptors": "node ./build-module-descriptors.js"
+  },
+  "dependencies": {
+    "@folio/developer": "~10.0.2",
+    "@folio/stripes": "~10.0.0",
+    "@folio/tenant-settings": "10.0.0",
+    "@folio/users": "12.1.16",
+    "@projectreshare/rs": "file:../../ui-rs",
+    "@projectreshare/rsdir": "file:../../ui-rsdir",
+    "@projectreshare/request": "file:../../ui-request",
+    "@projectreshare/supply": "file:../../ui-supply",
+    "moment": "~2.30.1",
+    "react": "~18.3.1",
+    "react-dom": "~18.3.1",
+    "react-intl": "^7.1.10",
+    "react-query": "^3.13.0",
+    "react-redux": "^8.0.5",
+    "react-router": "^5.2.0",
+    "react-router-dom": "^5.2.0",
+    "redux": "^4.0.5",
+    "rrule": "2.8.1"
+  },
+  "devDependencies": {
+    "@folio/stripes-cli": "~4.0.0"
+  },
+  "resolutions": {
+    "@projectreshare/rs": "file:../../ui-rs",
+    "@projectreshare/request": "file:../../ui-request",
+    "@projectreshare/stripes-reshare": "file:../../stripes-reshare",
+    "@projectreshare/supply": "file:../../ui-supply"
+  }
+
+}

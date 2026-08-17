@@ -1,0 +1,113 @@
+name: deploy-zfl
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        required: false
+        type: string
+      source_repo:
+        required: false
+        type: string
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: 'us-east-1'
+  TENANTS: >-
+    de14
+    de109
+    de1010
+    de1a
+    de188
+    de60
+    de24
+    dekon4
+    de30
+    de91s
+    dekob7
+    de335
+    de12
+    de7
+    de468
+    de634
+    de465
+    de89
+
+jobs:
+  test:
+    # don't run CI if commit includes  [ci skip] or [skip ci]
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        !contains(github.event.head_commit.message, '[ci skip]') &&
+        !contains(github.event.head_commit.message, '[skip ci]')
+      )
+    uses: ./.github/workflows/test.yaml
+
+  deploy:
+    needs: test
+
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Deploy triggered from ${{ inputs.source_repo }} @ ${{ inputs.source_sha }}"
+
+      - name: checkout module
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+          cache-dependency-path: environments/platform-zfldev/yarn.lock
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: prepare
+        run: yarn config set @folio:registry https://repository.folio.org/repository/npm-folio/
+        working-directory: ./environments/platform-zfldev
+
+      - name: Do yarn install
+        run: yarn install
+        working-directory: ./environments/platform-zfldev
+
+      # temporary, upgrade rsdir because yarn lock is stale
+      - name: Update ui-rsdir and install dependencies
+        run: yarn upgrade @projectreshare/rsdir
+        working-directory: ./environments/platform-zfldev
+
+      - name: Upload yarn.lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: yarn.lock
+          path: environments/platform-zfldev/yarn.lock
+
+      - name: build module descriptors
+        run: |
+          ./node_modules/.bin/stripes mod descriptor stripes.config.js --output ./ModuleDescriptors 
+        working-directory: ./environments/platform-zfldev
+
+      - name: build webpacks
+        run: |
+          set -euo pipefail
+          for tenant in $TENANTS; do
+            rm -rf "./${tenant}"
+            yarn build --tenant "$tenant" --okapi "https://zfldev-okapi.reshare-dev.indexdata.com"
+            mv output "./${tenant}"
+          done
+        working-directory: ./environments/platform-zfldev
+
+      - name: upload builds
+        if: ${{ !env.ACT }}
+        run: |
+          set -euo pipefail
+          for tenant in $TENANTS; do
+            aws s3 sync "./${tenant}" "s3://reshare-bundles/${tenant}" --acl public-read --delete
+          done
+        working-directory: ./environments/platform-zfldev
