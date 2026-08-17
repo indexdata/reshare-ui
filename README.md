@@ -1,5 +1,11 @@
 # reshare-ui
 
+Copyright © The Open Library Foundation
+
+This software is distributed under the terms of the Apache License, Version 2.0. See the file "[LICENSE](LICENSE)" for more information.
+
+## Introduction
+
 This is a monorepo containing the UI components for a [ReShare](https://projectreshare.org/) ILL system. They are based on [Stripes](https://github.com/folio-org/stripes), the UI framework for the FOLIO ecosystem.
 
 It is a React single-page application that renders fully client-side and connects to the APIs exposed by the ReShare backend through Okapi, the API gateway used by FOLIO. It maintains a consistent UX with FOLIO by attempting to adhere to the same design system and use [`stripes-components`](https://dev.folio.org/stripes-components/) where possible.
