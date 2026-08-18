@@ -9,6 +9,7 @@ import React from 'react';
 const reshareConfigStub = {
   showCost: true,
   sharedIndex: { type: 'folio', ui: 'https://shared-index.example' },
+  patronURL: '/users?qindex=barcode&query={patronid}',
 };
 
 // `getOkapiKy` is a getter, not the ky mock itself: the jest.mock factory that

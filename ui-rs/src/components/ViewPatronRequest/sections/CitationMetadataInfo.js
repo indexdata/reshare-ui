@@ -1,31 +1,46 @@
 import React from 'react';
 import { FormattedMessage } from 'react-intl';
 import {
+  Accordion,
   Card,
   Col,
   KeyValue,
   Row,
 } from '@folio/stripes/components';
 
+import { extractIdentifiers } from '../../../util/bibIdentifiers';
 import css from './CitationMetadata.css';
 
-class CitationMetadataInfo extends React.Component {
-  render() {
-    const { record } = this.props;
-    let summary = record.title || '[UNKNOWN]';
-    let author = record.author;
-    const date = record.publicationDate;
-    if (date) author = `${author} (${date})`;
-    if (record.author) summary = `${author}: ${summary}`;
+// "Author (1998): Some Title", degrading to whichever parts are present.
+const summarise = ({ title, author, publicationDate }) => {
+  const cited = title || '[UNKNOWN]';
+  if (!author) return cited;
+  return `${publicationDate ? `${author} (${publicationDate})` : author}: ${cited}`;
+};
 
-    const hasISSN = !!record.issn;
-    const idKey = `ui-rs.information.${hasISSN ? 'issn' : 'isbn'}`;
-    const idValue = record[hasISSN ? 'issn' : 'isbn'];
+const CitationMetadataInfo = ({ record }) => {
+  const { bibliographicInfo = {}, publicationInfo = {} } = record?.illRequest ?? {};
+  const {
+    title,
+    author,
+    edition,
+    titleOfComponent,
+    authorOfComponent,
+    volume,
+    issue,
+    pagesRequested,
+  } = bibliographicInfo;
+  const { publisher, publicationDate } = publicationInfo;
+  const identifiers = extractIdentifiers(bibliographicInfo);
 
-    return (
+  return (
+    <Accordion
+      id="citationMetadataInfo"
+      label={<FormattedMessage id="ui-rs.information.heading.citationMetadata" />}
+    >
       <Card
-        id={`${this.props.id}-card`}
-        headerStart={summary}
+        id="citationMetadataInfo-card"
+        headerStart={summarise({ title, author, publicationDate })}
         roundedBorder
         cardClass={css.citationMetadataCard}
         headerClass={css.citationMetadataCardHeader}
@@ -34,13 +49,13 @@ class CitationMetadataInfo extends React.Component {
           <Col xs={6}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.title" />}
-              value={record.title}
+              value={title}
             />
           </Col>
           <Col xs={6}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.titleOfComponent" />}
-              value={record.titleOfComponent}
+              value={titleOfComponent}
             />
           </Col>
         </Row>
@@ -48,13 +63,13 @@ class CitationMetadataInfo extends React.Component {
           <Col xs={6}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.author" />}
-              value={record.author}
+              value={author}
             />
           </Col>
           <Col xs={6}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.authorOfComponent" />}
-              value={record.authorOfComponent}
+              value={authorOfComponent}
             />
           </Col>
         </Row>
@@ -62,53 +77,65 @@ class CitationMetadataInfo extends React.Component {
           <Col xs={6}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.edition" />}
-              value={record.edition}
+              value={edition}
             />
           </Col>
-          <Col xs={6}>
-            <KeyValue
-              label={<FormattedMessage id={idKey} />}
-              value={idValue}
-            />
-          </Col>
-        </Row>
-        <Row>
           <Col xs={6}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.publisher" />}
-              value={record.publisher}
-            />
-          </Col>
-          <Col xs={6}>
-            <KeyValue
-              label={<FormattedMessage id="ui-rs.information.date" />}
-              value={record.publicationDate}
+              value={publisher}
             />
           </Col>
         </Row>
         <Row>
-          <Col xs={6}>
+          <Col xs={4}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rs.information.isbn" />}
+              value={identifiers.ISBN}
+            />
+          </Col>
+          <Col xs={4}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rs.information.issn" />}
+              value={identifiers.ISSN}
+            />
+          </Col>
+          <Col xs={4}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rs.information.oclcNumber" />}
+              value={identifiers.OCLC}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <Col xs={3}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.volume" />}
-              value={record.volume}
+              value={volume}
             />
           </Col>
           <Col xs={3}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.issue" />}
-              value={record.issue}
+              value={issue}
             />
           </Col>
           <Col xs={3}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.pages" />}
-              value={record.pagesRequested}
+              value={pagesRequested}
+            />
+          </Col>
+          <Col xs={3}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rs.information.date" />}
+              value={publicationDate}
             />
           </Col>
         </Row>
       </Card>
-    );
-  }
-}
+    </Accordion>
+  );
+};
 
 export default CitationMetadataInfo;

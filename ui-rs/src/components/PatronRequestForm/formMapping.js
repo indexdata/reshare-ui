@@ -1,17 +1,5 @@
 import { CREATE, EDIT } from './operations';
-
-const ID_ARRAYS = {
-  bibliographicItemId: {
-    idKey: 'bibliographicItemIdentifier',
-    codeKey: 'bibliographicItemIdentifierCode',
-    codes: ['ISBN', 'ISSN'],
-  },
-  bibliographicRecordId: {
-    idKey: 'bibliographicRecordIdentifier',
-    codeKey: 'bibliographicRecordIdentifierCode',
-    codes: ['OCLC'],
-  },
-};
+import { ID_ARRAYS, extractIdentifiers } from '../../util/bibIdentifiers';
 
 // Entries for the codes the form exposes, with any other code left as it was, so
 // identifiers we do not display survive a PUT.
@@ -29,14 +17,7 @@ const brokerToForm = (request) => {
   const illRequest = request?.illRequest ?? {};
   const { supplierUniqueRecordId, ...bibliographicInfo } = illRequest.bibliographicInfo ?? {};
 
-  const identifiers = {};
-  Object.entries(ID_ARRAYS).forEach(([arrayKey, { idKey, codeKey, codes }]) => {
-    codes.forEach(code => {
-      const value = (bibliographicInfo[arrayKey] ?? [])
-        .find(e => e?.[codeKey]?.['#text'] === code)?.[idKey];
-      if (value) identifiers[code] = value;
-    });
-  });
+  const identifiers = extractIdentifiers(bibliographicInfo);
 
   return {
     ...illRequest,
