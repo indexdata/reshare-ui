@@ -10,7 +10,7 @@ updates:
       timezone: "America/Detroit"
     assignees:
       - "ihardy"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 0
     labels:
       - "dependencies"
       - "security"
@@ -35,7 +35,7 @@ updates:
       timezone: "America/Detroit"
     assignees:
       - "ihardy"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     labels:
       - "dependencies"
       - "security"
