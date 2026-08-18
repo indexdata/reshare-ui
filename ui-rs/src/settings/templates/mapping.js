@@ -42,7 +42,7 @@ export function buildUpdateTemplateBody(values = {}) {
   };
   // Omitted optional fields are cleared by PUT.
   const subject = (values.subject ?? '').trim();
-  if (subject) updated.subject = subject;
+  if (subject && values.purpose !== 'pullslip') updated.subject = subject;
   if (values.audience) updated.audience = values.audience;
   return updated;
 }

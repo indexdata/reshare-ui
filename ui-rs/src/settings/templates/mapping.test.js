@@ -88,6 +88,10 @@ describe('buildUpdateTemplateBody', () => {
     expect(body).not.toHaveProperty('subject');
     expect(body).not.toHaveProperty('audience');
   });
+
+  it('omits the subject for pull slips, clearing one that was stored', () => {
+    expect(buildUpdateTemplateBody({ ...values, purpose: 'pullslip' })).not.toHaveProperty('subject');
+  });
 });
 
 describe('escapeHtml', () => {

@@ -254,6 +254,15 @@ describe('TemplateForm', () => {
     expect(byId('template-purpose')).toBeDisabled();
   });
 
+  it('offers "both" when editing a template that has an audience, which PUT can now restore', () => {
+    renderForm(jest.fn(), {
+      editing: true,
+      initialValues: { ...baseInitial, title: 'T', body: 'B', subject: 'S', labels: ['l'], audience: 'patron' },
+    });
+
+    expect([...byId('template-audience').options].map(opt => opt.value)).toEqual(['', 'patron', 'staff']);
+  });
+
   describe('labels', () => {
     it('offers built-in and existing labels before a preset is selected', async () => {
       renderForm(jest.fn(), { initialValues: { ...baseInitial, purpose: '' } });
