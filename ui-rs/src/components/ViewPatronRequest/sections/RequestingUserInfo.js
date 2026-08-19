@@ -19,11 +19,9 @@ const RequestingUserInfo = ({ record }) => {
   const { patronId, surname, givenName } = patronInfo;
   const email = patronEmail(patronInfo);
 
-  // The broker forwards patronInfo to the supplier, but the patron is the
-  // borrowing library's to know.
   if (record?.side !== 'borrowing') return null;
   // patronInfo is optional in ISO 18626, so a request may genuinely have none.
-  if (!patronId && !surname && !givenName) return null;
+  if (!patronId && !surname && !givenName && !email) return null;
 
   const patronURLTemplate = stripes?.config?.reshare?.patronURL;
   const patronLink = patronId && patronURLTemplate
