@@ -264,26 +264,13 @@ describe('TemplateForm', () => {
     expect(byId('template-purpose')).toBeDisabled();
   });
 
-  describe('audience', () => {
-    const optionValues = () => [...byId('template-audience').options].map(opt => opt.value);
-
-    it('cannot be cleared once set, which the broker cannot restore to "both"', () => {
-      renderForm(jest.fn(), {
-        editing: true,
-        initialValues: { ...baseInitial, title: 'T', body: 'B', subject: 'S', labels: ['l'], audience: 'patron' },
-      });
-
-      expect(optionValues()).toEqual(['patron', 'staff']);
+  it('offers "both" when editing a template that has an audience, which PUT can now restore', () => {
+    renderForm(jest.fn(), {
+      editing: true,
+      initialValues: { ...baseInitial, title: 'T', body: 'B', subject: 'S', labels: ['l'], audience: 'patron' },
     });
 
-    it('can still be narrowed from "both", which needs no restoring', () => {
-      renderForm(jest.fn(), {
-        editing: true,
-        initialValues: { ...baseInitial, title: 'T', body: 'B', subject: 'S', labels: ['l'] },
-      });
-
-      expect(optionValues()).toEqual(['', 'patron', 'staff']);
-    });
+    expect([...byId('template-audience').options].map(opt => opt.value)).toEqual(['', 'patron', 'staff']);
   });
 
   describe('labels', () => {

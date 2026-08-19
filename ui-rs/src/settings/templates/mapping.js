@@ -39,10 +39,10 @@ export function buildUpdateTemplateBody(values = {}) {
     body: values.body,
     contentType: values.contentType,
     labels: cleanLabels(values.labels),
-    subject: (values.subject ?? '').trim(),
   };
-  // Omitted rather than sent empty: "" matches neither an audience nor the IS NULL
-  // "both" case, making the template unreachable. The form rejects clearing it.
+  // Omitted optional fields are cleared by PUT.
+  const subject = (values.subject ?? '').trim();
+  if (subject && values.purpose !== 'pullslip') updated.subject = subject;
   if (values.audience) updated.audience = values.audience;
   return updated;
 }

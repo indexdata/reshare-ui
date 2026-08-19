@@ -83,13 +83,14 @@ describe('buildUpdateTemplateBody', () => {
     expect(buildUpdateTemplateBody(values)).not.toHaveProperty('purpose');
   });
 
-  it('sends an empty subject so clearing one takes effect', () => {
-    // PUT leaves omitted fields untouched, so omission would silently keep the old value.
-    expect(buildUpdateTemplateBody({ ...values, subject: '' }).subject).toBe('');
+  it('omits blank optional fields', () => {
+    const body = buildUpdateTemplateBody({ ...values, subject: '   ', audience: '' });
+    expect(body).not.toHaveProperty('subject');
+    expect(body).not.toHaveProperty('audience');
   });
 
-  it('omits a cleared audience, which would otherwise be stored as an unmatchable empty string', () => {
-    expect(buildUpdateTemplateBody({ ...values, audience: '' })).not.toHaveProperty('audience');
+  it('omits the subject for pull slips, clearing one that was stored', () => {
+    expect(buildUpdateTemplateBody({ ...values, purpose: 'pullslip' })).not.toHaveProperty('subject');
   });
 });
 

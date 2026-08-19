@@ -234,11 +234,6 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
     return errors;
   };
 
-  // Swapping patron for staff is an ordinary update; only clearing one is impossible,
-  // since PUT can set an audience but never restore the "matches both" null. So the
-  // choice is withheld rather than offered and then refused.
-  const audiences = editing && initialValues?.audience ? AUDIENCES.filter(Boolean) : AUDIENCES;
-
   // Whether the body currently holds markup, which is not the same question as
   // which content type is selected: switching to text leaves the markup alone.
   const bodyIsMarkup = useRef(initialValues?.contentType === 'html');
@@ -335,7 +330,7 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
                     id="template-audience"
                     name="audience"
                     component={Select}
-                    dataOptions={opts('audience', audiences)}
+                    dataOptions={opts('audience', AUDIENCES)}
                     label={<FormattedMessage id="ui-rs.settings.templates.field.audience" />}
                   />
                 </Col>
