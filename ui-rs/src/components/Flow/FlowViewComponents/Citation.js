@@ -3,7 +3,13 @@ import { FormattedMessage } from 'react-intl';
 import { Accordion, Col, KeyValue, Row } from '@folio/stripes/components';
 
 const Citation = ({ request }) => {
-  if (request.serviceType?.value !== 'Copy') return null;
+  const { bibliographicInfo = {}, publicationInfo = {}, serviceInfo = {} } = request?.illRequest ?? {};
+  if (serviceInfo.serviceType !== 'Copy') return null;
+
+  const { titleOfComponent, authorOfComponent, volume, issue, pagesRequested } = bibliographicInfo;
+  // Compliance codes are open codes a partner may send in any casing; the keys
+  // are lower case, and an unrecognised code shows as itself.
+  const copyright = serviceInfo.copyrightCompliance?.['#text'];
 
   return (
     <Accordion
@@ -14,19 +20,19 @@ const Citation = ({ request }) => {
         <Col xs={6}>
           <KeyValue
             label={<FormattedMessage id="ui-rs.information.titleOfComponent" />}
-            value={request.titleOfComponent}
+            value={titleOfComponent}
           />
         </Col>
         <Col xs={3}>
           <KeyValue
             label={<FormattedMessage id="ui-rs.information.volume" />}
-            value={request.volume}
+            value={volume}
           />
         </Col>
         <Col xs={3}>
           <KeyValue
             label={<FormattedMessage id="ui-rs.information.date" />}
-            value={request.publicationDate}
+            value={publicationInfo.publicationDate}
           />
         </Col>
       </Row>
@@ -34,28 +40,28 @@ const Citation = ({ request }) => {
         <Col xs={6}>
           <KeyValue
             label={<FormattedMessage id="ui-rs.information.authorOfComponent" />}
-            value={request.authorOfComponent}
+            value={authorOfComponent}
           />
         </Col>
         <Col xs={3}>
           <KeyValue
             label={<FormattedMessage id="ui-rs.information.issue" />}
-            value={request.issue}
+            value={issue}
           />
         </Col>
         <Col xs={3}>
           <KeyValue
             label={<FormattedMessage id="ui-rs.information.pages" />}
-            value={request.pagesRequested}
+            value={pagesRequested}
           />
         </Col>
       </Row>
-      {request.copyrightType?.value !== undefined &&
+      {copyright &&
         <Row>
           <Col xs={6}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.copyrightType" />}
-              value={<FormattedMessage id={`ui-rs.refdata.copyrightType.${request.copyrightType?.value}`} />}
+              value={<FormattedMessage id={`ui-rs.refdata.copyrightType.${copyright.toLowerCase()}`} defaultMessage={copyright} />}
             />
           </Col>
         </Row>

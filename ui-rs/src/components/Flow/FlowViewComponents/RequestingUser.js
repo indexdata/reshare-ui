@@ -1,14 +1,29 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { FormattedMessage } from 'react-intl';
 import { Accordion, Col, KeyValue, Row } from '@folio/stripes/components';
 import { useStripes } from '@folio/stripes/core';
+import { upNLevels } from '@projectreshare/stripes-reshare';
+
+import patronEmail from '../../../util/patronEmail';
 
 const RequestingUser = ({ request }) => {
   const stripes = useStripes();
-  const patronURL = stripes?.config?.reshare?.patronURL?.replace('{patronid}', request.patronIdentifier);
+  const location = useLocation();
+  const patronInfo = request?.illRequest?.patronInfo ?? {};
+  const { patronId, surname, givenName } = patronInfo;
+  const email = patronEmail(patronInfo);
 
-  if (!request.isRequester || !patronURL) return null;
+  if (request?.side !== 'borrowing') return null;
+  if (!patronId && !surname && !givenName) return null;
+
+  // Without a configured patron URL there is no local ILS to cross-reference, and
+  // this section is deliberately absent rather than showing patron detail alone.
+  const patronURLTemplate = stripes?.config?.reshare?.patronURL;
+  if (!patronURLTemplate) return null;
+
+  const patronURL = patronId ? patronURLTemplate.replace('{patronid}', patronId) : null;
+  const listPath = upNLevels(location, 2).split('?')[0];
 
   return (
     <Accordion
@@ -16,34 +31,44 @@ const RequestingUser = ({ request }) => {
       label={<FormattedMessage id="ui-rs.flow.sections.requestingUser" />}
     >
       <Row>
-        <Col xs={4}>
+        <Col xs={3}>
           <KeyValue
             label={<FormattedMessage id="ui-rs.information.lastName" />}
-            value={request.patronSurname}
+            value={surname}
           />
         </Col>
-        <Col xs={4}>
+        <Col xs={3}>
           <KeyValue
             label={<FormattedMessage id="ui-rs.information.firstName" />}
-            value={request.patronGivenName}
+            value={givenName}
           />
         </Col>
-        <Col xs={4}>
+        <Col xs={3}>
           <KeyValue
             label={<FormattedMessage id="ui-rs.information.userId" />}
-            value={request.patronIdentifier}
+            value={patronId}
+          />
+        </Col>
+        <Col xs={3}>
+          <KeyValue
+            label={<FormattedMessage id="ui-rs.information.emailAddress" />}
+            value={email}
           />
         </Col>
       </Row>
       <Row>
-        <Col xs={4}>
-          <Link to={patronURL}><FormattedMessage id="ui-rs.flow.info.patronLink" /></Link>
-        </Col>
-        <Col xs={4}>
-          <Link to={`/request/requests?filters=terminal.false&qindex=patronIdentifier&query=${request.patronIdentifier}&sort=-dateCreated`}>
-            <FormattedMessage id="ui-rs.flow.info.patronQuery" />
-          </Link>
-        </Col>
+        {patronURL &&
+          <Col xs={4}>
+            <Link to={patronURL}><FormattedMessage id="ui-rs.flow.info.patronLink" /></Link>
+          </Col>
+        }
+        {patronId &&
+          <Col xs={4}>
+            <Link to={`${listPath}?filters=terminal.false&qindex=patron&query=${encodeURIComponent(patronId)}&sort=-dateCreated`}>
+              <FormattedMessage id="ui-rs.flow.info.patronQuery" />
+            </Link>
+          </Col>
+        }
       </Row>
     </Accordion>
   );

@@ -77,6 +77,16 @@ const conditionNotifications = [
     createdAt: '2026-01-06T12:00:00Z',
   },
   {
+    id: 'accepted-cost-row',
+    kind: 'condition',
+    fromSymbol: 'ISIL:SUP',
+    cost: 9,
+    currency: 'USD',
+    receipt: 'ACCEPTED',
+    note: 'accepted-cost-note',
+    createdAt: '2026-01-07T12:00:00Z',
+  },
+  {
     id: 'non-condition',
     kind: 'note',
     note: 'general-chat-note',
@@ -87,7 +97,8 @@ const conditionNotifications = [
 const requestFixture = {
   id: 'pr-1',
   state: 'REQ_VALIDATED',
-  timestamp: '2026-01-05T12:00:00Z',
+  side: 'borrowing',
+  updatedAt: '2026-01-05T12:00:00Z',
   requesterRequestId: 'rrid-1',
   requesterSymbol: 'ISIL:REQ',
   supplierSymbol: 'ISIL:SUP',
@@ -98,7 +109,29 @@ const requestFixture = {
     },
     serviceInfo: {
       note: 'patron-service-note',
+      serviceType: 'Loan',
+      serviceLevel: { '#text': 'Express' },
     },
+    billingInfo: {
+      maximumCosts: { monetaryValue: '25.00', currencyCode: { '#text': 'USD' } },
+    },
+    patronInfo: {
+      patronId: 'patron-9',
+      surname: 'flow-surname',
+      givenName: 'flow-given',
+      address: [
+        {
+          electronicAddress: {
+            electronicAddressType: { '#text': 'Email' },
+            electronicAddressData: 'patron@example.org',
+          },
+        },
+      ],
+    },
+  },
+  illResponse: {
+    statusInfo: { status: 'Loaned', dueDate: '2026-03-01T00:00:00Z' },
+    deliveryInfo: { itemId: 'item-barcode-1' },
   },
 };
 
@@ -156,6 +189,71 @@ describe('FlowRoute', () => {
 
     expect(screen.queryByText('general-chat-note')).toBeNull();
     expect(screen.queryByText('other-supplier-row-note')).toBeNull();
+
+    expect(screen.getByText('Loan')).toBeInTheDocument();
+    expect(screen.getByText('Express')).toBeInTheDocument();
+    expect(screen.getByText('25.00 USD')).toBeInTheDocument();
+
+    // Agreed cost is the accepted priced condition; the table also holds a
+    // rejected 12.5 USD and a pending 4 EUR, so this proves the receipt filter.
+    expect(screen.getByText('ui-rs.information.cost').parentElement.textContent).toContain('9 USD');
+
+    // Requesting user, with the id linked through patronURL.
+    expect(screen.getByText('flow-surname')).toBeInTheDocument();
+    expect(screen.getByText('patron@example.org')).toBeInTheDocument();
+    expect(screen.getByText('ui-rs.flow.info.patronLink').closest('a'))
+      .toHaveAttribute('href', expect.stringContaining('patron-9'));
+    expect(screen.getByText('ui-rs.flow.info.patronQuery').closest('a'))
+      .toHaveAttribute('href', expect.stringContaining('qindex=patron'));
+
+    // Due date and item barcode come from the supplier's last ISO 18626 response.
+    expect(screen.getByText('3/1/2026')).toBeInTheDocument();
+    expect(screen.getByText('item-barcode-1')).toBeInTheDocument();
+  });
+
+  it('hides the requesting user on the lending side', () => {
+    renderFlowRoute({ ...requestFixture, side: 'lending' });
+
+    expect(screen.queryByText('flow-surname')).toBeNull();
+    expect(screen.queryByText('ui-rs.flow.sections.requestingUser')).toBeNull();
+  });
+
+  const copyRequestFixture = {
+    ...requestFixture,
+    illRequest: {
+      ...requestFixture.illRequest,
+      serviceInfo: { ...requestFixture.illRequest.serviceInfo, serviceType: 'Copy' },
+      bibliographicInfo: {
+        ...requestFixture.illRequest.bibliographicInfo,
+        titleOfComponent: 'article-title',
+        authorOfComponent: 'article-author',
+        volume: 'vol-7',
+        issue: 'iss-3',
+        pagesRequested: '11-22',
+      },
+      publicationInfo: { publicationDate: '1998' },
+    },
+  };
+
+  it('shows the copy citation section for a copy request', () => {
+    renderFlowRoute(copyRequestFixture);
+
+    expect(screen.getByText('ui-rs.flow.sections.citation')).toBeInTheDocument();
+    ['article-title', 'article-author', 'iss-3', '11-22', '1998']
+      .forEach(value => expect(screen.getByText(value)).toBeInTheDocument());
+  });
+
+  it('hides the copy citation section for a loan request', () => {
+    renderFlowRoute({
+      ...copyRequestFixture,
+      illRequest: {
+        ...copyRequestFixture.illRequest,
+        serviceInfo: { serviceType: 'Loan' },
+      },
+    });
+
+    expect(screen.queryByText('ui-rs.flow.sections.citation')).toBeNull();
+    expect(screen.queryByText('article-title')).toBeNull();
   });
 
   it('links to the previous and next request when the request is a revision', () => {
