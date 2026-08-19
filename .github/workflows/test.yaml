@@ -32,6 +32,9 @@ jobs:
       - name: Test ui-rs
         run: yarn workspace @projectreshare/rs test --ci
 
+      - name: Test ui-rsdir
+        run: yarn workspace @projectreshare/rsdir test --ci
+
       # PR-only: pushes to main already build the full deploy
       # platform in deploy-resharex.yaml, this lets PRs verify
       # at least the leaner dev platform builds

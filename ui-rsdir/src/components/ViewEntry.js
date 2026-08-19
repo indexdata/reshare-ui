@@ -14,6 +14,8 @@ import {
   Row,
 } from '@folio/stripes/components';
 import { useCloseDirect, upNLevels, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import addressPluginGeneric from '@k-int/address-plugin-generic';
+import { apiAddressToDisplayComponents } from '../util/addressAdapter';
 
 const ViewEntry = ({
   entry,
@@ -238,6 +240,11 @@ const ViewEntry = ({
   };
 
   const formatAddress = (address) => {
+    const addressComponents = apiAddressToDisplayComponents(
+      address,
+      addressPluginGeneric.fieldOrder
+    );
+
     return (
       <Card
         headerStart={(
@@ -253,30 +260,13 @@ const ViewEntry = ({
         roundedBorder
         marginBottom0
       >
-        { address.addressComponents && address.addressComponents.map(component => {
-          return (
-            <Row key={`${address.id}-${component.seq}`}>
-              <Col xs={3}>
-                <KeyValue
-                  label={<FormattedMessage id="ui-rsdir.address.sequence" />}
-                  value={component.seq}
-                />
-              </Col>
-              <Col xs={3}>
-                <KeyValue
-                  label={<FormattedMessage id="ui-rsdir.address.type" />}
-                  value={component.type}
-                />
-              </Col>
-              <Col xs={3}>
-                <KeyValue
-                  label={<FormattedMessage id="ui-rsdir.address.value" />}
-                  value={component.value}
-                />
-              </Col>
-            </Row>
-          );
-        })}
+        <address style={{ fontStyle: 'normal' }}>
+          {addressComponents.map((component, index) => (
+            <div key={`${address.id}-${component.type}-${component.seq}-${index}`}>
+              {component.value}
+            </div>
+          ))}
+        </address>
       </Card>
     );
   };
