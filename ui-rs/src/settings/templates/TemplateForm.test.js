@@ -264,8 +264,8 @@ describe('TemplateForm', () => {
     expect(byId('template-purpose')).toBeDisabled();
   });
 
-  it('offers "both" when editing a template that has an audience, which PUT can now restore', () => {
-    renderForm(jest.fn(), {
+  it('offers "both" when editing a template that has an audience, which PUT can now restore', async () => {
+    await renderForm(jest.fn(), {
       editing: true,
       initialValues: { ...baseInitial, title: 'T', body: 'B', subject: 'S', labels: ['l'], audience: 'patron' },
     });
