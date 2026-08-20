@@ -22,8 +22,7 @@ const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect }) => {
   const isCopyReq = values?.serviceInfo?.serviceType === 'Copy';
   const stripes = useStripes();
 
-  // TODO: Broker API
-  // const ncipBorrowerCheck = useSetting('borrower_check', 'hostLMSIntegration');
+  // TODO: Broker API; stubbed until it can supply hostLMSIntegration's borrower_check
   const ncipBorrowerCheck = { value: 'none', isSuccess: true };
 
   if (ncipBorrowerCheck.isSuccess !== true) return null;
