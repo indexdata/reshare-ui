@@ -86,12 +86,12 @@ const EditEntryRoute = () => {
   });
 
   const initialValues = useMemo(() => {
-    if (op === CREATE) return {};
+    if (op === CREATE || !entryQuery.data) return {};
 
     return {
       ...entryQuery.data,
       addresses: apiAddressesToFormAddresses(
-        entryQuery.data?.addresses,
+        entryQuery.data.addresses,
         addressPluginGeneric
       ),
     };
