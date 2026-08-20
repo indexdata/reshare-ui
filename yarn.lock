@@ -2496,6 +2496,19 @@
     "@jsonjoy.com/buffers" "^1.0.0"
     "@jsonjoy.com/codegen" "^1.0.0"
 
+"@k-int/address-plugin-generic@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@k-int/address-plugin-generic/-/address-plugin-generic-1.1.0.tgz#aecea421b135486c9dab9fb17767a7d65fdedb11"
+  integrity sha512-Y93D537+3Rd8IKaQ3rnq4SZoob9lVUSwGr0H/oLS9ZM+Mc1QNdS2vkv+g+Ouyjp/720ViTrz/u4kdNy9Boi9nw==
+  dependencies:
+    "@k-int/address-utils" "^1.1.0"
+    react-flexbox-grid "^2.1.2"
+
+"@k-int/address-utils@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@k-int/address-utils/-/address-utils-1.1.0.tgz#d023b0e39b7e64881183561d9929fe8ab85adbe7"
+  integrity sha512-e1m/LG60oVbSNz7wKqnqh52VkVSxgdEZzNZw9aitZnI2iuruTh5SfJ5iEz315K0/3ZE5A5gAjj4VTnkH7IqvRA==
+
 "@k-int/stripes-kint-components@^5.1.1":
   version "5.37.1"
   resolved "https://registry.yarnpkg.com/@k-int/stripes-kint-components/-/stripes-kint-components-5.37.1.tgz#e70109aa3627ea2bb80f5e61526468942ab1deea"
@@ -11251,6 +11264,14 @@ react-final-form@^6.3.0:
   integrity sha512-x3XYvozolECp3nIjly+4QqxdjSSWfcnpGEL5K8OBT6xmGrq5kBqbA6+/tOqoom9NwqIPPbxPNsOViFlbKgowbA==
   dependencies:
     "@babel/runtime" "^7.15.4"
+
+react-flexbox-grid@^2.1.2:
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/react-flexbox-grid/-/react-flexbox-grid-2.1.2.tgz#5eadf04e8559f7140cd6867a55a5351ded8d3920"
+  integrity sha512-lj1oVnIJ7TY3W6tPjFUxlUYd1DLFxEg8RiX3HAYVvreE3O9HU9n2390CFoPQ+qk1E+5MXa2t/mLMafFLAa8+7Q==
+  dependencies:
+    flexboxgrid2 "^7.2.0"
+    prop-types "^15.5.8"
 
 react-highlight-words@^0.20.0:
   version "0.20.0"

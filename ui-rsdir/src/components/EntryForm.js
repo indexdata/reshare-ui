@@ -10,6 +10,7 @@ import {
   TextField,
 } from '@folio/stripes/components';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
+import addressPluginGeneric from '@k-int/address-plugin-generic';
 import SymbolsField from './SymbolsField';
 import { required } from '../util/validators';
 import AddressesField from './AddressesField';
@@ -187,7 +188,7 @@ const EntryForm = () => {
         </Row>
         <Row>
           <Col xs={12}>
-            <AddressesField />
+            <AddressesField addressPlugin={addressPluginGeneric} />
           </Col>
         </Row>
       </Accordion>

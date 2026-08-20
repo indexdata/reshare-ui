@@ -2,5 +2,8 @@
   "extends": "@folio/eslint-config-stripes",
   "rules": {
     "react/prop-types": "off"
+  },
+  "env": {
+    "jest": true
   }
 }
