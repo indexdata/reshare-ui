@@ -38,7 +38,7 @@ const sendCallout = jest.fn();
 const requestFixture = {
   id: 'pr-1',
   state: 'VALIDATED',
-  stateModel: 'returnables',
+  stateModel: 'default',
   side: 'borrowing',
   createdAt: '2026-01-05T12:00:00Z',
   updatedAt: '2026-01-05T13:00:00Z',
@@ -94,7 +94,7 @@ const responses = {
   'broker/patron_requests/pr-1/notifications': { items: [] },
   'broker/patron_requests/pr-1/events': { items: [] },
   // VALIDATED is intentionally not editable.
-  'broker/state_model/models/returnables': {
+  'broker/state_model/models/default': {
     states: [
       { side: 'REQUESTER', name: 'NEEDS_REVIEW', editable: true },
       { side: 'REQUESTER', name: 'VALIDATED' },
@@ -238,7 +238,7 @@ describe('ViewRoute', () => {
   };
 
   it('offers an Edit action linking to the edit route when the state is editable', async () => {
-    renderInRequestApp({ ...requestFixture, state: 'NEEDS_REVIEW', stateModel: 'returnables' });
+    renderInRequestApp({ ...requestFixture, state: 'NEEDS_REVIEW', stateModel: 'default' });
     await screen.findByText('Request REQ-101');
 
     fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
@@ -248,7 +248,7 @@ describe('ViewRoute', () => {
   });
 
   it('hides the Edit action when the state is not editable', async () => {
-    renderInRequestApp({ ...requestFixture, state: 'VALIDATED', stateModel: 'returnables' });
+    renderInRequestApp({ ...requestFixture, state: 'VALIDATED', stateModel: 'default' });
     await screen.findByText('Request REQ-101');
 
     fireEvent.click(screen.getByRole('button', { name: 'Actions' }));

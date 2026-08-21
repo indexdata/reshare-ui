@@ -23,7 +23,7 @@ const sendCallout = jest.fn();
 const editableRequest = (overrides = {}) => ({
   id: 'req-1',
   state: 'NEEDS_REVIEW',
-  stateModel: 'returnables',
+  stateModel: 'default',
   internalNote: 'Staff only note',
   illRequest: {
     patronInfo: { patronId: 'p1', givenName: 'Ada', surname: 'Lovelace' },
@@ -50,7 +50,7 @@ const itemIdFor = (json, code) => json.illRequest.bibliographicInfo.bibliographi
 const recordIdFor = (json, code) => json.illRequest.bibliographicInfo.bibliographicRecordId
   ?.find(i => i.bibliographicRecordIdentifierCode?.['#text'] === code)?.bibliographicRecordIdentifier;
 
-const returnablesModel = {
+const defaultModel = {
   states: [
     { side: 'REQUESTER', name: 'NEEDS_REVIEW', editable: true },
     { side: 'REQUESTER', name: 'SENT' },
@@ -60,7 +60,7 @@ const returnablesModel = {
 const renderEdit = ({ request = editableRequest(), history } = {}) => {
   mockOkapi.setResponses({
     'broker/patron_requests/req-1': request,
-    'broker/state_model/models/returnables': returnablesModel,
+    'broker/state_model/models/default': defaultModel,
   });
   return renderWithRs(
     <CalloutContext.Provider value={{ sendCallout }}>

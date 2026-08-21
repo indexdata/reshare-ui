@@ -101,7 +101,7 @@ const PatronRequestsQueries = ({ appName, children }) => {
     },
   );
 
-  const stateModelQuery = useOkapiQuery('broker/state_model/models/returnables', {
+  const stateModelQuery = useOkapiQuery('broker/state_model/models/default', {
     staleTime: 30 * 60 * 1000,
     cacheTime: 8 * 60 * 60 * 1000,
   });
