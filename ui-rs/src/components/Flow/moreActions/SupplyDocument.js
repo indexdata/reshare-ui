@@ -48,7 +48,7 @@ const SupplyDocument = ({ request, performAction }) => {
           validate={validate}
           render={({ handleSubmit, submitting, invalid, form }) => (
             <form onSubmit={handleSubmit}>
-              <FormattedMessage id="ui-rs.actions.supply-document.prompt" />
+              <FormattedMessage id="ui-rs.actions.supply-document.confirm" />
               <Layout className="padding-top-gutter">
                 <Field
                   name="deliveryUrl"
