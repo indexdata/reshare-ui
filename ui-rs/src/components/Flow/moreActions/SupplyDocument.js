@@ -7,16 +7,17 @@ import { required } from '@folio/stripes/util';
 
 import actionMeta from '../actionMeta';
 
-const SupplyDocument = ({ request, performAction }) => {
+const SupplyDocument = ({ request, performAction, actions = [] }) => {
   const [isOpen, setIsOpen] = useState(false);
   const actionPending = !!useIsActionPending(request.id);
   const icon = actionMeta['supply-document']?.icon;
+  const withNote = actions.find(action => action.name === 'supply-document')?.parameters?.includes('note');
 
   const onSubmit = async values => {
     try {
       await performAction('supply-document', {
         deliveryUrl: values.deliveryUrl.trim(),
-        note: values.note,
+        ...(withNote ? { note: values.note } : {}),
       }, {
         success: 'ui-rs.actions.supply-document.success',
         error: 'ui-rs.actions.supply-document.error',
@@ -59,14 +60,18 @@ const SupplyDocument = ({ request, performAction }) => {
                   autoFocus
                 />
               </Layout>
-              <Layout className="padding-top-gutter">
-                <Label><FormattedMessage id="ui-rs.actions.addNote" /></Label>
-              </Layout>
-              <Row>
-                <Col xs={12}>
-                  <Field name="note" component={TextArea} />
-                </Col>
-              </Row>
+              {withNote &&
+                <>
+                  <Layout className="padding-top-gutter">
+                    <Label><FormattedMessage id="ui-rs.actions.addNote" /></Label>
+                  </Layout>
+                  <Row>
+                    <Col xs={12}>
+                      <Field name="note" component={TextArea} />
+                    </Col>
+                  </Row>
+                </>
+              }
               <ModalFooter>
                 <Button
                   buttonStyle="primary"

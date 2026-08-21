@@ -4,23 +4,10 @@ import { fireEvent, screen, waitFor } from '@folio/jest-config-stripes/testing-l
 import { renderWithRs } from '../../../test/renderWithRs';
 import SupplyDocument from './SupplyDocument';
 
-const mockSendCallout = jest.fn();
-
 jest.mock('@folio/stripes-components/lib/Icon', () => require('../../../test/iconMock').default);
-
-jest.mock('@folio/stripes/components', () => {
-  const r = require('react');
-  return {
-    ...jest.requireActual('@folio/stripes/components'),
-    TextArea: r.forwardRef(({ input, meta: _meta, ...rest }, ref) => (
-      r.createElement('textarea', { ref, ...input, ...rest })
-    )),
-  };
-});
 
 jest.mock('@projectreshare/stripes-reshare', () => ({
   ...jest.requireActual('@projectreshare/stripes-reshare'),
-  useIntlCallout: () => mockSendCallout,
   useIsActionPending: () => false,
 }));
 
@@ -29,8 +16,8 @@ const request = {
   requesterRequestId: 'REQ-1',
 };
 
-const renderSupplyDocument = performAction => renderWithRs(
-  <SupplyDocument request={request} performAction={performAction} />
+const renderSupplyDocument = (performAction, withNote = false) => renderWithRs(
+  <SupplyDocument request={request} performAction={performAction} withNote={withNote} />
 );
 
 describe('SupplyDocument', () => {
@@ -40,27 +27,29 @@ describe('SupplyDocument', () => {
     const performAction = jest.fn(() => Promise.resolve());
     renderSupplyDocument(performAction);
 
-    const submit = screen.getByText('ui-rs.button.scan').closest('button');
+    const submit = screen.getByText('stripes-reshare.actions.supply-document').closest('button');
     expect(submit).toBeDisabled();
     fireEvent.click(submit);
     expect(performAction).not.toHaveBeenCalled();
   });
 
-  it('submits the trimmed delivery URL and note', async () => {
+  it('submits the trimmed delivery URL and an optional disclosed note without requiring a request ID scan', async () => {
     const performAction = jest.fn(() => Promise.resolve());
-    renderSupplyDocument(performAction);
+    renderSupplyDocument(performAction, true);
 
-    fireEvent.change(screen.getByLabelText(/ui-rs.actions.supply-document.deliveryUrl/), {
+    expect(screen.queryByText('ui-rs.button.scan')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('textbox')).toHaveLength(1);
+    expect(screen.getByText('ui-rs.actions.addNote')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('ui-rs.actions.supply-document.deliveryUrl'), {
       target: { value: '  https://documents.example.org/copy/1  ' },
     });
-    const inputs = screen.getAllByRole('textbox');
-    fireEvent.change(inputs.find(input => input.getAttribute('name') === 'reqId'), {
-      target: { value: 'req-1' },
-    });
-    fireEvent.change(inputs.find(input => input.getAttribute('name') === 'note'), {
-      target: { value: 'Document ready' },
-    });
-    fireEvent.click(screen.getByText('ui-rs.button.scan').closest('button'));
+    fireEvent.click(screen.getByText('ui-rs.actions.addNote').closest('button'));
+    expect(screen.getByText('ui-rs.actions.hideNoteField')).toBeInTheDocument();
+
+    const note = screen.getAllByRole('textbox').find(input => input.getAttribute('name') === 'note');
+    fireEvent.change(note, { target: { value: 'Document ready' } });
+    fireEvent.click(screen.getByText('stripes-reshare.actions.supply-document').closest('button'));
 
     await waitFor(() => expect(performAction).toHaveBeenCalledWith(
       'supply-document',
@@ -75,18 +64,23 @@ describe('SupplyDocument', () => {
     ));
   });
 
-  it('rejects a scan for another request', async () => {
+  it('does not show or submit a note when it is not an action parameter', async () => {
     const performAction = jest.fn(() => Promise.resolve());
     renderSupplyDocument(performAction);
 
-    fireEvent.change(screen.getByLabelText(/ui-rs.actions.supply-document.deliveryUrl/), {
+    expect(screen.queryByText('ui-rs.actions.addNote')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('ui-rs.actions.supply-document.deliveryUrl'), {
       target: { value: 'https://documents.example.org/copy/1' },
     });
-    const reqId = screen.getAllByRole('textbox').find(input => input.getAttribute('name') === 'reqId');
-    fireEvent.change(reqId, { target: { value: 'REQ-2' } });
-    fireEvent.click(screen.getByText('ui-rs.button.scan').closest('button'));
+    fireEvent.click(screen.getByText('stripes-reshare.actions.supply-document').closest('button'));
 
-    await waitFor(() => expect(mockSendCallout).toHaveBeenCalledWith('ui-rs.actions.wrongId', 'error'));
-    expect(performAction).not.toHaveBeenCalled();
+    await waitFor(() => expect(performAction).toHaveBeenCalledWith(
+      'supply-document',
+      { deliveryUrl: 'https://documents.example.org/copy/1' },
+      {
+        success: 'ui-rs.actions.supply-document.success',
+        error: 'ui-rs.actions.supply-document.error',
+      },
+    ));
   });
 });

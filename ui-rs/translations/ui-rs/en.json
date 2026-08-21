@@ -321,7 +321,7 @@
   "actions.ask-retry.itemId": "New system identifier",
   "actions.ask-retry.success": "Alternative proposed.",
   "actions.ask-retry.error": "Error, could not propose alternative. {errMsg}",
-  "actions.supply-document.prompt": "Enter the document delivery URL and scan the request ID to complete supply.",
+  "actions.supply-document.prompt": "Enter the document delivery URL to complete supply.",
   "actions.supply-document.confirm": "Enter the document delivery URL to complete supply.",
   "actions.supply-document.deliveryUrl": "Document delivery URL",
   "actions.supply-document.success": "Document supplied.",

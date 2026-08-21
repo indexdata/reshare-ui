@@ -22,6 +22,7 @@ jest.mock('@projectreshare/stripes-reshare', () => ({
 }));
 
 const request = { id: 'pr-1' };
+const actionsWithNote = [{ name: 'supply-document', parameters: ['deliveryUrl', 'note'] }];
 
 const actionButtons = () => screen.getAllByText('stripes-reshare.actions.supply-document')
   .map(el => el.closest('button'))
@@ -32,7 +33,7 @@ describe('secondary SupplyDocument action', () => {
 
   it('requires a URL and submits the trimmed URL and note', async () => {
     const performAction = jest.fn(() => Promise.resolve());
-    renderWithRs(<SupplyDocument request={request} performAction={performAction} />);
+    renderWithRs(<SupplyDocument request={request} performAction={performAction} actions={actionsWithNote} />);
 
     fireEvent.click(actionButtons()[0]);
     expect(screen.getByText('ui-rs.actions.supply-document.confirm')).toBeInTheDocument();
@@ -59,5 +60,27 @@ describe('secondary SupplyDocument action', () => {
       },
     ));
     await waitFor(() => expect(actionButtons()).toHaveLength(1));
+  });
+
+  it('does not show or submit a note when it is not an action parameter', async () => {
+    const performAction = jest.fn(() => Promise.resolve());
+    const actions = [{ name: 'supply-document', parameters: ['deliveryUrl'] }];
+    renderWithRs(<SupplyDocument request={request} performAction={performAction} actions={actions} />);
+
+    fireEvent.click(actionButtons()[0]);
+    expect(screen.queryByText('ui-rs.actions.addNote')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/ui-rs.actions.supply-document.deliveryUrl/), {
+      target: { value: 'https://documents.example.org/copy/2' },
+    });
+    fireEvent.click(actionButtons().slice(-1)[0]);
+
+    await waitFor(() => expect(performAction).toHaveBeenCalledWith(
+      'supply-document',
+      { deliveryUrl: 'https://documents.example.org/copy/2' },
+      {
+        success: 'ui-rs.actions.supply-document.success',
+        error: 'ui-rs.actions.supply-document.error',
+      },
+    ));
   });
 });
