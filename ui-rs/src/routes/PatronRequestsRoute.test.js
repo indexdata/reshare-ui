@@ -37,7 +37,7 @@ const requestRow = {
 
 const responses = {
   'broker/patron_requests': { items: [requestRow], about: { count: 1 } },
-  'broker/state_model/models/returnables': {
+  'broker/state_model/models/default': {
     states: [{ name: 'REQ_VALIDATED', display: 'Validated', side: 'REQUESTER' }],
   },
 };
@@ -162,7 +162,7 @@ const facetBody = (url, facetValues) => ({
 
 const peerResponses = (facetValues) => ({
   'broker/patron_requests': (url) => facetBody(url, facetValues),
-  'broker/state_model/models/returnables': { states: [] },
+  'broker/state_model/models/default': { states: [] },
 });
 
 // Open the supplier peer accordion and return its combobox filter input. The input only
@@ -251,7 +251,7 @@ describe('PatronRequestsRoute peer facet', () => {
         url,
         url.includes('supplier_name') ? hundred.slice(0, 3) : hundred,
       ),
-      'broker/state_model/models/returnables': { states: [] },
+      'broker/state_model/models/default': { states: [] },
     });
     renderList(['/requests?sort=-dateCreated']);
     const input = await openPeerFilter();
@@ -286,7 +286,7 @@ describe('PatronRequestsRoute peer facet', () => {
         url,
         url.includes('supplier_name') ? peers.slice(0, 1) : peers,
       ),
-      'broker/state_model/models/returnables': { states: [] },
+      'broker/state_model/models/default': { states: [] },
     });
     renderList(['/requests?sort=-dateCreated']);
     const input = await openPeerFilter();

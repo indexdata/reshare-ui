@@ -21,6 +21,7 @@
   "actions.cannot-supply": "Cannot supply",
   "actions.add-condition": "Add conditions",
   "actions.ship": "Ship item",
+  "actions.supply-document": "Supply document",
   "actions.mark-received": "Mark received",
   "actions.accept-cancel": "Accept cancellation",
   "actions.accept-retry": "Accept retry",
