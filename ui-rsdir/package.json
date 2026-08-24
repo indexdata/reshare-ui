@@ -12,7 +12,9 @@
     "test": "jest"
   },
   "dependencies": {
+    "@k-int/address-plugin-british-isles": "^1.1.0",
     "@k-int/address-plugin-generic": "^1.1.0",
+    "@k-int/address-plugin-north-america": "^1.1.0",
     "@projectreshare/stripes-reshare": "^3.0.0",
     "final-form": "^4.2.0",
     "final-form-arrays": "^3.0.2",
@@ -39,7 +41,9 @@
     "route": "/directory",
     "stripesDeps": [
       "@folio/stripes-erm-components",
+      "@k-int/address-plugin-british-isles",
       "@k-int/address-plugin-generic",
+      "@k-int/address-plugin-north-america",
       "@projectreshare/stripes-reshare"
     ],
     "permissionSets": [

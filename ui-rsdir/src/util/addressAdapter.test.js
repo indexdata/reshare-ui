@@ -1,4 +1,6 @@
 import addressPluginGeneric from '@k-int/address-plugin-generic';
+import addressPluginBritishIsles from '@k-int/address-plugin-british-isles';
+import addressPluginNorthAmerica from '@k-int/address-plugin-north-america';
 import {
   apiAddressToFormAddress,
   apiAddressToDisplayComponents,
@@ -39,7 +41,7 @@ describe('addressAdapter', () => {
         { seq: 3, type: 'Other', value: 'Springfield' },
         { seq: 13, type: 'CountryCode', value: 'US' },
       ],
-    });
+    }, addressPluginGeneric);
 
     expect(pluginAddress).toEqual({
       addressLabel: 'Shipping',
@@ -67,7 +69,7 @@ describe('addressAdapter', () => {
       postBox: 'PO Box 1',
       postOffice: 'Springfield Post Office',
       country: 'US',
-    });
+    }, addressPluginGeneric);
 
     expect(apiAddress.addressComponents).toEqual([
       { seq: 0, type: 'Other', value: 'Shipping' },
@@ -92,7 +94,7 @@ describe('addressAdapter', () => {
         { seq: 4, type: 'Thoroughfare', value: 'Original street' },
         { seq: 5, type: 'Thoroughfare', value: 'Second street' },
       ],
-    });
+    }, addressPluginGeneric);
 
     expect(apiAddress.addressComponents).toEqual([
       { seq: 2, type: 'Thoroughfare', value: 'Updated street' },
@@ -108,7 +110,7 @@ describe('addressAdapter', () => {
       addressComponents: [
         { seq: 1, type: 'Locality', value: 'Old locality' },
       ],
-    });
+    }, addressPluginGeneric);
 
     expect(apiAddress.addressComponents).toEqual([]);
   });
@@ -141,6 +143,50 @@ describe('addressAdapter', () => {
       'IL',
       '62701',
     ]);
+  });
+
+  it('converts North American address lines through the selected plugin', () => {
+    const address = {
+      id: 'address-id',
+      type: 'Default',
+      addressComponents: [
+        { seq: 1, type: 'Other', value: 'Main Library' },
+        { seq: 2, type: 'Thoroughfare', value: '123 Main Street' },
+        { seq: 4, type: 'Locality', value: 'Springfield' },
+        { seq: 5, type: 'AdministrativeArea', value: 'IL' },
+        { seq: 6, type: 'PostalCode', value: '62701' },
+        { seq: 9, type: 'CountryCode', value: 'US' },
+      ],
+    };
+
+    const formAddress = apiAddressToFormAddress(address, addressPluginNorthAmerica);
+
+    expect(formAddress).toEqual(expect.objectContaining({
+      addressLineOne: 'Main Library',
+      addressLineTwo: '123 Main Street',
+      country: 'US',
+      countryCode: 'US',
+    }));
+    expect(pluginAddressToApiAddress(formAddress, addressPluginNorthAmerica).addressComponents)
+      .toEqual(address.addressComponents);
+  });
+
+  it('preserves components unsupported by the selected plugin', () => {
+    const apiAddress = pluginAddressToApiAddress({
+      type: 'Default',
+      thoroughfare: '123 Main Street',
+      locality: 'London',
+      administrativeArea: 'London',
+      postalCode: 'SW1A 1AA',
+      country: 'UK',
+      addressComponents: [
+        { seq: 0, type: 'Other', value: 'Shipping department' },
+      ],
+    }, addressPluginBritishIsles);
+
+    expect(apiAddress.addressComponents).toContainEqual(
+      { seq: 0, type: 'Other', value: 'Shipping department' }
+    );
   });
 
   it('orders reserved Other fields and retains duplicates and legacy values', () => {

@@ -1,3 +1,4 @@
+import addressPluginGeneric from '@k-int/address-plugin-generic';
 import EntryForm from './EntryForm';
 
 jest.mock('@folio/stripes/components', () => ({
@@ -19,5 +20,6 @@ jest.mock('@projectreshare/stripes-reshare', () => ({
 describe('EntryForm', () => {
   it('loads with the generic address plugin dependency', () => {
     expect(EntryForm).toEqual(expect.any(Function));
+    expect(addressPluginGeneric.addressFields).toEqual(expect.any(Function));
   });
 });

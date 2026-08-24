@@ -2496,10 +2496,26 @@
     "@jsonjoy.com/buffers" "^1.0.0"
     "@jsonjoy.com/codegen" "^1.0.0"
 
+"@k-int/address-plugin-british-isles@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@k-int/address-plugin-british-isles/-/address-plugin-british-isles-1.1.0.tgz#3f9526a9819ef8313d4f072944e79cb39d387d5d"
+  integrity sha512-YVGwo12PuNyML6W5D3VWNvka5ULpxi87Wi5bzQzqKyLsOPtBek93g/xc518Mm5XPejz2oTQNiqtkdQW/jjiOvg==
+  dependencies:
+    "@k-int/address-utils" "^1.1.0"
+    react-flexbox-grid "^2.1.2"
+
 "@k-int/address-plugin-generic@^1.1.0":
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@k-int/address-plugin-generic/-/address-plugin-generic-1.1.0.tgz#aecea421b135486c9dab9fb17767a7d65fdedb11"
   integrity sha512-Y93D537+3Rd8IKaQ3rnq4SZoob9lVUSwGr0H/oLS9ZM+Mc1QNdS2vkv+g+Ouyjp/720ViTrz/u4kdNy9Boi9nw==
+  dependencies:
+    "@k-int/address-utils" "^1.1.0"
+    react-flexbox-grid "^2.1.2"
+
+"@k-int/address-plugin-north-america@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@k-int/address-plugin-north-america/-/address-plugin-north-america-1.1.0.tgz#4e1140cbd63bedaa2c48023b134dfee4b09654dc"
+  integrity sha512-gWgNNezctKuJKA5d2MfK3hDAnX+MJeOI92DCGKrpOx5agJOefu7xTVA+SESDq8HhQmvM8OrIV3kmA5jiHPQT7Q==
   dependencies:
     "@k-int/address-utils" "^1.1.0"
     react-flexbox-grid "^2.1.2"

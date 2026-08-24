@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { FormattedMessage } from 'react-intl';
-import { Field } from 'react-final-form';
+import { Field, useField } from 'react-final-form';
 import { FieldArray } from 'react-final-form-arrays';
 import {
   Button,
@@ -34,42 +34,61 @@ const createAddress = () => ({
   addressComponents: [],
 });
 
-const AddressesField = ({ addressPlugin }) => {
+const AddressCard = ({ addressPlugin, fields, index, name }) => {
   const AddressFields = addressPlugin.addressFields;
+  const { input: countryInput } = useField(`${name}.country`, {
+    subscription: { value: true },
+  });
+  const supportedCountries = addressPlugin.listOfSupportedCountries || [];
+  const country = supportedCountries.includes(countryInput.value)
+    ? countryInput.value
+    : supportedCountries[0];
 
+  return (
+    <Card
+      headerStart={<FormattedMessage id="ui-rsdir.address.index" values={{ index: index + 1 }} />}
+      headerEnd={
+        <IconButton
+          icon="trash"
+          onClick={() => fields.remove(index)}
+          aria-label="Remove address"
+        />
+      }
+    >
+      <Row>
+        <Col xs={6}>
+          <Field
+            name={`${name}.type`}
+            component={Select}
+            dataOptions={buildOptions(ADDRESS_TYPE_OPTIONS)}
+            label={<FormattedMessage id="ui-rsdir.address.addressType" />}
+            required
+            validate={required}
+          />
+        </Col>
+      </Row>
+      <AddressFields
+        country={country}
+        name={name}
+        textFieldComponent={TextField}
+      />
+    </Card>
+  );
+};
+
+const AddressesField = ({ addressPlugin }) => {
   return (
     <FieldArray name="addresses">
       {({ fields }) => (
         <div>
           {fields.map((name, index) => (
-            <Card
+            <AddressCard
+              addressPlugin={addressPlugin}
+              fields={fields}
+              index={index}
               key={name}
-              headerStart={<FormattedMessage id="ui-rsdir.address.index" values={{ index: index + 1 }} />}
-              headerEnd={
-                <IconButton
-                  icon="trash"
-                  onClick={() => fields.remove(index)}
-                  aria-label="Remove address"
-                />
-              }
-            >
-              <Row>
-                <Col xs={6}>
-                  <Field
-                    name={`${name}.type`}
-                    component={Select}
-                    dataOptions={buildOptions(ADDRESS_TYPE_OPTIONS)}
-                    label={<FormattedMessage id="ui-rsdir.address.addressType" />}
-                    required
-                    validate={required}
-                  />
-                </Col>
-              </Row>
-              <AddressFields
-                name={name}
-                textFieldComponent={TextField}
-              />
-            </Card>
+              name={name}
+            />
           ))}
           <Button
             id="add-address-button"
@@ -81,6 +100,18 @@ const AddressesField = ({ addressPlugin }) => {
       )}
     </FieldArray>
   );
+};
+
+AddressCard.propTypes = {
+  addressPlugin: PropTypes.shape({
+    addressFields: PropTypes.elementType.isRequired,
+    listOfSupportedCountries: PropTypes.arrayOf(PropTypes.string),
+  }).isRequired,
+  fields: PropTypes.shape({
+    remove: PropTypes.func.isRequired,
+  }).isRequired,
+  index: PropTypes.number.isRequired,
+  name: PropTypes.string.isRequired,
 };
 
 AddressesField.propTypes = {

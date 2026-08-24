@@ -10,7 +10,7 @@ import {
   TextField,
 } from '@folio/stripes/components';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
-import addressPluginGeneric from '@k-int/address-plugin-generic';
+import PropTypes from 'prop-types';
 import SymbolsField from './SymbolsField';
 import { required } from '../util/validators';
 import AddressesField from './AddressesField';
@@ -109,7 +109,7 @@ const ParentField = () => {
   );
 };
 
-const EntryForm = () => {
+const EntryForm = ({ addressPlugin }) => {
   return (
     <AccordionSet>
       <Accordion
@@ -188,12 +188,18 @@ const EntryForm = () => {
         </Row>
         <Row>
           <Col xs={12}>
-            <AddressesField addressPlugin={addressPluginGeneric} />
+            <AddressesField addressPlugin={addressPlugin} />
           </Col>
         </Row>
       </Accordion>
     </AccordionSet>
   );
+};
+
+EntryForm.propTypes = {
+  addressPlugin: PropTypes.shape({
+    addressFields: PropTypes.elementType.isRequired,
+  }).isRequired,
 };
 
 export default EntryForm;

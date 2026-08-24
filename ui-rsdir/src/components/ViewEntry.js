@@ -13,9 +13,10 @@ import {
   PaneMenu,
   Row,
 } from '@folio/stripes/components';
+import { useStripes } from '@folio/stripes/core';
 import { useCloseDirect, upNLevels, useOkapiQuery } from '@projectreshare/stripes-reshare';
-import addressPluginGeneric from '@k-int/address-plugin-generic';
 import { apiAddressToDisplayComponents } from '../util/addressAdapter';
+import { getAddressPlugin } from '../util/addressPlugin';
 
 const ViewEntry = ({
   entry,
@@ -26,6 +27,8 @@ const ViewEntry = ({
   const location = useLocation();
   const history = useHistory();
   const intl = useIntl();
+  const stripes = useStripes();
+  const addressPlugin = getAddressPlugin(stripes.config?.reshare?.addressPlugin);
   const close = useCloseDirect(closePath || upNLevels(location, 2));
   const parentQuery = useOkapiQuery(`directory/entries/by-id/${entry.parent}`, {
     staleTime: 2 * 60 * 1000,
@@ -242,7 +245,7 @@ const ViewEntry = ({
   const formatAddress = (address) => {
     const addressComponents = apiAddressToDisplayComponents(
       address,
-      addressPluginGeneric.fieldOrder
+      addressPlugin.fieldOrder
     );
 
     return (

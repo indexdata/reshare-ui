@@ -12,6 +12,14 @@ const ADDRESS_FIELD_MAPPINGS = [
 ];
 
 const pluginFieldNames = new Set(ADDRESS_FIELD_MAPPINGS.map(({ field }) => field));
+const pluginOnlyFieldNames = new Set([
+  ...pluginFieldNames,
+  'addressLabel',
+  'addressLineOne',
+  'addressLineTwo',
+  'countryCode',
+  'lines',
+]);
 
 const mappingForComponent = component => {
   if (component.type === 'Other') {
@@ -25,9 +33,21 @@ const mappingForComponent = component => {
 
 const hasValue = value => value !== undefined && value !== null && value !== '';
 
-export const apiAddressToPluginAddress = (address = {}) => ({
+const apiCountryCode = address => (
+  (address.addressComponents || []).find(component => component.type === 'CountryCode')?.value
+);
+
+const pluginCountryCode = (address, addressPlugin) => {
+  const countryCode = apiCountryCode(address);
+  const supportedCountries = addressPlugin?.listOfSupportedCountries || [];
+
+  if (supportedCountries.includes(countryCode)) return countryCode;
+  return supportedCountries[0] || countryCode;
+};
+
+export const apiAddressToPluginAddress = (address = {}, addressPlugin) => ({
   addressLabel: address.type,
-  countryCode: 'generic',
+  countryCode: pluginCountryCode(address, addressPlugin),
   id: address.id,
   lines: (address.addressComponents || []).map((component, index) => {
     const mapping = mappingForComponent(component);
@@ -44,39 +64,59 @@ export const apiAddressToPluginAddress = (address = {}) => ({
 
 export const apiAddressToFormAddress = (address = {}, addressPlugin) => ({
   ...address,
-  ...addressPlugin.backendToFields(apiAddressToPluginAddress(address)),
+  ...addressPlugin.backendToFields(apiAddressToPluginAddress(address, addressPlugin)),
 });
 
 export const apiAddressesToFormAddresses = (addresses, addressPlugin) => (
   addresses?.map(address => apiAddressToFormAddress(address, addressPlugin))
 );
 
-export const pluginAddressToApiAddress = (address = {}) => {
+export const pluginAddressToApiAddress = (address = {}, addressPlugin) => {
   const addressProperties = Object.keys(address).reduce((result, key) => {
-    if (key !== 'addressComponents' && !pluginFieldNames.has(key)) {
+    if (key !== 'addressComponents' && !pluginOnlyFieldNames.has(key)) {
       result[key] = address[key];
     }
 
     return result;
   }, {});
 
+  const pluginAddress = addressPlugin.fieldsToBackend({
+    ...apiAddressToPluginAddress(address, addressPlugin),
+    ...address,
+    addressLabel: address.type,
+    countryCode: pluginCountryCode(address, addressPlugin),
+  });
+
   const seenFields = new Set();
   const preservedComponents = (address.addressComponents || []).filter(component => {
     const mapping = mappingForComponent(component);
 
-    if (!mapping || seenFields.has(mapping.field)) return true;
+    if (
+      !mapping ||
+      !Number.isFinite(addressPlugin.fieldOrder[mapping.pluginType]) ||
+      seenFields.has(mapping.field)
+    ) return true;
 
     seenFields.add(mapping.field);
     return false;
   });
 
-  const pluginComponents = ADDRESS_FIELD_MAPPINGS
-    .filter(({ field }) => hasValue(address[field]))
-    .map(({ componentType, field, seq }) => ({
-      seq,
-      type: componentType,
-      value: address[field],
-    }));
+  const pluginComponents = (pluginAddress.lines || [])
+    .filter(line => hasValue(line?.value))
+    .map(line => {
+      const mapping = ADDRESS_FIELD_MAPPINGS.find(candidate => (
+        candidate.lineType === line.type?.value?.toLowerCase()
+      ));
+
+      if (!mapping) return null;
+
+      return {
+        seq: mapping.seq,
+        type: mapping.componentType,
+        value: line.value,
+      };
+    })
+    .filter(Boolean);
 
   return {
     ...addressProperties,
@@ -85,8 +125,8 @@ export const pluginAddressToApiAddress = (address = {}) => {
   };
 };
 
-export const pluginAddressesToApiAddresses = addresses => (
-  addresses?.map(pluginAddressToApiAddress)
+export const pluginAddressesToApiAddresses = (addresses, addressPlugin) => (
+  addresses?.map(address => pluginAddressToApiAddress(address, addressPlugin))
 );
 
 export const apiAddressToDisplayComponents = (address = {}, fieldOrder = {}) => (
