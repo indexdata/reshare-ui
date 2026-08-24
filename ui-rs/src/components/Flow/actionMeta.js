@@ -11,6 +11,7 @@ const actionMeta = {
   'accept-condition': { icon: 'check-circle' },
   'will-supply': { icon: 'check-circle' },
   'add-condition': { icon: 'plus-sign' },
+  'add-item': { icon: 'plus-sign' },
   'ask-retry': { icon: 'edit' },
 };
 
