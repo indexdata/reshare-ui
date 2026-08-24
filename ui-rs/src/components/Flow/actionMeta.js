@@ -1,6 +1,7 @@
 // Per-action client-side display metadata not provided by the API
 const actionMeta = {
   'ship': { icon: 'archive' },
+  'supply-document': { icon: 'link', primaryOnly: true },
   'ship-return': { icon: 'archive' },
   'cannot-supply': { icon: 'times-circle-solid' },
   'reject-cancel': { icon: 'times-circle-solid' },
