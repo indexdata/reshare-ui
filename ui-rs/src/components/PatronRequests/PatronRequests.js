@@ -34,11 +34,14 @@ const appDetails = {
     title: 'Requests',
     visibleColumns: [
       'flags', 'hrid',
-      'dateCreated', 'lastUpdated', 'selectedItemBarcode', 'patron', 'state', 'serviceType',
+      'dateCreated', 'lastUpdated', 'itemBarcode', 'patron', 'state', 'serviceType',
       'supplierSymbol', 'pickupLocation',
       'title',
     ],
     extraFilter: 'r.true',
+    // The requester's copy of an item has a placeholder barcode, unique per request;
+    // the supplier's real barcode arrives alongside it as itemId.
+    itemBarcodeField: 'itemId',
     intlId: 'supplier',
     institutionFilterId: 'supplier',
     statePrefix: 'REQ',
@@ -49,10 +52,11 @@ const appDetails = {
     visibleColumns: [
       'flags', 'hrid',
       'dateCreated', 'lastUpdated', 'state', 'serviceType',
-      'requesterSymbol', 'selectedItemBarcode', 'pickLocation',
+      'requesterSymbol', 'itemBarcode', 'pickLocation',
       'pickShelvingLocation', 'title'
     ],
     extraFilter: 'r.false',
+    itemBarcodeField: 'barcode',
     intlId: 'requester',
     institutionFilterId: 'requester',
     statePrefix: 'RES',
@@ -102,7 +106,7 @@ const PatronRequests = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestsQuery.isRefetchError, requestsQuery.errorUpdatedAt]);
 
-  const { title, visibleColumns, createPerm } = appDetails[appName];
+  const { title, visibleColumns, createPerm, itemBarcodeField } = appDetails[appName];
 
 
   return (
@@ -252,7 +256,7 @@ const PatronRequests = ({
                       serviceType: <FormattedMessage id="ui-rs.patronrequests.serviceType" />,
                       requesterSymbol: <FormattedMessage id="ui-rs.patronrequests.requestingInstitutionSymbol" />,
                       supplierSymbol: <FormattedMessage id="ui-rs.patronrequests.supplyingInstitutionSymbol" />,
-                      selectedItemBarcode: <FormattedMessage id="ui-rs.patronrequests.selectedItemBarcode" />,
+                      itemBarcode: <FormattedMessage id="ui-rs.patronrequests.itemBarcode" />,
                       pickLocation: <FormattedMessage id="ui-rs.patronrequests.pickLocation" />,
                       pickShelvingLocation: <FormattedMessage id="ui-rs.patronrequests.pickShelvingLocation" />,
                       pickupLocation: <FormattedMessage id="ui-rs.patronrequests.pickupLocation" />,
@@ -263,7 +267,7 @@ const PatronRequests = ({
                       lastUpdated: '96px',
                       state: { min: 84 },
                       serviceType: { max: 80 },
-                      selectedItemBarcode: '130px',
+                      itemBarcode: '130px',
                     }}
                     contentData={requests}
                     pagingOffset={offset}
@@ -297,6 +301,12 @@ const PatronRequests = ({
                         const p = a.illRequest?.patronInfo;
                         if (p?.givenName && p?.surname) return `${p.surname}, ${p.givenName}`;
                         return p?.surname ?? p?.givenName ?? p?.patronId ?? a.patron;
+                      },
+                      itemBarcode: a => {
+                        if (a.items?.length > 1) {
+                          return <FormattedMessage id="ui-rs.patronrequests.itemBarcode.multiVolume" />;
+                        }
+                        return a.items?.[0]?.[itemBarcodeField] ?? null;
                       },
                       serviceType: a => a.illRequest?.serviceInfo?.serviceType,
                       title: a => a.illRequest?.bibliographicInfo?.title,

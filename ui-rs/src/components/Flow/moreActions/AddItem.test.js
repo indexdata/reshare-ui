@@ -28,9 +28,9 @@ describe('secondary AddItem action', () => {
     const submit = actionButtons().slice(-1)[0];
     expect(submit).toBeDisabled();
 
-    fireEvent.change(screen.getByLabelText(/ui-rs.flow.info.itemBarcode/), { target: { value: '  30001000123456  ' } });
-    fireEvent.change(screen.getByLabelText(/ui-rs.flow.info.itemCallNumber/), { target: { value: ' PN1993.5 ' } });
-    fireEvent.change(screen.getByLabelText(/ui-rs.information.title/), { target: { value: 'Volume 2' } });
+    fireEvent.change(screen.getByLabelText(/ui-rs.flow.volumes.itemBarcode/), { target: { value: '  30001000123456  ' } });
+    fireEvent.change(screen.getByLabelText(/ui-rs.flow.volumes.callNumber/), { target: { value: ' PN1993.5 ' } });
+    fireEvent.change(screen.getByLabelText(/ui-rs.flow.volumes.title/), { target: { value: 'Volume 2' } });
     fireEvent.click(submit);
 
     await waitFor(() => expect(performAction).toHaveBeenCalledWith(
@@ -49,8 +49,8 @@ describe('secondary AddItem action', () => {
     renderWithRs(<AddItem request={request} performAction={performAction} />);
 
     fireEvent.click(actionButtons()[0]);
-    fireEvent.change(screen.getByLabelText(/ui-rs.flow.info.itemBarcode/), { target: { value: '30001000123456' } });
-    fireEvent.change(screen.getByLabelText(/ui-rs.flow.info.itemCallNumber/), { target: { value: '   ' } });
+    fireEvent.change(screen.getByLabelText(/ui-rs.flow.volumes.itemBarcode/), { target: { value: '30001000123456' } });
+    fireEvent.change(screen.getByLabelText(/ui-rs.flow.volumes.callNumber/), { target: { value: '   ' } });
     fireEvent.click(actionButtons().slice(-1)[0]);
 
     await waitFor(() => expect(performAction).toHaveBeenCalledWith(
@@ -64,7 +64,7 @@ describe('secondary AddItem action', () => {
     renderWithRs(<AddItem request={request} performAction={performAction} />);
 
     fireEvent.click(actionButtons()[0]);
-    fireEvent.change(screen.getByLabelText(/ui-rs.flow.info.itemBarcode/), { target: { value: '30001000123456' } });
+    fireEvent.change(screen.getByLabelText(/ui-rs.flow.volumes.itemBarcode/), { target: { value: '30001000123456' } });
     fireEvent.click(actionButtons().slice(-1)[0]);
 
     await waitFor(() => expect(performAction).toHaveBeenCalled());

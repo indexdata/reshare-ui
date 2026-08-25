@@ -28,6 +28,10 @@ const requestRow = {
   supplierSymbol: 'ISIL:SUP',
   createdAt: '2026-01-05T12:00:00Z',
   updatedAt: '2026-01-06T12:00:00Z',
+  items: [
+    { id: 'item-1', barcode: 'pr-1', itemId: '30001000123456' },
+    { id: 'item-2', barcode: 'pr-1', itemId: '30001000654321' },
+  ],
   illRequest: {
     bibliographicInfo: { title: 'fixture-title' },
     serviceInfo: { serviceType: 'Loan' },
@@ -44,17 +48,17 @@ const responses = {
 
 // An explicit history, so tests can assert where the route navigates and whether it
 // pushed or replaced.
-const renderList = (initialEntries = ['/requests']) => {
+const renderList = (initialEntries = ['/requests'], appName = 'request') => {
   const history = createMemoryHistory({ initialEntries });
   return {
     history,
     ...renderWithRs(
-      <AppNameContext.Provider value="request">
+      <AppNameContext.Provider value={appName}>
         <Route
           path="/requests"
           render={() => (
             <>
-              <PatronRequestsRoute appName="request" />
+              <PatronRequestsRoute appName={appName} />
               <LocationSearch />
             </>
           )}
@@ -114,7 +118,38 @@ describe('PatronRequestsRoute', () => {
     const r = within(row);
     expect(r.getByText('fixture-title')).toBeInTheDocument();
     expect(r.getByText('ISIL:SUP')).toBeInTheDocument();
+    expect(r.getByText('ui-rs.patronrequests.itemBarcode.multiVolume')).toBeInTheDocument();
     expect(screen.getByText('ui-rs.patronrequests.found')).toBeInTheDocument();
+  });
+
+  it('shows the supplier barcode of a lone item on the borrowing side', async () => {
+    mockOkapi.setResponses({
+      ...responses,
+      'broker/patron_requests': {
+        items: [{ ...requestRow, items: [requestRow.items[0]] }],
+        about: { count: 1 },
+      },
+    });
+    renderList(['/requests?sort=-dateCreated']);
+    const hrid = await screen.findByText('REQ-101');
+    const r = within(hrid.closest('[role="row"], tr'));
+    expect(r.getByText('30001000123456')).toBeInTheDocument();
+    // Not the placeholder barcode the requester stores in its own copy of the item.
+    expect(r.queryByText('pr-1')).not.toBeInTheDocument();
+  });
+
+  it('shows the item barcode of a lone item on the lending side', async () => {
+    mockOkapi.setResponses({
+      ...responses,
+      'broker/patron_requests': {
+        items: [{ ...requestRow, items: [{ id: 'item-1', barcode: '30001000123456' }] }],
+        about: { count: 1 },
+      },
+    });
+    renderList(['/requests?sort=-dateCreated'], 'supply');
+    const hrid = await screen.findByText('REQ-101');
+    const r = within(hrid.closest('[role="row"], tr'));
+    expect(r.getByText('30001000123456')).toBeInTheDocument();
   });
 
   it('keeps the selected qindex in the URL and search dropdown after submit', async () => {

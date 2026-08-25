@@ -131,7 +131,6 @@ const requestFixture = {
   },
   illResponse: {
     statusInfo: { status: 'Loaned', dueDate: '2026-03-01T00:00:00Z' },
-    deliveryInfo: { itemId: 'item-barcode-1' },
   },
 };
 
@@ -206,9 +205,8 @@ describe('FlowRoute', () => {
     expect(screen.getByText('ui-rs.flow.info.patronQuery').closest('a'))
       .toHaveAttribute('href', expect.stringContaining('qindex=patron'));
 
-    // Due date and item barcode come from the supplier's last ISO 18626 response.
+    // Due date comes from the supplier's last ISO 18626 response.
     expect(screen.getByText('3/1/2026')).toBeInTheDocument();
-    expect(screen.getByText('item-barcode-1')).toBeInTheDocument();
   });
 
   it('hides the requesting user on the lending side', () => {

@@ -33,7 +33,7 @@ const RequestInfo = ({ request }) => {
   const agreedCost = findAgreedCost(notifications?.items, request?.supplierSymbol);
 
   // The supplier's side of the exchange, as the last ISO 18626 response.
-  const { statusInfo, deliveryInfo } = request?.illResponse ?? {};
+  const { statusInfo } = request?.illResponse ?? {};
 
   const location = useLocation();
   const [showStateCode, setShowStateCode] = useState(false);
@@ -85,7 +85,6 @@ const RequestInfo = ({ request }) => {
             'ui-rs.flow.info.dueDate',
             statusInfo?.dueDate ? <FormattedUTCDate value={statusInfo.dueDate} /> : <NoValue />
           )}
-          {colKeyVal('ui-rs.flow.info.itemBarcode', deliveryInfo?.itemId || <NoValue />)}
         </Row>
         <Row>
           {serviceInfo.note &&

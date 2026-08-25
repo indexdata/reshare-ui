@@ -61,7 +61,7 @@ const AddItem = ({ request, performAction }) => {
                   <Col xs={12} md={6}>
                     <Field
                       name="barcode"
-                      label={<FormattedMessage id="ui-rs.flow.info.itemBarcode" />}
+                      label={<FormattedMessage id="ui-rs.flow.volumes.itemBarcode" />}
                       component={TextField}
                       required
                       autoFocus
@@ -70,7 +70,7 @@ const AddItem = ({ request, performAction }) => {
                   <Col xs={12} md={6}>
                     <Field
                       name="callNumber"
-                      label={<FormattedMessage id="ui-rs.flow.info.itemCallNumber" />}
+                      label={<FormattedMessage id="ui-rs.flow.volumes.callNumber" />}
                       component={TextField}
                     />
                   </Col>
@@ -79,7 +79,7 @@ const AddItem = ({ request, performAction }) => {
                   <Col xs={12}>
                     <Field
                       name="title"
-                      label={<FormattedMessage id="ui-rs.information.title" />}
+                      label={<FormattedMessage id="ui-rs.flow.volumes.title" />}
                       component={TextField}
                     />
                   </Col>
