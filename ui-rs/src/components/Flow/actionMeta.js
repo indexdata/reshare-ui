@@ -1,4 +1,7 @@
-// Per-action client-side display metadata not provided by the API
+// Per-action client-side display metadata not provided by the API.
+//
+// `hidden` keeps an action out of the secondary "More options" list
+// e.g. for when the UI surfaces them elsewhere
 const actionMeta = {
   'ship': { icon: 'archive' },
   'supply-document': { icon: 'link', primaryOnly: true },
@@ -12,6 +15,7 @@ const actionMeta = {
   'will-supply': { icon: 'check-circle' },
   'add-condition': { icon: 'plus-sign' },
   'add-item': { icon: 'plus-sign' },
+  'remove-item': { icon: 'trash', hidden: true },
   'ask-retry': { icon: 'edit' },
 };
 

@@ -14,9 +14,8 @@ const ActionAccordion = ({ actions = [], request }) => {
   const primaryActionName = primaryActionObj?.name;
   const actionCodes = actions.map(a => a.name);
 
-  const moreActionCodes = primaryActionName && actionMeta[primaryActionName]?.primaryOnly
-    ? actionCodes.filter(a => a !== primaryActionName)
-    : actionCodes;
+  const moreActionCodes = actionCodes.filter(a => !actionMeta[a]?.hidden
+    && !(a === primaryActionName && actionMeta[primaryActionName]?.primaryOnly));
 
   const PrimaryAction = primaryActionName
     ? (primaryActions[kebabToPascal(primaryActionName)] || primaryActions.Generic)
