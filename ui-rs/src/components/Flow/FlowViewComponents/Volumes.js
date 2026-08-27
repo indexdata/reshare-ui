@@ -55,12 +55,10 @@ const Volumes = ({ request, actions = [] }) => {
     ),
   };
 
-  // A lone item takes its title from the request when the lender doesn't supply
-  // one, so the column only earns its place once there is more than one.
   const visibleColumns = [
     'barcode',
     'callNumber',
-    ...(items.length > 1 ? ['title'] : []),
+    'title',
     ...(canRemove ? ['remove'] : []),
   ];
 

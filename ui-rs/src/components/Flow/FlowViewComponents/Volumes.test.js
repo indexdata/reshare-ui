@@ -46,13 +46,10 @@ describe('Volumes accordion', () => {
     expect(screen.getByText('PN1993.5')).toBeInTheDocument();
   });
 
-  it('shows the title column only once there is more than one item', () => {
-    const { unmount } = renderVolumes({ id: 'pr-1', items: [items[0]] }, []);
-    expect(screen.queryByText('ui-rs.flow.volumes.title')).not.toBeInTheDocument();
-    unmount();
-
-    renderVolumes({ id: 'pr-1', items }, []);
+  it('shows the title column for a single item', () => {
+    renderVolumes({ id: 'pr-1', items: [items[0]] }, []);
     expect(screen.getByText('ui-rs.flow.volumes.title')).toBeInTheDocument();
+    expect(screen.getByText('Volume 1')).toBeInTheDocument();
   });
 
   it('offers removal only when the action is available', () => {
