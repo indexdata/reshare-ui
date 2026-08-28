@@ -19,6 +19,7 @@ module.exports = {
       },
       showCost: true,
       showRefresh: true,
+      liveUpdates: true,
       showConditions: true,
       patronURL: '/users?qindex=barcode&query={patronid}',
     },

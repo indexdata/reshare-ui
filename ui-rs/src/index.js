@@ -1,5 +1,6 @@
 import React from 'react';
 import { Redirect, Route, Switch } from 'react-router-dom';
+import { BrokerEventsProvider } from '@projectreshare/stripes-reshare';
 import Settings from './settings';
 import AppNameContext from './AppNameContext';
 
@@ -24,54 +25,61 @@ const ResourceSharing = (props) => {
     return <Settings {...props} appName={appName} />;
   }
 
+  // The broker's event stream is per side, and an app instance is one side for
+  // its whole life, so the connection belongs above the routes rather than in
+  // any of them: it opens once and survives navigation between list and detail.
+  const side = appName === 'supply' ? 'lending' : 'borrowing';
+
   return (
     <AppNameContext.Provider value={appName}>
-      <Switch>
-        <Redirect
-          exact
-          from={path}
-          to={`${path}/requests`}
-        />
+      <BrokerEventsProvider side={side}>
+        <Switch>
+          <Redirect
+            exact
+            from={path}
+            to={`${path}/requests`}
+          />
 
-        {/* Backwards compatibility for previous client-side URLs */}
-        <Redirect
-          exact
-          from={`${path}/requests/view/:id`}
-          to={`${path}/requests/:id${search}`}
-        />
-        <Redirect
-          exact
-          from={`${path}/requests/view/:id/flow`}
-          to={`${path}/requests/:id/flow${search}`}
-        />
-        <Redirect
-          exact
-          from={`${path}/requests/view/:id/details`}
-          to={`${path}/requests/:id/details${search}`}
-        />
+          {/* Backwards compatibility for previous client-side URLs */}
+          <Redirect
+            exact
+            from={`${path}/requests/view/:id`}
+            to={`${path}/requests/:id${search}`}
+          />
+          <Redirect
+            exact
+            from={`${path}/requests/view/:id/flow`}
+            to={`${path}/requests/:id/flow${search}`}
+          />
+          <Redirect
+            exact
+            from={`${path}/requests/view/:id/details`}
+            to={`${path}/requests/:id/details${search}`}
+          />
 
-        {appName === 'request' &&
-          <Route path={`${path}/requests/create`} component={CreateRoute} />
-        }
-        {appName === 'request' &&
-          <Route path={`${path}/requests/:id/edit`} component={EditRoute} />
-        }
-        <Route path={`${path}/requests/pullslips`} component={PullSlipsRoute} />
-        <Route path={`${path}/requests/:id/pullslip`} component={PullSlipRoute} />
-        <Redirect
-          exact
-          from={`${path}/requests/:id`}
-          to={`${path}/requests/:id/flow${search}`}
-        />
+          {appName === 'request' &&
+            <Route path={`${path}/requests/create`} component={CreateRoute} />
+          }
+          {appName === 'request' &&
+            <Route path={`${path}/requests/:id/edit`} component={EditRoute} />
+          }
+          <Route path={`${path}/requests/pullslips`} component={PullSlipsRoute} />
+          <Route path={`${path}/requests/:id/pullslip`} component={PullSlipRoute} />
+          <Redirect
+            exact
+            from={`${path}/requests/:id`}
+            to={`${path}/requests/:id/flow${search}`}
+          />
 
-        {/* Contains nested routes: ./details and ./flow */}
-        <Route path={`${path}/requests/:id`} component={ViewRoute} />
+          {/* Contains nested routes: ./details and ./flow */}
+          <Route path={`${path}/requests/:id`} component={ViewRoute} />
 
-        <Route
-          path={`${path}/requests/:action?`}
-          render={(p) => <PatronRequestsRoute {...p} appName={appName} />}
-        />
-      </Switch>
+          <Route
+            path={`${path}/requests/:action?`}
+            render={(p) => <PatronRequestsRoute {...p} appName={appName} />}
+          />
+        </Switch>
+      </BrokerEventsProvider>
     </AppNameContext.Provider>
   );
 };

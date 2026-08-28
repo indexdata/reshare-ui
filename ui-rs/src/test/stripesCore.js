@@ -5,7 +5,7 @@ import React from 'react';
 // with `makeStripesCoreMock`, covering only the named exports our routes touch.
 
 // ReShare app-shell flags read via useStripes().config.reshare. One stub serves
-// every route test; a test needing different flags mocks useStripes itself.
+// every route test; `getReshareOverrides` layers per-test flags over it.
 const reshareConfigStub = {
   showCost: true,
   sharedIndex: { type: 'folio', ui: 'https://shared-index.example' },
@@ -15,11 +15,13 @@ const reshareConfigStub = {
 // `getOkapiKy` is a getter, not the ky mock itself: the jest.mock factory that
 // calls this is hoisted above the test's module-scope `const mockOkapi = ...`, so
 // the value must be read lazily (at render) rather than captured here.
-const makeStripesCoreMock = (getOkapiKy) => ({
+// `getReshareOverrides` is read at render for the same reason as `getOkapiKy`, so a
+// test can flip a flag (e.g. `liveUpdates`) per case rather than per file.
+const makeStripesCoreMock = (getOkapiKy, getReshareOverrides = () => ({})) => ({
   useStripes: () => ({
     currency: 'USD',
     hasPerm: () => true,
-    config: { reshare: reshareConfigStub },
+    config: { reshare: { ...reshareConfigStub, ...getReshareOverrides() } },
   }),
   useOkapiKy: () => getOkapiKy(),
   CalloutContext: React.createContext(null),

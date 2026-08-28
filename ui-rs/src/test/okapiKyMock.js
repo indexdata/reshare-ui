@@ -15,8 +15,50 @@ const effectiveUrl = (path, opts) => {
   return `${path}${path.includes('?') ? '&' : '?'}${qs}`;
 };
 
+const abortError = () => Object.assign(new Error('Aborted'), { name: 'AbortError' });
+
+// A readable stream the test writes into: `send` delivers text to whatever read is
+// pending (or queues it), and aborting the caller's signal rejects that read the way
+// a torn-down fetch body does.
+const makeStreamConnection = (signal) => {
+  const queued = [];
+  let waiting = null;
+  const conn = {
+    aborted: false,
+    send: (text) => {
+      const value = new TextEncoder().encode(text);
+      if (waiting) {
+        const { resolve } = waiting;
+        waiting = null;
+        resolve({ done: false, value });
+      } else {
+        queued.push(value);
+      }
+    },
+    reader: {
+      read: () => new Promise((resolve, reject) => {
+        if (conn.aborted) reject(abortError());
+        else if (queued.length) resolve({ done: false, value: queued.shift() });
+        else waiting = { resolve, reject };
+      }),
+    },
+  };
+  if (signal) {
+    signal.addEventListener('abort', () => {
+      conn.aborted = true;
+      if (waiting) {
+        const { reject } = waiting;
+        waiting = null;
+        reject(abortError());
+      }
+    });
+  }
+  return conn;
+};
+
 const makeOkapiKyMock = () => {
   let responses = {};
+  const streams = [];
 
   const okapiKy = jest.fn((path, opts) => ({
     json: async () => {
@@ -48,6 +90,17 @@ const makeOkapiKyMock = () => {
   okapiKy.put = jest.fn(async () => ({ json: async () => ({}) }));
   // DELETE responds 204 with no body, so nothing here resolves a json payload.
   okapiKy.delete = jest.fn(async () => ({}));
+
+  // BrokerEventsProvider opens the broker's event stream with `okapiKy.get(path, opts)`
+  // and reads frames off `res.body`. Each connection is recorded on `okapiKy.streams()`
+  // so a test can push raw frame text into it; a stream that is never pushed to just
+  // stays open until the provider aborts it.
+  okapiKy.get = jest.fn(async (path, opts) => {
+    const conn = makeStreamConnection(opts?.signal);
+    streams.push(conn);
+    return { body: { getReader: () => conn.reader } };
+  });
+  okapiKy.streams = () => streams;
 
   return okapiKy;
 };

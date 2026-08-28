@@ -1,6 +1,7 @@
 import React from 'react';
 import { Route } from 'react-router-dom';
-import { fireEvent, screen, waitFor } from '@folio/jest-config-stripes/testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@folio/jest-config-stripes/testing-library/react';
+import { BrokerEventsProvider } from '@projectreshare/stripes-reshare';
 
 import { renderWithRs } from '../test/renderWithRs';
 import { makeOkapiKyMock } from '../test/okapiKyMock';
@@ -22,9 +23,13 @@ jest.mock('react-syntax-highlighter', () => ({
 }));
 jest.mock('react-syntax-highlighter/dist/esm/styles/hljs', () => ({ github: { hljs: {} } }));
 
-// Pass a getter, not mockOkapi itself: this factory is hoisted above the
-// `const mockOkapi = ...` line, so the value is only available at render time.
-jest.mock('@folio/stripes/core', () => require('../test/stripesCore').makeStripesCoreMock(() => mockOkapi));
+// App-shell flags for the case under test; reset in beforeEach.
+let mockReshareOverrides = {};
+
+// Pass getters, not the values themselves: this factory is hoisted above the
+// `const mockOkapi = ...` line, so both are only available at render time.
+jest.mock('@folio/stripes/core', () => require('../test/stripesCore')
+  .makeStripesCoreMock(() => mockOkapi, () => mockReshareOverrides));
 
 const { CalloutContext } = require('@folio/stripes/core');
 
@@ -118,6 +123,7 @@ const renderViewRoute = () => renderWithRs(
 describe('ViewRoute', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockReshareOverrides = {};
     mockOkapi.setResponses(responses);
   });
 
@@ -253,5 +259,44 @@ describe('ViewRoute', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
     expect(screen.queryByRole('button', { name: 'ui-rs.editPatronRequest' })).not.toBeInTheDocument();
+  });
+
+  // The stream itself is covered by stripes-reshare's BrokerEvents tests; what is
+  // worth proving here is that a peer message actually reaches this route's queries,
+  // which a spy on invalidateQueries cannot show.
+  it('refetches the request when a peer message for it arrives on the stream', async () => {
+    mockReshareOverrides = { liveUpdates: true };
+    renderWithRs(
+      <BrokerEventsProvider side="borrowing">
+        <Route path="/requests/:id" component={ViewRoute} />
+      </BrokerEventsProvider>,
+      { initialEntries: ['/requests/pr-1/details'], messages }
+    );
+    await screen.findByText('Request REQ-101');
+
+    const fetchCount = () => mockOkapi.calledUrls()
+      .filter(url => url === 'broker/patron_requests/pr-1').length;
+    const before = fetchCount();
+
+    await waitFor(() => expect(mockOkapi.streams()).toHaveLength(1));
+    await act(async () => {
+      mockOkapi.streams()[0].send(`data: ${JSON.stringify({
+        event: 'message-requester',
+        data: { supplyingAgencyMessage: { header: { requestingAgencyRequestId: 'REQ-101' } } },
+      })}\n\n`);
+    });
+
+    // The refetch waits for the request to stop moving, so this outlasts the
+    // default timeout. The settle window itself is covered in useRequestEvents'
+    // own tests; what is being shown here is that the refetch reaches this
+    // route's queries at all.
+    await waitFor(() => expect(fetchCount()).toBeGreaterThan(before), { timeout: 5000 });
+  });
+
+  it('does not open the stream without the flag', async () => {
+    renderViewRoute();
+    await screen.findByText('Request REQ-101');
+
+    expect(mockOkapi.get).not.toHaveBeenCalled();
   });
 });

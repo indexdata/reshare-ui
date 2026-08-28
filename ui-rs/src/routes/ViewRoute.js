@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { Route, Switch } from 'react-router-dom';
 import { Button, ButtonGroup, IconButton, Icon, Layout, Pane, PaneMenu, Paneset, Tooltip } from '@folio/stripes/components';
-import { DirectLink, upNLevels, useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { DirectLink, upNLevels, useCloseDirect, useOkapiQuery, useRequestEvents } from '@projectreshare/stripes-reshare';
 
 import FlowRoute from './FlowRoute';
 import ViewMessageBanners from '../components/ViewMessageBanners';
@@ -49,6 +49,8 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
     { staleTime: 30 * 60 * 1000, cacheTime: 8 * 60 * 60 * 1000, enabled: appName === 'request' && hasRequestLoaded }
   );
   const canEdit = appName === 'request' && isRequestEditable(stateModel, request);
+
+  useRequestEvents(request);
 
   const { AsidePane, toggle, isOpen } = useRequestAside(ASIDE_SLOTS);
   const { isSuccess: countsLoaded, unseen, total } = useNotificationCounts(request?.id);
