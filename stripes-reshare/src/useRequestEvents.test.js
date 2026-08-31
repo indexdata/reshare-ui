@@ -168,6 +168,28 @@ describe('useRequestEvents', () => {
     expect(requestCalls('pr-1')).toBe(1);
   });
 
+  it('stays unsettled when an event lands while the refetch is in flight', async () => {
+    renderUseRequestEvents(request);
+
+    let finishRefetch;
+    const inFlight = new Promise((resolve) => { finishRefetch = resolve; });
+    invalidateQueriesSpy.mockImplementation((key) => (
+      key === 'broker/patron_requests/pr-1' ? inFlight : Promise.resolve()
+    ));
+
+    handlers.onEvent(event({ requestingAgencyRequestId: 'pr-1' }));
+    act(() => { jest.advanceTimersByTime(SETTLE_MS); });
+
+    // The refetch cannot answer for a message that arrived after it started, so
+    // the actions have to wait for the one this queues behind it.
+    handlers.onEvent(event({ requestingAgencyRequestId: 'pr-1' }));
+    await act(async () => { finishRefetch(); });
+    expect(isSettling('pr-1')).toBe(true);
+
+    await letItSettle();
+    expect(isSettling('pr-1')).toBe(false);
+  });
+
   it('still refreshes, and releases the actions, when the hook goes away mid-change', () => {
     const { unmount } = renderUseRequestEvents(request);
 

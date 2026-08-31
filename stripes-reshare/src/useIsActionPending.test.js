@@ -40,6 +40,16 @@ describe('useIsActionPending', () => {
     expect(result.current).toBe(false);
   });
 
+  // Callers pass `request?.id`, so this is the window before the request loads.
+  it('reports nothing without a request id, whatever else is going on', async () => {
+    const { result } = renderIsActionPending(undefined);
+
+    await act(async () => { queryClient.setQueryData(settlingKey('pr-1'), true); });
+    await act(async () => { queryClient.setQueryData(settlingKey(undefined), true); });
+
+    expect(result.current).toBe(false);
+  });
+
   it('is unmoved by another request on the same queue settling', async () => {
     const { result } = renderIsActionPending('pr-1');
 

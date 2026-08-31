@@ -7,8 +7,10 @@ module.exports = {
     platformDescription: 'ReShare platform',
     hasAllPerms: false,
     showDevInfo: true,
-    showRefresh: true,
-    liveUpdates: true,
+    reshare: {
+      showRefresh: true,
+      liveUpdates: true,
+    },
     staleBundleWarning: { path: '/index.html', header: 'last-modified', interval: 5 },
   },
   modules: {

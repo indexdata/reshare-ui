@@ -41,7 +41,13 @@ const useRequestEvents = (request) => {
   const { markUnsettled, refetchChat, settle } = useMemo(() => {
     const setSettling = (value) => queryClient.setQueryData(settlingKey(id), value);
 
+    // An event landing while a refetch is in flight has queued another one
+    // behind it; the refetch in flight cannot answer for that change, so it
+    // leaves the actions withdrawn for its successor to release.
+    let eventSinceRefetch = false;
+
     const settleNow = async () => {
+      eventSinceRefetch = false;
       try {
         // The list is marked stale too: it is not mounted while this route is,
         // and would otherwise show the old state on the way back. Awaited, since
@@ -54,12 +60,12 @@ const useRequestEvents = (request) => {
           queryClient.invalidateQueries('broker/patron_requests'),
         ]);
       } finally {
-        setSettling(false);
+        if (!eventSinceRefetch) setSettling(false);
       }
     };
 
     return {
-      markUnsettled: () => setSettling(true),
+      markUnsettled: () => { eventSinceRefetch = true; setSettling(true); },
       // Chat is conversational, so it does not wait for the request to settle.
       refetchChat: () => queryClient.invalidateQueries(`broker/patron_requests/${id}/notifications`),
       settle: debounce(settleNow, SETTLE_MS, { maxWait: SETTLE_MAX_MS }),
