@@ -1,6 +1,7 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { FormattedMessage } from 'react-intl';
-import { Field } from 'react-final-form';
+import { Field, useField } from 'react-final-form';
 import { FieldArray } from 'react-final-form-arrays';
 import {
   Button,
@@ -20,15 +21,6 @@ const ADDRESS_TYPE_OPTIONS = [
   { labelId: 'ui-rsdir.address.addressType.other', value: 'Other' },
 ];
 
-const ADDRESS_COMPONENT_TYPE_OPTIONS = [
-  { labelId: 'ui-rsdir.address.componentType.thoroughfare', value: 'Thoroughfare' },
-  { labelId: 'ui-rsdir.address.componentType.locality', value: 'Locality' },
-  { labelId: 'ui-rsdir.address.componentType.administrativeArea', value: 'AdministrativeArea' },
-  { labelId: 'ui-rsdir.address.componentType.postalCode', value: 'PostalCode' },
-  { labelId: 'ui-rsdir.address.componentType.countryCode', value: 'CountryCode' },
-  { labelId: 'ui-rsdir.address.componentType.other', value: 'Other' },
-];
-
 const buildOptions = options => [
   { label: '', value: '' },
   ...options.map(option => ({
@@ -37,113 +29,66 @@ const buildOptions = options => [
   })),
 ];
 
-const parseInteger = value => {
-  if (value === '' || value === undefined) {
-    return undefined;
-  }
-
-  return Number.parseInt(value, 10);
-};
-
 const createAddress = () => ({
   type: '',
   addressComponents: [],
 });
 
-const createAddressComponent = fields => ({
-  seq: fields.length + 1,
-  type: '',
-  value: '',
-});
+const AddressCard = ({ addressPlugin, fields, index, name }) => {
+  const AddressFields = addressPlugin.addressFields;
+  const { input: countryInput } = useField(`${name}.country`, {
+    subscription: { value: true },
+  });
+  const supportedCountries = addressPlugin.listOfSupportedCountries || [];
+  const country = supportedCountries.includes(countryInput.value)
+    ? countryInput.value
+    : supportedCountries[0];
 
-const AddressesField = () => {
+  return (
+    <Card
+      headerStart={<FormattedMessage id="ui-rsdir.address.index" values={{ index: index + 1 }} />}
+      headerEnd={
+        <IconButton
+          icon="trash"
+          onClick={() => fields.remove(index)}
+          aria-label="Remove address"
+        />
+      }
+    >
+      <Row>
+        <Col xs={6}>
+          <Field
+            name={`${name}.type`}
+            component={Select}
+            dataOptions={buildOptions(ADDRESS_TYPE_OPTIONS)}
+            label={<FormattedMessage id="ui-rsdir.address.addressType" />}
+            required
+            validate={required}
+          />
+        </Col>
+      </Row>
+      <AddressFields
+        country={country}
+        name={name}
+        textFieldComponent={TextField}
+      />
+    </Card>
+  );
+};
+
+const AddressesField = ({ addressPlugin }) => {
   return (
     <FieldArray name="addresses">
       {({ fields }) => (
         <div>
           {fields.map((name, index) => (
-            <Card
+            <AddressCard
+              addressPlugin={addressPlugin}
+              fields={fields}
+              index={index}
               key={name}
-              headerStart={<FormattedMessage id="ui-rsdir.address.index" values={{ index: index + 1 }} />}
-              headerEnd={
-                <IconButton
-                  icon="trash"
-                  onClick={() => fields.remove(index)}
-                  aria-label="Remove address"
-                />
-              }
-            >
-              <Row>
-                <Col xs={6}>
-                  <Field
-                    name={`${name}.type`}
-                    component={Select}
-                    dataOptions={buildOptions(ADDRESS_TYPE_OPTIONS)}
-                    label={<FormattedMessage id="ui-rsdir.address.addressType" />}
-                    required
-                    validate={required}
-                  />
-                </Col>
-              </Row>
-              <FieldArray name={`${name}.addressComponents`}>
-                {({ fields: componentFields }) => (
-                  <div>
-                    {componentFields.map((componentName, componentIndex) => (
-                      <Card
-                        key={componentName}
-                        headerStart={<FormattedMessage id="ui-rsdir.address.component.index" values={{ index: componentIndex + 1 }} />}
-                        headerEnd={
-                          <IconButton
-                            icon="trash"
-                            onClick={() => componentFields.remove(componentIndex)}
-                            aria-label="Remove address component"
-                          />
-                        }
-                      >
-                        <Row>
-                          <Col xs={4}>
-                            <Field
-                              name={`${componentName}.seq`}
-                              component={TextField}
-                              type="number"
-                              parse={parseInteger}
-                              label={<FormattedMessage id="ui-rsdir.address.sequence" />}
-                              required
-                              validate={required}
-                            />
-                          </Col>
-                          <Col xs={4}>
-                            <Field
-                              name={`${componentName}.type`}
-                              component={Select}
-                              dataOptions={buildOptions(ADDRESS_COMPONENT_TYPE_OPTIONS)}
-                              label={<FormattedMessage id="ui-rsdir.address.type" />}
-                              required
-                              validate={required}
-                            />
-                          </Col>
-                          <Col xs={4}>
-                            <Field
-                              name={`${componentName}.value`}
-                              component={TextField}
-                              label={<FormattedMessage id="ui-rsdir.address.value" />}
-                              required
-                              validate={required}
-                            />
-                          </Col>
-                        </Row>
-                      </Card>
-                    ))}
-                    <Button
-                      id={`add-address-component-button-${index}`}
-                      onClick={() => componentFields.push(createAddressComponent(componentFields))}
-                    >
-                      <FormattedMessage id="ui-rsdir.address.component.add" />
-                    </Button>
-                  </div>
-                )}
-              </FieldArray>
-            </Card>
+              name={name}
+            />
           ))}
           <Button
             id="add-address-button"
@@ -155,6 +100,24 @@ const AddressesField = () => {
       )}
     </FieldArray>
   );
+};
+
+AddressCard.propTypes = {
+  addressPlugin: PropTypes.shape({
+    addressFields: PropTypes.elementType.isRequired,
+    listOfSupportedCountries: PropTypes.arrayOf(PropTypes.string),
+  }).isRequired,
+  fields: PropTypes.shape({
+    remove: PropTypes.func.isRequired,
+  }).isRequired,
+  index: PropTypes.number.isRequired,
+  name: PropTypes.string.isRequired,
+};
+
+AddressesField.propTypes = {
+  addressPlugin: PropTypes.shape({
+    addressFields: PropTypes.elementType.isRequired,
+  }).isRequired,
 };
 
 export default AddressesField;

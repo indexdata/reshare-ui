@@ -8,12 +8,17 @@
   "scripts": {
     "start": "stripes serve",
     "build": "stripes build --output ./output",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "test": "jest"
   },
   "dependencies": {
+    "@k-int/address-plugin-british-isles": "^1.1.0",
+    "@k-int/address-plugin-generic": "^1.1.0",
+    "@k-int/address-plugin-north-america": "^1.1.0",
     "@projectreshare/stripes-reshare": "^3.0.0",
     "final-form": "^4.2.0",
     "final-form-arrays": "^3.0.2",
+    "prop-types": "^15.8.1",
     "query-string": "^8.1.0",
     "react-final-form": "^6.3.0",
     "react-final-form-arrays": "^3.1.1"
@@ -36,6 +41,9 @@
     "route": "/directory",
     "stripesDeps": [
       "@folio/stripes-erm-components",
+      "@k-int/address-plugin-british-isles",
+      "@k-int/address-plugin-generic",
+      "@k-int/address-plugin-north-america",
       "@projectreshare/stripes-reshare"
     ],
     "permissionSets": [

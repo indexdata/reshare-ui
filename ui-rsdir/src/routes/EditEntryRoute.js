@@ -1,13 +1,18 @@
-import React, { useContext } from 'react';
+import React, { useContext, useMemo } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { Form } from 'react-final-form';
 import arrayMutators from 'final-form-arrays';
 import { useMutation, useQueryClient } from 'react-query';
 import { Prompt, useParams, useHistory, useLocation } from 'react-router-dom';
 import { Button, Pane, PaneFooter, KeyValue } from '@folio/stripes/components';
-import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
+import { CalloutContext, useOkapiKy, useStripes } from '@folio/stripes/core';
 import { useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import EntryForm from '../components/EntryForm';
+import { getAddressPlugin } from '../util/addressPlugin';
+import {
+  apiAddressesToFormAddresses,
+  pluginAddressesToApiAddresses,
+} from '../util/addressAdapter';
 
 // Possible operations performed by submitting this form
 const CREATE = 'create';
@@ -20,6 +25,8 @@ const EditEntryRoute = () => {
   const callout = useContext(CalloutContext);
   const queryClient = useQueryClient();
   const okapiKy = useOkapiKy();
+  const stripes = useStripes();
+  const addressPlugin = getAddressPlugin(stripes.config?.reshare?.addressPlugin);
 
   const op = id ? EDIT : CREATE;
 
@@ -80,13 +87,28 @@ const EditEntryRoute = () => {
     },
   });
 
+  const initialValues = useMemo(() => {
+    if (op === CREATE || !entryQuery.data) return {};
+
+    return {
+      ...entryQuery.data,
+      addresses: apiAddressesToFormAddresses(
+        entryQuery.data.addresses,
+        addressPlugin
+      ),
+    };
+  }, [addressPlugin, entryQuery.data, op]);
+
   if (op === EDIT && !entryQuery.isSuccess) return null;
 
-  const initialValues = op === CREATE ? {} : entryQuery.data;
-
   const submit = (values, form) => {
+    const submitValues = {
+      ...values,
+      addresses: pluginAddressesToApiAddresses(values.addresses, addressPlugin),
+    };
+
     if (op === CREATE) {
-      return creator.mutateAsync(values);
+      return creator.mutateAsync(submitValues);
     }
 
     // For PATCH, use Final Form's dirtyFields to get only modified fields
@@ -95,7 +117,11 @@ const EditEntryRoute = () => {
 
     Object.keys(dirtyFields).forEach(key => {
       if (dirtyFields[key]) {
-        modifiedFields[key] = values[key];
+        if (key === 'addresses' || key.startsWith('addresses[')) {
+          modifiedFields.addresses = submitValues.addresses;
+        } else {
+          modifiedFields[key] = submitValues[key];
+        }
       }
     });
 
@@ -156,7 +182,7 @@ const EditEntryRoute = () => {
           }
         >
           <form onSubmit={handleSubmit} id="form-entry">
-            <EntryForm />
+            <EntryForm addressPlugin={addressPlugin} />
           </form>
           <FormattedMessage id="ui-rsdir.confirmDirtyNavigate">
             {prompt => <Prompt when={!pristine && !(submitting || submitSucceeded)} message={prompt[0]} />}

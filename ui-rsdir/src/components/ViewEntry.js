@@ -13,7 +13,10 @@ import {
   PaneMenu,
   Row,
 } from '@folio/stripes/components';
+import { useStripes } from '@folio/stripes/core';
 import { useCloseDirect, upNLevels, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { apiAddressToDisplayComponents } from '../util/addressAdapter';
+import { getAddressPlugin } from '../util/addressPlugin';
 
 const ViewEntry = ({
   entry,
@@ -24,6 +27,8 @@ const ViewEntry = ({
   const location = useLocation();
   const history = useHistory();
   const intl = useIntl();
+  const stripes = useStripes();
+  const addressPlugin = getAddressPlugin(stripes.config?.reshare?.addressPlugin);
   const close = useCloseDirect(closePath || upNLevels(location, 2));
   const parentQuery = useOkapiQuery(`directory/entries/by-id/${entry.parent}`, {
     staleTime: 2 * 60 * 1000,
@@ -238,6 +243,11 @@ const ViewEntry = ({
   };
 
   const formatAddress = (address) => {
+    const addressComponents = apiAddressToDisplayComponents(
+      address,
+      addressPlugin.fieldOrder
+    );
+
     return (
       <Card
         headerStart={(
@@ -253,30 +263,13 @@ const ViewEntry = ({
         roundedBorder
         marginBottom0
       >
-        { address.addressComponents && address.addressComponents.map(component => {
-          return (
-            <Row key={`${address.id}-${component.seq}`}>
-              <Col xs={3}>
-                <KeyValue
-                  label={<FormattedMessage id="ui-rsdir.address.sequence" />}
-                  value={component.seq}
-                />
-              </Col>
-              <Col xs={3}>
-                <KeyValue
-                  label={<FormattedMessage id="ui-rsdir.address.type" />}
-                  value={component.type}
-                />
-              </Col>
-              <Col xs={3}>
-                <KeyValue
-                  label={<FormattedMessage id="ui-rsdir.address.value" />}
-                  value={component.value}
-                />
-              </Col>
-            </Row>
-          );
-        })}
+        <address style={{ fontStyle: 'normal' }}>
+          {addressComponents.map((component, index) => (
+            <div key={`${address.id}-${component.type}-${component.seq}-${index}`}>
+              {component.value}
+            </div>
+          ))}
+        </address>
       </Card>
     );
   };
