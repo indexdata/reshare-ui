@@ -30,8 +30,8 @@ if (typeof global.ResizeObserver === 'undefined') {
   };
 }
 
-// jsdom exposes neither TextDecoder nor TextEncoder; useRequestEvents constructs a
-// TextDecoder to read the broker's event stream, which route tests mount.
+// jsdom exposes neither TextDecoder nor TextEncoder; BrokerEvents constructs a
+// TextDecoder to read the event stream, which route tests mount.
 if (typeof global.TextDecoder === 'undefined') {
   // eslint-disable-next-line global-require
   const { TextDecoder, TextEncoder } = require('util');

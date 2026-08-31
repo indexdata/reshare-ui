@@ -1,6 +1,6 @@
 import React from 'react';
 import { Redirect, Route, Switch } from 'react-router-dom';
-import { BrokerEventsProvider } from '@projectreshare/stripes-reshare';
+import { BrokerEventsProvider, RequestCacheSync } from '@projectreshare/stripes-reshare';
 import Settings from './settings';
 import AppNameContext from './AppNameContext';
 
@@ -33,6 +33,7 @@ const ResourceSharing = (props) => {
   return (
     <AppNameContext.Provider value={appName}>
       <BrokerEventsProvider side={side}>
+        <RequestCacheSync />
         <Switch>
           <Redirect
             exact

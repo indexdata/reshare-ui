@@ -1,7 +1,7 @@
 import React from 'react';
 import { Route } from 'react-router-dom';
 import { act, fireEvent, screen, waitFor } from '@folio/jest-config-stripes/testing-library/react';
-import { BrokerEventsProvider } from '@projectreshare/stripes-reshare';
+import { BrokerEventsProvider, RequestCacheSync } from '@projectreshare/stripes-reshare';
 
 import { renderWithRs } from '../test/renderWithRs';
 import { makeOkapiKyMock } from '../test/okapiKyMock';
@@ -268,6 +268,7 @@ describe('ViewRoute', () => {
     mockReshareOverrides = { liveUpdates: true };
     renderWithRs(
       <BrokerEventsProvider side="borrowing">
+        <RequestCacheSync />
         <Route path="/requests/:id" component={ViewRoute} />
       </BrokerEventsProvider>,
       { initialEntries: ['/requests/pr-1/details'], messages }
@@ -287,7 +288,7 @@ describe('ViewRoute', () => {
     });
 
     // The refetch waits for the request to stop moving, so this outlasts the
-    // default timeout. The settle window itself is covered in useRequestEvents'
+    // default timeout. The settle window itself is covered in RequestCacheSync's
     // own tests; what is being shown here is that the refetch reaches this
     // route's queries at all.
     await waitFor(() => expect(fetchCount()).toBeGreaterThan(before), { timeout: 5000 });

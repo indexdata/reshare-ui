@@ -286,7 +286,7 @@ describe('BrokerEvents', () => {
       expect(conn.aborted).toBe(true);
 
       // A stall is a fault, not a teardown of convenience, so it keeps its
-      // backoff — otherwise a blackholed path reconnects in a tight loop.
+      // backoff, or a blackholed path reconnects in a tight loop.
       expect(connections).toHaveLength(1);
       await act(async () => { jest.advanceTimersByTime(BACKOFF_CEILING_MS); });
       await waitFor(() => expect(connections).toHaveLength(2));

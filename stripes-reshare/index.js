@@ -4,6 +4,7 @@
 
 // Components (grouped with associated helpers)
 export { BrokerEventsProvider } from './src/BrokerEvents';
+export { default as RequestCacheSync } from './src/RequestCacheSync';
 export { default as DirectLink } from './src/DirectLink/DirectLink';
 export { default as useCloseDirect } from './src/DirectLink/useCloseDirect';
 
@@ -16,7 +17,6 @@ export { default as useIsActionPending } from './src/useIsActionPending';
 export { default as useOkapiKy } from './src/useOkapiKy';
 export { useOkapiQuery, useOkapiQueryConfig } from './src/useOkapiQuery';
 export { default as usePerformAction } from './src/usePerformAction';
-export { default as useRequestEvents } from './src/useRequestEvents';
 
 
 // Utilities

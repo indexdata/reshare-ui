@@ -1,10 +1,10 @@
 /**
  * One broker event-stream connection for the whole app, and a hook to listen in.
  *
- * The stream is narrowed server-side to a side and a symbol, and the symbol comes
- * from the tenant, so the connection has no per-screen inputs: one per session,
- * surviving navigation. Consumers get parsed payloads and decide what to do with
- * them; nothing here knows about patron requests. See `useRequestEvents`.
+ * The stream is narrowed server-side to a side and a symbol taken from the
+ * tenant, so the connection has no per-screen inputs: one per session, surviving
+ * navigation. Consumers get parsed payloads and decide what to do with them;
+ * nothing here knows about patron requests. See `RequestCacheSync`.
  *
  * Inert unless the `reshare.liveUpdates` app-shell flag is set.
  */
@@ -79,13 +79,11 @@ const BrokerEventsProvider = ({ side, children }) => {
     let stalled = false;
     // Sets the backoff; delivery clears it.
     let failures = 0;
-    // Set when a connection ends. The broker sends no ids and supports no
-    // replay, so anything raised before the next one establishes is simply
-    // gone, however brief the interruption.
+    // Set when a connection ends. The stream has no ids and no replay, so
+    // anything raised before the next one opens is lost, however brief the gap.
     let missedEvents = false;
 
-    // One listener throwing must not break delivery to the others, nor look
-    // like the connection failed.
+    // One listener throwing must not break delivery to the others.
     const emit = (method, arg) => listeners.current.forEach((listener) => {
       try {
         listener[method](arg);
@@ -97,8 +95,8 @@ const BrokerEventsProvider = ({ side, children }) => {
     const emitEvent = (payload) => emit('event', payload);
     const emitGap = () => emit('gap');
 
-    // Bytes arriving are the only proof the path works, so the backoff is
-    // forgiven here and any hole before it is reported.
+    // Any bytes prove the connection works: reset the retry delay, and tell
+    // listeners if events were missed while it was down.
     const noteDelivery = () => {
       if (missedEvents) {
         missedEvents = false;
@@ -109,13 +107,12 @@ const BrokerEventsProvider = ({ side, children }) => {
 
     const delay = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
 
-    // One connection, open to close.
     const streamOnce = async () => {
       controller = new AbortController();
       stalled = false;
       let watchdog;
-      // Armed before the request, so a response that never arrives at all —
-      // an intermediary buffering the body — times out the same way.
+      // Armed before the request, so a response that never arrives at all, such
+      // as an intermediary buffering the body, times out the same way.
       const arm = () => {
         clearTimeout(watchdog);
         watchdog = setTimeout(() => {
@@ -192,8 +189,8 @@ const BrokerEventsProvider = ({ side, children }) => {
         }
 
         if (stopped) return;
-        // Reported by the next delivery rather than here, so listeners are told
-        // when the stream is working again and a recheck can succeed.
+        // Reported by the next delivery, not here, so listeners recheck at a
+        // point where the recheck can succeed.
         missedEvents = true;
       }
     };
@@ -217,21 +214,20 @@ const BrokerEventsProvider = ({ side, children }) => {
  * Listen to the app's broker event stream.
  *
  * `onEvent` receives each parsed payload. `onGap` means the stream has not been
- * carrying everything, so whatever the caller derives from it must be rechecked.
+ * carrying everything, so anything derived from it must be rechecked.
  *
- * Both are read at call time and need not be stable; mounting without a provider
- * above delivers nothing. They are called synchronously, so a returned promise is
- * not awaited and a rejection escapes the isolation between listeners.
+ * Both are read at call time, so they need not be stable, and both are called
+ * synchronously: a promise one returns is not awaited. Without a provider above,
+ * nothing is delivered.
  */
 const useBrokerEvents = ({ onEvent, onGap } = {}) => {
   const stripes = useStripes();
   const subscribe = useContext(BrokerEventsContext);
 
   const handlers = useRef({ onEvent, onGap });
-  // Committed renders only — a ref written during render can carry callbacks from
-  // an attempt React went on to throw away — but synchronously after commit, so a
-  // frame arriving before passive effects flush is not matched against the
-  // component's previous props.
+  // A layout effect, so the handlers are updated once the render has committed
+  // and before any frame can arrive. Writing during render would risk callbacks
+  // from a render React discarded, and a passive effect flushes too late.
   useLayoutEffect(() => { handlers.current = { onEvent, onGap }; });
 
   useEffect(() => {
