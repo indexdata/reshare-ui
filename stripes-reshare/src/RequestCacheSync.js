@@ -1,15 +1,16 @@
 /**
- * Keeps cached patron requests in step with the broker event stream.
+ * Keeps cached patron-request queries synchronized with broker events.
  *
- * An event marks what it touched out of date and cancels any fetch in flight for
- * it, neither of which costs a request. Only watched queries refetch, once the
- * request stops moving; the rest stay marked until next opened. Marking is what
- * withdraws the actions (see useIsActionPending).
+ * Each event invalidates the affected queries and cancels older in-flight
+ * requests that could overwrite that invalidation. Active queries refetch after
+ * their debounce; inactive queries remain invalidated until observed again.
+ * Invalidated record and action queries also disable request actions.
  *
- * The list is marked, never refetched in place: that needs events the broker does
- * not raise, for arrivals and for changes from our own side.
+ * The request list uses a separate, longer debounce to coalesce queue-wide
+ * activity. The stream does not report arrivals or same-side changes, so focus
+ * and remount refetches remain necessary for complete list freshness.
  *
- * Mount once inside a `BrokerEventsProvider`, above the routes.
+ * Mount once inside BrokerEventsProvider, above the routes.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -25,14 +26,26 @@ import {
   requestKeys,
 } from './requestQueries';
 
-// Transitions arrive in bursts. The cap bounds a request that never quietens,
-// and a refetch it starts mid-burst is superseded by the next event.
+// Request transitions often emit several events. Debounce until quiet, with
+// maxWait bounding how long active queries can remain invalidated.
 const SETTLE_MS = 2 * 1000;
 const SETTLE_MAX_MS = 10 * 1000;
 
-const isWatchable = (query) => isRequestKey(query.queryKey) && query.state.isInvalidated;
+// A transition can emit several events, including one carrying a note. Use a
+// short debounce to coalesce the burst without noticeably delaying chat.
+const CHAT_SETTLE_MS = 500;
+const CHAT_SETTLE_MAX_MS = 1000;
 
-// The queries these ids would refetch. Chat never waits for the timer.
+// The list waits longer. It is the expensive query, a whole queue's worth of
+// events feed it rather than one request's, and a row appearing a few seconds
+// late costs nothing. The cap is what a busy queue settles to: one refetch a
+// minute.
+const LIST_SETTLE_MS = 10 * 1000;
+const LIST_SETTLE_MAX_MS = 60 * 1000;
+
+const isWatchable = (query) => isRequestKey(query.queryKey) && query.state.isInvalidated;
+const isWatchableChat = (query) => isNotificationsKey(query.queryKey) && query.state.isInvalidated;
+
 const belongsTo = (ids) => (query) => {
   const path = keyPath(query.queryKey);
   return ids.some((id) => {
@@ -44,22 +57,38 @@ const belongsTo = (ids) => (query) => {
 const RequestCacheSync = () => {
   const queryClient = useQueryClient();
 
-  const settle = useMemo(() => debounce(
-    () => queryClient.refetchQueries({ active: true, predicate: isWatchable }),
-    SETTLE_MS,
-    { maxWait: SETTLE_MAX_MS }
-  ), [queryClient]);
+  const { settle, settleChat, settleList } = useMemo(() => ({
+    settle: debounce(
+      () => queryClient.refetchQueries({ active: true, predicate: isWatchable }),
+      SETTLE_MS,
+      { maxWait: SETTLE_MAX_MS }
+    ),
+    settleChat: debounce(
+      () => queryClient.refetchQueries({ active: true, predicate: isWatchableChat }),
+      CHAT_SETTLE_MS,
+      { maxWait: CHAT_SETTLE_MAX_MS }
+    ),
+    settleList: debounce(
+      () => queryClient.refetchQueries(LIST_KEY, { active: true }),
+      LIST_SETTLE_MS,
+      { maxWait: LIST_SETTLE_MAX_MS }
+    ),
+  }), [queryClient]);
 
-  useEffect(() => () => settle.cancel(), [settle]);
+  useEffect(() => () => {
+    settle.cancel();
+    settleChat.cancel();
+    settleList.cancel();
+  }, [settle, settleChat, settleList]);
 
   const markStale = (key) => queryClient.invalidateQueries(key, { refetchActive: false });
 
-  // A fetch that left before the event clears the mark when it lands. Cancel the
-  // ones nobody is watching; a watched fetch is someone's own search, so it is
-  // left to finish.
+  // A response started before the event would clear the invalidation. Cancel
+  // inactive list fetches; active searches finish and refresh after the debounce.
   const markList = () => {
     queryClient.cancelQueries(LIST_KEY, { active: false });
     markStale(LIST_KEY);
+    settleList();
   };
 
   // Only what this event touched restarts the timer, so a request nobody has open
@@ -72,16 +101,14 @@ const RequestCacheSync = () => {
     ids.forEach((id) => {
       const { record, actions, events, notifications } = requestKeys(id);
       [record, actions, events].forEach((key) => {
-        // Stops a pre-event fetch from clearing the mark set on the next line.
         queryClient.cancelQueries(key);
         markStale(key);
       });
-      // Chat does not wait for the request to settle. Cancelled first, or a fetch
-      // already running absorbs the invalidation and returns the conversation
-      // without this message.
+      // Cancel first so a pre-event response cannot clear the invalidation.
       queryClient.cancelQueries(notifications);
-      queryClient.invalidateQueries(notifications);
+      markStale(notifications);
     });
+    settleChat();
     settleIfWatched(belongsTo(ids));
   };
 
@@ -99,14 +126,10 @@ const RequestCacheSync = () => {
       markList();
       queryClient.getQueryCache().findAll().forEach(({ queryKey }) => {
         if (!isRequestKey(queryKey)) return;
-        if (isNotificationsKey(queryKey)) {
-          queryClient.cancelQueries(queryKey);
-          queryClient.invalidateQueries(queryKey);
-          return;
-        }
         queryClient.cancelQueries(queryKey);
         markStale(queryKey);
       });
+      settleChat();
       settleIfWatched(isWatchable);
     },
   });

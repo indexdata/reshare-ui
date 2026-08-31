@@ -13,6 +13,8 @@ jest.mock('./BrokerEvents', () => ({
 }));
 
 const SETTLE_MS = 2 * 1000;
+const CHAT_SETTLE_MS = 500;
+const LIST_SETTLE_MS = 10 * 1000;
 const LIST_QUERY = ['broker/patron_requests', { cql: 'x' }];
 
 const request = { id: 'pr-1', requesterRequestId: 'pr-1' };
@@ -81,12 +83,35 @@ describe('RequestCacheSync', () => {
     expect(isStale(keys.events)).toBe(true);
   });
 
-  // An event naming a request never fetched here is what an arrival looks like.
   it('marks the list out of date on any event, resolvable or not', () => {
     queryClient.setQueryData(LIST_QUERY, { items: [] });
     renderSync();
 
     handlers.onEvent(event('never-seen'));
+
+    expect(isStale(LIST_QUERY)).toBe(true);
+  });
+
+  it('refreshes a list on screen once the queue stops moving', async () => {
+    const list = jest.fn().mockResolvedValue({ items: [] });
+    renderSync(<Watcher queryKey={LIST_QUERY} queryFn={list} />);
+    await act(async () => {});
+    list.mockClear();
+
+    handlers.onEvent(event('never-seen'));
+    await act(async () => { jest.advanceTimersByTime(SETTLE_MS); });
+    expect(list).not.toHaveBeenCalled();
+
+    await act(async () => { jest.advanceTimersByTime(LIST_SETTLE_MS); });
+    expect(list).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not refetch a list nobody is looking at', async () => {
+    queryClient.setQueryData(LIST_QUERY, { items: [] });
+    renderSync();
+
+    handlers.onEvent(event('never-seen'));
+    await act(async () => { jest.advanceTimersByTime(LIST_SETTLE_MS); });
 
     expect(isStale(LIST_QUERY)).toBe(true);
   });
@@ -112,7 +137,6 @@ describe('RequestCacheSync', () => {
       handlers.onEvent(event('pr-1'));
       act(() => { jest.advanceTimersByTime(900); });
     }
-    // Still moving: marked, but nothing fetched yet.
     expect(queryFn).not.toHaveBeenCalled();
     expect(isStale(keys.record)).toBe(true);
 
@@ -135,11 +159,9 @@ describe('RequestCacheSync', () => {
     await act(async () => { jest.advanceTimersByTime(SETTLE_MS); });
 
     expect(queryFn).not.toHaveBeenCalled();
-    // Still marked, so opening it again refetches.
     expect(isStale(keys.record)).toBe(true);
   });
 
-  // A request nobody has open must not push back the refetch of one on screen.
   it('does not delay a watched request for events about other requests', async () => {
     seedRequest(request);
     seedRequest(other);
@@ -158,22 +180,39 @@ describe('RequestCacheSync', () => {
     expect(queryFn).toHaveBeenCalledTimes(1);
   });
 
-  it('refreshes chat at once rather than waiting for the request to settle', async () => {
+  it('refreshes chat well before the request settles', async () => {
     seedRequest(request);
     const keys = requestKeys('pr-1');
-    const chat = jest.fn().mockResolvedValue([]);
+    const chat = jest.fn().mockResolvedValue({ items: [] });
     renderSync(<Watcher queryKey={keys.notifications} queryFn={chat} />);
     await act(async () => {});
     chat.mockClear();
 
-    await act(async () => { handlers.onEvent(event('pr-1')); });
+    handlers.onEvent(event('pr-1'));
+    await act(async () => { jest.advanceTimersByTime(CHAT_SETTLE_MS); });
 
-    // No timer has run: chat does not wait for the request to stop moving.
     expect(chat).toHaveBeenCalledTimes(1);
   });
 
-  // A fetch that left before the newest event must not come back and pass for
-  // the current state.
+  it('queries the notification list once for a burst, not once per message', async () => {
+    seedRequest(request);
+    const keys = requestKeys('pr-1');
+    const chat = jest.fn().mockResolvedValue({ items: [] });
+    renderSync(<Watcher queryKey={keys.notifications} queryFn={chat} />);
+    await act(async () => {});
+    chat.mockClear();
+
+    for (let i = 0; i < 4; i += 1) {
+      handlers.onEvent(event('pr-1'));
+      act(() => { jest.advanceTimersByTime(200); });
+    }
+    await act(async () => { jest.advanceTimersByTime(CHAT_SETTLE_MS); });
+
+    expect(chat.mock.calls.length).toBeLessThanOrEqual(2);
+  });
+
+  // A response from a fetch started before the latest event must not clear its
+  // invalidation.
   it('keeps a request marked when an event lands during its refetch', async () => {
     seedRequest(request);
     const keys = requestKeys('pr-1');
