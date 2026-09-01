@@ -3,11 +3,14 @@
 
 
 // Components (grouped with associated helpers)
+export { BrokerEventsProvider } from './src/BrokerEvents';
+export { default as RequestCacheSync } from './src/RequestCacheSync';
 export { default as DirectLink } from './src/DirectLink/DirectLink';
 export { default as useCloseDirect } from './src/DirectLink/useCloseDirect';
 
 
 // Hooks
+export { useBrokerEvents } from './src/BrokerEvents';
 export { default as useGetSIURL } from './src/useGetSIURL';
 export { default as useIntlCallout } from './src/useIntlCallout';
 export { default as useIsActionPending } from './src/useIsActionPending';
