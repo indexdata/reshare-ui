@@ -211,6 +211,18 @@ describe('RequestCacheSync', () => {
     expect(chat.mock.calls.length).toBeLessThanOrEqual(2);
   });
 
+  it('marks a request whose first fetch is still in flight', async () => {
+    const keys = requestKeys('pr-1');
+    let finishFetch;
+    const queryFn = jest.fn(() => new Promise((resolve) => { finishFetch = resolve; }));
+    renderSync(<Watcher queryKey={keys.record} queryFn={queryFn} />);
+
+    handlers.onEvent(event('pr-1'));
+    await act(async () => { finishFetch(request); });
+
+    expect(isStale(keys.record)).toBe(true);
+  });
+
   // A response from a fetch started before the latest event must not clear its
   // invalidation.
   it('keeps a request marked when an event lands during its refetch', async () => {

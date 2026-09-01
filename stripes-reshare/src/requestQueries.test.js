@@ -60,6 +60,22 @@ describe('requestIdsForEvent', () => {
     expect(idsFor(supplierMessage({ requestingAgencyRequestId: 'pr-1' }))).toEqual(['pr-1']);
   });
 
+  it('resolves a request whose first fetch has not landed', () => {
+    queryClient.getQueryCache().build(queryClient, { queryKey: requestKeys('pr-1').record });
+
+    expect(idsFor(supplierMessage({ requestingAgencyRequestId: 'pr-1' }))).toEqual(['pr-1']);
+  });
+
+  it('names a request once however many ways it is cached', () => {
+    seed({ id: 'pr-1', requesterRequestId: 'pr-1' });
+    queryClient.setQueryData(
+      [requestKeys('pr-1').record, { notifyOnChangeProps: 'tracked' }],
+      { id: 'pr-1', requesterRequestId: 'pr-1' }
+    );
+
+    expect(idsFor(supplierMessage({ requestingAgencyRequestId: 'pr-1' }))).toEqual(['pr-1']);
+  });
+
   it('resolves nothing without an ISO 18626 header', () => {
     seed({ id: 'pr-1', requesterRequestId: 'pr-1' });
 

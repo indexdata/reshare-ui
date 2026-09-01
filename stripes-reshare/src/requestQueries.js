@@ -31,19 +31,19 @@ const isNotificationsKey = (queryKey) => isRequestKey(queryKey) &&
 const isRecordKey = (queryKey) => isRequestKey(queryKey) &&
   !keyPath(queryKey).slice(RECORD_PREFIX.length).includes('/');
 
+const recordId = (queryKey) => keyPath(queryKey).slice(RECORD_PREFIX.length);
+
 const eventHeader = (payload) => {
   const message = payload?.data;
   return message?.supplyingAgencyMessage?.header ?? message?.requestingAgencyMessage?.header;
 };
 
 /**
- * Which of our requests an event names, as ids we hold.
+ * Resolves an event's agency request ids to local patron-request ids.
  *
- * A header carries whichever id the peer keeps: ours when borrowing, the
- * requester's when lending, where our own id is nowhere in the message. Cached
- * records carry both, so the match is made against them, and an event for a
- * request never fetched here yields nothing, there being no entry to mark. A
- * payload naming it in our own terms would be read straight off it instead.
+ * The local id comes from the query key, so it is available before the record
+ * loads. When available, cached `requesterRequestId` covers lending messages
+ * that do not include `supplyingAgencyRequestId`.
  */
 const requestIdsForEvent = (payload, queryClient) => {
   const header = eventHeader(payload);
@@ -52,11 +52,13 @@ const requestIdsForEvent = (payload, queryClient) => {
     [header.requestingAgencyRequestId, header.supplyingAgencyRequestId].filter(Boolean)
   );
   if (!peerIds.size) return [];
-  return queryClient.getQueryCache().findAll()
+  const ids = queryClient.getQueryCache().findAll()
     .filter(query => isRecordKey(query.queryKey))
-    .map(query => query.state.data)
-    .filter(record => record?.id && (peerIds.has(record.id) || peerIds.has(record.requesterRequestId)))
-    .map(record => record.id);
+    .filter(query => peerIds.has(recordId(query.queryKey)) ||
+      peerIds.has(query.state.data?.requesterRequestId))
+    .map(query => recordId(query.queryKey));
+  // Query-key variants can refer to the same request.
+  return [...new Set(ids)];
 };
 
 export {
