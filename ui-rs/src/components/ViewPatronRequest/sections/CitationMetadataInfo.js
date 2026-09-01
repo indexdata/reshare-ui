@@ -88,19 +88,19 @@ const CitationMetadataInfo = ({ record }) => {
           </Col>
         </Row>
         <Row>
-          <Col xs={4}>
+          <Col xs={3}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.isbn" />}
               value={identifiers.ISBN}
             />
           </Col>
-          <Col xs={4}>
+          <Col xs={3}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.issn" />}
               value={identifiers.ISSN}
             />
           </Col>
-          <Col xs={4}>
+          <Col xs={3}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.oclcNumber" />}
               value={identifiers.OCLC}
