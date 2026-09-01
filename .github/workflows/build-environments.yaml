@@ -1,0 +1,82 @@
+name: build-environments
+
+# The deploy platforms pin more dependencies than platform-rs-dev. Run this
+# workflow on every PR for branch protection, but only build platforms whose
+# inputs changed.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-environments-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # one platform breaking shouldn't hide the other's result
+      matrix:
+        platform:
+          - resharex
+          - zfldev
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need the base commit to diff against
+
+      - name: Decide whether to build
+        id: changes
+        run: |
+          set -euo pipefail
+          changed="$RUNNER_TEMP/changed.txt"
+          outside="$RUNNER_TEMP/outside.txt"
+          git diff --name-only '${{ github.event.pull_request.base.sha }}' HEAD > "$changed"
+          grep -vE '^environments/' "$changed" > "$outside" || true
+          if grep -qE '^environments/platform-${{ matrix.platform }}/' "$changed"; then
+            reason='a file under environments/platform-${{ matrix.platform }} changed'
+          elif grep -qE '(^|/)package\.json$' "$outside"; then
+            reason='a package.json outside environments/ changed'
+          fi
+          if [ -n "${reason:-}" ]; then
+            echo 'build=true' >> "$GITHUB_OUTPUT"
+            echo "::notice::Building ${{ matrix.platform }}: $reason"
+          else
+            echo 'build=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::Skipping ${{ matrix.platform }}: nothing it depends on changed'
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.changes.outputs.build == 'true'
+        with:
+          node-version: 24
+          cache: yarn
+          cache-dependency-path: environments/platform-${{ matrix.platform }}/yarn.lock
+
+      - name: Install Yarn
+        if: steps.changes.outputs.build == 'true'
+        run: npm install -g yarn
+
+      - name: prepare
+        if: steps.changes.outputs.build == 'true'
+        run: yarn config set @folio:registry https://repository.folio.org/repository/npm-folio/
+        working-directory: ./environments/platform-${{ matrix.platform }}
+
+      # Match the deploy workflows, which also allow the lockfile to update.
+      - name: Do yarn install
+        if: steps.changes.outputs.build == 'true'
+        run: yarn install
+        working-directory: ./environments/platform-${{ matrix.platform }}
+
+      - name: build module descriptors
+        if: steps.changes.outputs.build == 'true'
+        run: ./node_modules/.bin/stripes mod descriptor stripes.config.js --output ./ModuleDescriptors
+        working-directory: ./environments/platform-${{ matrix.platform }}
+
+      # One tenant is enough to prove the bundle compiles; the deploy builds the rest.
+      - name: build webpack
+        if: steps.changes.outputs.build == 'true'
+        run: yarn build
+        working-directory: ./environments/platform-${{ matrix.platform }}
