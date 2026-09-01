@@ -31,7 +31,7 @@ env:
     de30
     de91s
     dekob7
-    de335
+    de355
     de12
     de7
     de468
@@ -75,11 +75,6 @@ jobs:
 
       - name: Do yarn install
         run: yarn install
-        working-directory: ./environments/platform-zfldev
-
-      # temporary, upgrade rsdir because yarn lock is stale
-      - name: Update ui-rsdir and install dependencies
-        run: yarn upgrade @projectreshare/rsdir
         working-directory: ./environments/platform-zfldev
 
       - name: Upload yarn.lock
