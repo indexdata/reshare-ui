@@ -61,7 +61,7 @@ const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect }) => {
           <Field
             component={RadioButton}
             inline
-            label={<FormattedMessage id="ui-rs.information.serviceType.Loan" />}
+            label={<FormattedMessage id="stripes-reshare.iso18626.ServiceType.Loan" />}
             name="serviceInfo.serviceType"
             type="radio"
             value="Loan"
@@ -69,7 +69,7 @@ const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect }) => {
           <Field
             component={RadioButton}
             inline
-            label={<FormattedMessage id="ui-rs.information.serviceType.Copy" />}
+            label={<FormattedMessage id="stripes-reshare.iso18626.ServiceType.Copy" />}
             name="serviceInfo.serviceType"
             type="radio"
             value="Copy"

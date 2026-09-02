@@ -50,7 +50,7 @@ const SupplierCard = ({ supplier, position }) => {
           <KeyValue label={<FormattedMessage id="ui-rs.suppliers.lastStatus" />}>
             {supplier.lastStatus && (
               <FormattedMessage
-                id={`ui-rs.iso18626.Status.${supplier.lastStatus}`}
+                id={`stripes-reshare.iso18626.Status.${supplier.lastStatus}`}
                 defaultMessage={supplier.lastStatus}
               />
             )}

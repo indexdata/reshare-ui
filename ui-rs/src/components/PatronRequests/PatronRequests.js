@@ -308,7 +308,12 @@ const PatronRequests = ({
                         }
                         return a.items?.[0]?.[itemBarcodeField] ?? null;
                       },
-                      serviceType: a => a.illRequest?.serviceInfo?.serviceType,
+                      serviceType: a => {
+                        const serviceType = a.illRequest?.serviceInfo?.serviceType;
+                        return serviceType
+                          ? <FormattedMessage id={`stripes-reshare.iso18626.ServiceType.${serviceType}`} defaultMessage={serviceType} />
+                          : '';
+                      },
                       title: a => a.illRequest?.bibliographicInfo?.title,
                       state: a => (a.state
                         ? <FormattedMessage id={`stripes-reshare.states.${a.state}`} defaultMessage={a.state} />

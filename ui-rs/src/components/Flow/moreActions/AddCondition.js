@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { Form, Field } from 'react-final-form';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { useIsActionPending } from '@projectreshare/stripes-reshare';
+import { LoanCondition, useIsActionPending } from '@projectreshare/stripes-reshare';
 import { useStripes } from '@folio/stripes/core';
 import { Button, Col, Icon, Label, Layout, Modal, ModalFooter, RadioButton, Row, TextArea, TextField } from '@folio/stripes/components';
 
 import { useInvalidateNotifications } from '../../chat/useNotifications';
 import actionMeta from '../actionMeta';
-import { LoanCondition } from '../../../constants/iso18626';
 
 const AddCondition = ({ request, performAction }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -87,7 +86,7 @@ const AddCondition = ({ request, performAction }) => {
                         <RadioButton
                           checked={input.value === value}
                           fullWidth
-                          label={intl.formatMessage({ id: `ui-rs.iso18626.LoanCondition.${value}`, defaultMessage: value })}
+                          label={intl.formatMessage({ id: `stripes-reshare.iso18626.LoanCondition.${value}`, defaultMessage: value })}
                           marginBottom0
                           onChange={() => input.onChange(value)}
                           value={value}

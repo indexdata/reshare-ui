@@ -1,6 +1,6 @@
 import React from 'react';
+import { ReasonUnfilled } from '@projectreshare/stripes-reshare';
 import ActionReasonButton from '../ActionReasonButton';
-import { ReasonUnfilled } from '../../../constants/iso18626';
 
 export { default as Generic } from './Generic';
 export { default as AddCondition } from './AddCondition';
@@ -13,7 +13,7 @@ export const CannotSupply = props => (
     action="cannot-supply"
     reasons={ReasonUnfilled}
     reasonField="reasonUnfilled"
-    reasonTranslationPrefix="ui-rs.iso18626.ReasonUnfilled"
+    reasonTranslationPrefix="stripes-reshare.iso18626.ReasonUnfilled"
     {...props}
   />
 );

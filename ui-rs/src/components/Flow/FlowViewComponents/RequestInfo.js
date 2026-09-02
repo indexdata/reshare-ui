@@ -68,14 +68,14 @@ const RequestInfo = ({ request }) => {
           {colKeyVal(
             'ui-rs.information.serviceType',
             serviceType
-              ? <FormattedMessage id={`ui-rs.information.serviceType.${serviceType}`} defaultMessage={serviceType} />
+              ? <FormattedMessage id={`stripes-reshare.iso18626.ServiceType.${serviceType}`} defaultMessage={serviceType} />
               : <NoValue />
           )}
         </Row>
         <Row>
           {serviceLevel !== undefined && colKeyVal(
             'ui-rs.information.serviceLevel',
-            <FormattedMessage id={`ui-rs.refdata.serviceLevel.${serviceLevel}`} defaultMessage={serviceLevel} />
+            <FormattedMessage id={`stripes-reshare.iso18626.ServiceLevel.${serviceLevel}`} defaultMessage={serviceLevel} />
           )}
           {maximumCost !== undefined && colKeyVal('ui-rs.information.maximumCost', maximumCost)}
           {agreedCost !== undefined && colKeyVal('ui-rs.information.cost', formatConditionCost(agreedCost))}

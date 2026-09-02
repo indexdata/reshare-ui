@@ -3,9 +3,8 @@ import { useInfiniteQuery } from 'react-query';
 import { useIntl } from 'react-intl';
 import { Redirect, useLocation } from 'react-router-dom';
 import queryString from 'query-string';
-import { useOkapiKy, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { ServiceLevel, ServiceType, useOkapiKy, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import PatronRequests from '../components/PatronRequests';
-import { ServiceType, ServiceLevel } from '../constants/iso18626';
 import { buildPatronRequestsCql, buildFacetOptionsCql, DEFAULT_SEARCH } from '../util/buildPatronRequestsCql';
 
 const PER_PAGE = 100;
@@ -130,8 +129,8 @@ const PatronRequestsQueries = ({ appName, children }) => {
     hasInternalNote: [{ label: intl.formatMessage({ id: 'ui-rs.hasInternalNote' }), value: 'true' }],
     hasUnread: [{ label: intl.formatMessage({ id: 'ui-rs.unread' }), value: 'true' }],
     terminal: [{ label: intl.formatMessage({ id: 'ui-rs.hideComplete' }), value: 'false' }],
-    serviceType: ServiceType.map(v => ({ label: intl.formatMessage({ id: `ui-rs.information.serviceType.${v}` }), value: v })),
-    serviceLevel: ServiceLevel.map(v => ({ label: intl.formatMessage({ id: `ui-rs.refdata.serviceLevel.${v}` }), value: v })),
+    serviceType: ServiceType.map(v => ({ label: intl.formatMessage({ id: `stripes-reshare.iso18626.ServiceType.${v}` }), value: v })),
+    serviceLevel: ServiceLevel.map(v => ({ label: intl.formatMessage({ id: `stripes-reshare.iso18626.ServiceLevel.${v}` }), value: v })),
     state: (stateModelQuery.data?.states || [])
       .filter(s => s.side === stateSide)
       .map(s => ({ label: s.display, value: s.name })),

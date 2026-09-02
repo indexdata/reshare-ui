@@ -117,5 +117,44 @@
   "iso18626.CopyrightCompliance.UK-CopyRFeePaid": "Copyright Fee Paid (UK)",
   "iso18626.CopyrightCompliance.UK-FairDealing": "Fair Dealing (UK)",
   "iso18626.CopyrightCompliance.US-CCG": "CCG (US) - published within the last 5 years",
-  "iso18626.CopyrightCompliance.US-CCL": "CCL (US) - NOT published within the last 5 years"
+  "iso18626.CopyrightCompliance.US-CCL": "CCL (US) - NOT published within the last 5 years",
+
+  "iso18626.LoanCondition.LibraryUseOnly": "Use in library only",
+  "iso18626.LoanCondition.NoReproduction": "No reproduction",
+  "iso18626.LoanCondition.SignatureRequired": "Signature required",
+  "iso18626.LoanCondition.SpecCollSupervReq": "Special collections supervision required",
+  "iso18626.LoanCondition.WatchLibraryUseOnly": "Watch over use in library only",
+
+  "iso18626.ReasonRetry.NotFoundAsCited": "Not found as cited",
+
+  "iso18626.ReasonUnfilled.NonCirculating": "Non-circulating",
+  "iso18626.ReasonUnfilled.NotAvailableForILL": "Not available for ILL",
+  "iso18626.ReasonUnfilled.NotHeld": "Not held",
+  "iso18626.ReasonUnfilled.NotOnShelf": "Not on shelf",
+  "iso18626.ReasonUnfilled.PolicyProblem": "Policy problem",
+  "iso18626.ReasonUnfilled.PoorCondition": "Poor condition",
+
+  "iso18626.ServiceLevel.Express": "Express",
+  "iso18626.ServiceLevel.Normal": "Normal",
+  "iso18626.ServiceLevel.SecondaryMail": "Secondary mail",
+  "iso18626.ServiceLevel.Standard": "Standard",
+  "iso18626.ServiceLevel.Urgent": "Urgent",
+  "iso18626.ServiceLevel.Rush": "Rush",
+
+  "iso18626.ServiceType.Copy": "Copy",
+  "iso18626.ServiceType.Loan": "Loan",
+  "iso18626.ServiceType.CopyOrLoan": "Copy or loan",
+
+  "iso18626.Status.RequestReceived": "Request received",
+  "iso18626.Status.ExpectToSupply": "Expect to supply",
+  "iso18626.Status.WillSupply": "Will supply",
+  "iso18626.Status.Loaned": "Loaned",
+  "iso18626.Status.Overdue": "Overdue",
+  "iso18626.Status.Recalled": "Recalled",
+  "iso18626.Status.RetryPossible": "Retry possible",
+  "iso18626.Status.Unfilled": "Unfilled",
+  "iso18626.Status.CopyCompleted": "Copy completed",
+  "iso18626.Status.LoanCompleted": "Loan completed",
+  "iso18626.Status.CompletedWithoutReturn": "Completed without return",
+  "iso18626.Status.Cancelled": "Cancelled"
 }

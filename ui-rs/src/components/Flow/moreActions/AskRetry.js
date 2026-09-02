@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { Form, Field } from 'react-final-form';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { useIsActionPending } from '@projectreshare/stripes-reshare';
+import { SupportedReasonRetry, useIsActionPending } from '@projectreshare/stripes-reshare';
 import { Button, Col, Icon, Label, Layout, Modal, ModalFooter, RadioButton, Row, TextArea, TextField } from '@folio/stripes/components';
 import { required } from '@folio/stripes/util';
 
 import actionMeta from '../actionMeta';
-import { SupportedReasonRetry } from '../../../constants/iso18626';
 
 const AskRetry = ({ request, performAction }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -64,7 +63,7 @@ const AskRetry = ({ request, performAction }) => {
                       <RadioButton
                         checked={input.value === value}
                         fullWidth
-                        label={intl.formatMessage({ id: `ui-rs.iso18626.ReasonRetry.${value}`, defaultMessage: value })}
+                        label={intl.formatMessage({ id: `stripes-reshare.iso18626.ReasonRetry.${value}`, defaultMessage: value })}
                         marginBottom0
                         onChange={() => input.onChange(value)}
                         value={value}

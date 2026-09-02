@@ -1,5 +1,5 @@
 import { useIntl } from 'react-intl';
-import { CopyrightCompliance, PublicationType } from '../../constants/iso18626';
+import { CopyrightCompliance, PublicationType } from '@projectreshare/stripes-reshare';
 
 // Lowercased to match the publication types handleSISelect writes.
 const publicationTypes = PublicationType.map(code => ({ label: code, value: code.toLowerCase() }));
