@@ -101,5 +101,21 @@
   "settings.edit": "Edit",
   "settings.settingLoading": "Loading",
   "settings.finishEditing": "Finish editing",
-  "settings.valueFor": "Value for setting {name}"
+  "settings.valueFor": "Value for setting {name}",
+
+  "iso18626.CopyrightCompliance.AU-CopyRCatS183ComW": "Copyright Act §183 - Commonwealth (Australia)",
+  "iso18626.CopyrightCompliance.AU-CopyRCatS183State": "Copyright Act §183 - State (Australia)",
+  "iso18626.CopyrightCompliance.AU-CopyrightActS49": "Copyright Act §49 (Australia)",
+  "iso18626.CopyrightCompliance.AU-CopyrightActS50-1": "Copyright Act §50[1] (Australia)",
+  "iso18626.CopyrightCompliance.AU-CopyrightActS50-7A": "Copyright Act §50[7]A (Australia)",
+  "iso18626.CopyrightCompliance.AU-CopyrightActS50-7B": "Copyright Act §50[7]B (Australia)",
+  "iso18626.CopyrightCompliance.AU-CopyrightCleared": "Copyright Cleared (Australia)",
+  "iso18626.CopyrightCompliance.AU-GenBus": "General Business (Australia)",
+  "iso18626.CopyrightCompliance.NZ-CopyrightActS54": "Copyright Act §54 (New Zealand)",
+  "iso18626.CopyrightCompliance.NZ-CopyrightActS55": "Copyright Act §55 (New Zealand)",
+  "iso18626.CopyrightCompliance.Other": "Other types of copyright compliance",
+  "iso18626.CopyrightCompliance.UK-CopyRFeePaid": "Copyright Fee Paid (UK)",
+  "iso18626.CopyrightCompliance.UK-FairDealing": "Fair Dealing (UK)",
+  "iso18626.CopyrightCompliance.US-CCG": "CCG (US) - published within the last 5 years",
+  "iso18626.CopyrightCompliance.US-CCL": "CCL (US) - NOT published within the last 5 years"
 }
