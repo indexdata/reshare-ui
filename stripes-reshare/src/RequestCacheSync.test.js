@@ -2,7 +2,7 @@ import React from 'react';
 import { act, render } from '@folio/jest-config-stripes/testing-library/react';
 import { QueryClient, QueryClientProvider, setLogger, useQuery } from 'react-query';
 import RequestCacheSync from './RequestCacheSync';
-import { requestKeys } from './requestQueries';
+import { SUPPLIERS_KEY, requestKeys } from './requestQueries';
 
 // The transport is covered by BrokerEvents.test.js and the id matching by
 // requestQueries.test.js; here we only need to reach the handlers this
@@ -19,6 +19,7 @@ const LIST_QUERY = ['broker/patron_requests', { cql: 'x' }];
 
 const request = { id: 'pr-1', requesterRequestId: 'pr-1' };
 const other = { id: 'pr-2', requesterRequestId: 'pr-2' };
+const rotaKey = (requesterRequestId) => [SUPPLIERS_KEY, { requester_req_id: requesterRequestId }];
 
 const event = (requestingAgencyRequestId) => ({
   event: 'message-requester',
@@ -247,6 +248,7 @@ describe('RequestCacheSync', () => {
   it('treats everything held as suspect after a gap in the stream', () => {
     queryClient.setQueryData(LIST_QUERY, { items: [] });
     seedRequest(request);
+    queryClient.setQueryData(rotaKey('pr-1'), { items: [] });
     // A sub-resource whose request has since been evicted.
     queryClient.setQueryData(requestKeys('gone').actions, { actions: [] });
     renderSync();
@@ -256,5 +258,39 @@ describe('RequestCacheSync', () => {
     expect(isStale(LIST_QUERY)).toBe(true);
     expect(isStale(requestKeys('pr-1').record)).toBe(true);
     expect(isStale(requestKeys('gone').actions)).toBe(true);
+    expect(isStale(rotaKey('pr-1'))).toBe(true);
+  });
+
+  it('marks the rota of the request an event names, and no other', () => {
+    seedRequest(request);
+    queryClient.setQueryData(rotaKey('pr-1'), { items: [] });
+    queryClient.setQueryData(rotaKey('pr-2'), { items: [] });
+    renderSync();
+
+    handlers.onEvent(event('pr-1'));
+
+    expect(isStale(rotaKey('pr-1'))).toBe(true);
+    expect(isStale(rotaKey('pr-2'))).toBe(false);
+  });
+
+  it('refetches a rota on screen once the request stops moving', async () => {
+    seedRequest(request);
+    // Seeded, so the watcher mounts satisfied and any call is a refetch.
+    queryClient.setQueryData(rotaKey('pr-1'), { items: [] });
+    const queryFn = jest.fn().mockResolvedValue({ items: [] });
+    renderSync(
+      <>
+        <Watcher queryKey={requestKeys('pr-1').record} queryFn={jest.fn().mockResolvedValue(request)} />
+        <Watcher queryKey={rotaKey('pr-1')} queryFn={queryFn} />
+      </>
+    );
+
+    handlers.onEvent(event('pr-1'));
+    expect(queryFn).not.toHaveBeenCalled();
+    expect(isStale(rotaKey('pr-1'))).toBe(true);
+
+    await act(async () => { jest.advanceTimersByTime(SETTLE_MS); });
+    expect(queryFn).toHaveBeenCalledTimes(1);
+    expect(isStale(rotaKey('pr-1'))).toBe(false);
   });
 });
