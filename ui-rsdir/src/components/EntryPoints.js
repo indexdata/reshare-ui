@@ -7,6 +7,7 @@ import {
   NavListItem,
   NavListSection,
   Pane,
+  PaneMenu,
 } from '@folio/stripes/components';
 import { useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import ViewEntry from './ViewEntry';
@@ -38,53 +39,31 @@ const EntryPoints = ({ id }) => {
   const networksPath = `${editBasePath}/networks`;
   const activeLink = `${location.pathname}${location.search}`;
 
-  const setViewTab = () => {
-    history.push(`${basePath}${location.search}`);
+  const showEditOptions = () => {
+    history.push(`${editBasePath}${location.search}`);
   };
 
-  const setEditTab = () => {
-    history.push(`${editBasePath}/entry${location.search}`);
-  };
-
-  const tabs = (
-    <div
-      aria-label={intl.formatMessage({ id: 'ui-rsdir.entryPoints.tabs' })}
-      role="tablist"
-    >
+  const editMenu = !isEditTab && (
+    <PaneMenu>
       <Button
-        aria-selected={!isEditTab}
-        buttonStyle={!isEditTab ? 'primary' : 'default'}
-        id="clickable-entry-points-view-tab"
+        buttonStyle="primary paneHeaderNewButton"
+        id="clickable-entry-points-edit"
         marginBottom0
-        onClick={setViewTab}
-        role="tab"
+        onClick={showEditOptions}
       >
-        <FormattedMessage id="ui-rsdir.entryPoints.viewTab" />
+        <FormattedMessage id="ui-rsdir.edit" />
       </Button>
-      <Button
-        aria-selected={isEditTab}
-        buttonStyle={isEditTab ? 'primary' : 'default'}
-        id="clickable-entry-points-edit-tab"
-        marginBottom0
-        onClick={setEditTab}
-        role="tab"
-      >
-        <FormattedMessage id="ui-rsdir.entryPoints.editTab" />
-      </Button>
-    </div>
+    </PaneMenu>
   );
 
   return (
     <Pane
       defaultWidth="fill"
       dismissible
+      lastMenu={editMenu}
       onClose={close}
       paneTitle={title}
     >
-      {tabs}
-      {!isEditTab &&
-        <ViewEntry entry={entry} isEmbedded showActions={false} />
-      }
       {isEditTab &&
         <NavList aria-label={title}>
           <NavListSection activeLink={activeLink} striped>
@@ -133,6 +112,7 @@ const EntryPoints = ({ id }) => {
           </NavListSection>
         </NavList>
       }
+      <ViewEntry entry={entry} isEmbedded showActions={false} />
     </Pane>
   );
 };
