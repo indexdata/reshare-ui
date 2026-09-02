@@ -310,6 +310,9 @@ const PatronRequests = ({
                       },
                       serviceType: a => a.illRequest?.serviceInfo?.serviceType,
                       title: a => a.illRequest?.bibliographicInfo?.title,
+                      state: a => (a.state
+                        ? <FormattedMessage id={`stripes-reshare.states.${a.state}`} defaultMessage={a.state} />
+                        : ''),
                     }}
                     hasMargin
                     isEmptyMessage={
