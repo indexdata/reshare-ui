@@ -2,6 +2,7 @@ import React from 'react';
 import {
   fireEvent,
   screen,
+  waitFor,
   within,
 } from '@folio/jest-config-stripes/testing-library/react';
 
@@ -26,6 +27,8 @@ jest.mock('@projectreshare/stripes-reshare', () => ({
 // FlowRoute receives request/actions as props, so it never queries; only
 // useStripes (reshare flags) and CalloutContext are touched here.
 jest.mock('@folio/stripes/core', () => require('../test/stripesCore').makeStripesCoreMock(() => ({})));
+
+const { CalloutContext } = require('@folio/stripes/core');
 
 const conditionNotifications = [
   {
@@ -252,6 +255,50 @@ describe('FlowRoute', () => {
 
     expect(screen.queryByText('ui-rs.flow.sections.citation')).toBeNull();
     expect(screen.queryByText('article-title')).toBeNull();
+  });
+
+  // The broker sends a delivered copy as sentVia=URL with the URL in itemId; ISO 18626
+  // has no element of its own for it.
+  const deliveredFixture = (itemId) => ({
+    ...copyRequestFixture,
+    illResponse: {
+      statusInfo: { status: 'CopyCompleted' },
+      deliveryInfo: { itemId, sentVia: { '#text': 'URL' } },
+    },
+  });
+
+  // jsdom has no clipboard; the stub is a global, so it must not outlive the test.
+  afterEach(() => { delete window.navigator.clipboard; });
+
+  it('links the delivered copy and copies its URL to the clipboard', async () => {
+    const url = 'https://documents.example.org/copy/2';
+    const writeText = jest.fn(() => Promise.resolve());
+    const sendCallout = jest.fn();
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+
+    const request = deliveredFixture(url);
+    renderWithRs(
+      <CalloutContext.Provider value={{ sendCallout }}>
+        <FlowRoute request={request} actions={actionsFixture} />
+      </CalloutContext.Provider>,
+      { initialEntries: [`/requests/${request.id}/flow`], messages }
+    );
+
+    const link = screen.getByText(url);
+    expect(link).toHaveAttribute('href', url);
+    expect(link).toHaveAttribute('target', '_blank');
+
+    fireEvent.click(screen.getByLabelText('ui-rs.flow.info.copyDeliveryUrl'));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(url));
+  });
+
+  it('does not link a delivered URL with an unsafe scheme', () => {
+    renderFlowRoute(deliveredFixture('data:text/html,<h1>not a document</h1>'));
+
+    expect(screen.queryByText('ui-rs.flow.sections.deliveryInfo')).toBeNull();
   });
 
   it('links to the previous and next request when the request is a revision', () => {

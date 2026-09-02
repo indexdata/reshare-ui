@@ -87,16 +87,6 @@ const RequestInfo = ({ record = {} }) => {
             />
           </Col>
         </Row>
-        {deliveryInfo?.pickupUrl &&
-          <Row>
-            <Col xs={12}>
-              <KeyValue
-                label={<FormattedMessage id="ui-rs.information.pickupURL" />}
-                value={deliveryInfo.pickupUrl}
-              />
-            </Col>
-          </Row>
-        }
         <Row>
           <Col xs={12}>
             <KeyValue
