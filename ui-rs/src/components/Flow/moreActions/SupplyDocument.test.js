@@ -36,8 +36,7 @@ describe('secondary SupplyDocument action', () => {
     renderWithRs(<SupplyDocument request={request} performAction={performAction} actions={actionsWithNote} />);
 
     fireEvent.click(actionButtons()[0]);
-    expect(screen.getByText('ui-rs.actions.supply-document.confirm')).toBeInTheDocument();
-    expect(screen.queryByText('ui-rs.actions.supply-document.prompt')).not.toBeInTheDocument();
+    expect(screen.getByText('ui-rs.actions.supply-document.prompt')).toBeInTheDocument();
     const submit = actionButtons().slice(-1)[0];
     expect(submit).toBeDisabled();
 
