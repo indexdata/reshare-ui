@@ -7,12 +7,15 @@
 
 const LIST_KEY = 'broker/patron_requests';
 const RECORD_PREFIX = `${LIST_KEY}/`;
+const SUPPLIERS_KEY = 'broker/located_suppliers';
 
 const requestKeys = (id) => ({
   record: `${RECORD_PREFIX}${id}`,
   actions: `${RECORD_PREFIX}${id}/actions`,
   events: `${RECORD_PREFIX}${id}/events`,
   notifications: `${RECORD_PREFIX}${id}/notifications`,
+  // Not a sub-resource but a search, so a key with params rather than a path.
+  suppliers: [SUPPLIERS_KEY, { requester_req_id: id }],
 });
 
 // Extra elements carry search params and options (see useOkapiQuery); the path
@@ -63,6 +66,7 @@ const requestIdsForEvent = (payload, queryClient) => {
 
 export {
   LIST_KEY,
+  SUPPLIERS_KEY,
   isNotificationsKey,
   isRequestKey,
   keyPath,

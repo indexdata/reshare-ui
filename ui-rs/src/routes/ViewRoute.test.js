@@ -98,6 +98,7 @@ const responses = {
   'broker/patron_requests/pr-1/actions': { actions: [] },
   'broker/patron_requests/pr-1/notifications': { items: [] },
   'broker/patron_requests/pr-1/events': { items: [] },
+  'broker/located_suppliers': { items: [] },
   // VALIDATED is intentionally not editable.
   'broker/state_model/models/default': {
     states: [
