@@ -63,8 +63,8 @@ describe('Suppliers', () => {
 
     const links = screen.getAllByRole('link', { name: 'ui-rs.viewInDirectory' });
     expect(links.map(l => l.getAttribute('href'))).toEqual([
-      '/directory/entries/view/ent-a',
-      '/directory/entries/view/ent-b',
+      '/directory/entries/ent-a',
+      '/directory/entries/ent-b',
     ]);
   });
 
