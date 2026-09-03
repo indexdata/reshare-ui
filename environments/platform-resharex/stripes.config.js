@@ -7,6 +7,9 @@ module.exports = {
     platformDescription: 'ReShare platform',
     hasAllPerms: false,
     showDevInfo: true,
+    rtr: {
+      idleSessionTTL: '12h'
+    },
     reshare: {
       showRefresh: true,
       liveUpdates: true,
