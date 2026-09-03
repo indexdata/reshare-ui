@@ -1,11 +1,9 @@
-import { useLocation, useParams } from 'react-router-dom';
-import { Pane } from '@folio/stripes/components';
+import { useParams } from 'react-router-dom';
 import { FormattedMessage } from 'react-intl';
-import { useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { useOkapiQuery } from '@projectreshare/stripes-reshare';
+import EntryPane from '../components/EntryPane';
 import SettingsConfigEditor from '../components/SettingsConfigEditor';
 
-const CREATE = 'create';
-const EDIT = 'edit';
 const STALE_QUERY_TIME = 2 * 60 * 1000;
 const entryPath = id => `directory/entries/by-id/${id}`;
 const fieldLabelId = fieldName => `ui-rsdir.illConfig.${fieldName}`;
@@ -59,26 +57,15 @@ const fieldMap = [
 
 const EditIllConfigRoute = () => {
   const { id } = useParams();
-  const location = useLocation();
-
-  const operation = id ? EDIT : CREATE;
-
-  const close = useCloseDirect(operation === CREATE ? `/directory/entries${location.search}` : `/directory/entries/entry-points/${id}/edit${location.search}`);
 
   const entryQuery = useOkapiQuery(entryPath(id), {
     staleTime: STALE_QUERY_TIME,
-    enabled: !!id,
   });
 
-  if (operation === EDIT && !entryQuery.isSuccess) return null;
+  if (!entryQuery.isSuccess) return null;
 
   return (
-    <Pane
-      defaultWidth="fill"
-      paneTitle={<FormattedMessage id="ui-rsdir.illConfig.edit" />}
-      onClose={close}
-      dismissible
-    >
+    <EntryPane entry={entryQuery.data}>
       <SettingsConfigEditor
         configKey="illConfig"
         controlIdPrefix="ill-config"
@@ -94,7 +81,7 @@ const EditIllConfigRoute = () => {
         resourcePath={entryPath(id)}
         successMessage={<FormattedMessage id="ui-rsdir.illConfig.edit.success" />}
       />
-    </Pane>
+    </EntryPane>
   );
 };
 

@@ -9,6 +9,7 @@ import {
   Button,
   PaneMenu,
 } from '@folio/stripes/components';
+import { DirectLink } from '@projectreshare/stripes-reshare';
 import SearchAndFilter from './SearchAndFilter';
 
 const Entries = ({
@@ -47,10 +48,6 @@ const Entries = ({
     },
   };
 
-  const handleNew = () => {
-    history.push(`${match.url}/create${location.search}`);
-  };
-
   return (
     <Paneset>
       <Pane
@@ -74,14 +71,16 @@ const Entries = ({
         paneTitle={intl.formatMessage({ id: 'ui-rsdir.entries.resultsCount' }, { count: totalCount })}
         lastMenu={
           <PaneMenu>
-            <Button
+            <DirectLink
+              component={Button}
               id="clickable-new-entry"
-              onClick={handleNew}
+              to={`${match.url}/create`}
+              preserveSearch
               buttonStyle="primary paneHeaderNewButton"
               marginBottom0
             >
               <FormattedMessage id="ui-rsdir.new" />
-            </Button>
+            </DirectLink>
           </PaneMenu>
         }
       >
@@ -99,7 +98,7 @@ const Entries = ({
           isEmptyMessage={intl.formatMessage({ id: 'stripes-smart-components.sas.noResults.noTerms' })}
           loading={entriesQuery.isFetching}
           onNeedMoreData={fetchMore}
-          onRowClick={(_e, rowData) => history.push(`${match.url}/entry-points/${rowData.id}${location.search}`)}
+          onRowClick={(_e, rowData) => history.push(`${match.url}/${rowData.id}${location.search}`)}
           pageAmount={perPage}
           pagingType={MCLPagingTypes.PREV_NEXT}
           totalCount={totalCount}

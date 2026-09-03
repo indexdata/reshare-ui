@@ -14,7 +14,7 @@ const RequesterSupplier = ({ request: req }) => {
       <Col xs={6}>
         <Card
           id="requester-card"
-          headerEnd={<Link to={`/directory/entries/view/${requester.id}`}>View</Link>}
+          headerEnd={<Link to={`/directory/entries/${requester.id}`}>View</Link>}
           headerStart={<FormattedMessage id="ui-rs.requester" />}
           roundedBorder
         >
@@ -24,7 +24,7 @@ const RequesterSupplier = ({ request: req }) => {
       <Col xs={6}>
         <Card
           id="supplier-card"
-          headerEnd={supplier && <Link to={`/directory/entries/view/${supplier.id}`}>View</Link>}
+          headerEnd={supplier && <Link to={`/directory/entries/${supplier.id}`}>View</Link>}
           headerStart={<FormattedMessage id="ui-rs.supplier" />}
           roundedBorder
         >
