@@ -3,15 +3,15 @@ import { Route } from 'react-router-dom';
 import { act, fireEvent, screen, waitFor } from '@folio/jest-config-stripes/testing-library/react';
 import { BrokerEventsProvider, RequestCacheSync } from '@projectreshare/stripes-reshare';
 
-import { renderWithRs } from '../test/renderWithRs';
-import { makeOkapiKyMock } from '../test/okapiKyMock';
+import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
+import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
 import ViewRoute from './ViewRoute';
 import AppNameContext from '../AppNameContext';
 
 // `mock` prefix lets the hoisted jest.mock factory below reference this.
 const mockOkapi = makeOkapiKyMock();
 
-jest.mock('@folio/stripes-components/lib/Icon', () => require('../test/iconMock').default);
+jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
 jest.mock('@folio/stripes-components/lib/TextArea', () => require('../test/textAreaMock').default);
 
 // react-syntax-highlighter ships ESM jest can't parse and only renders event

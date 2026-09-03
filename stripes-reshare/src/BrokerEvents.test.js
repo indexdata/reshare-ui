@@ -1,12 +1,8 @@
 import React from 'react';
-import { TextDecoder, TextEncoder } from 'util';
 import { act, render, renderHook, waitFor } from '@folio/jest-config-stripes/testing-library/react';
 import { BrokerEventsProvider, useBrokerEvents } from './BrokerEvents';
 
-// jsdom exposes neither, and reading the stream needs both.
-global.TextDecoder = TextDecoder;
-global.TextEncoder = TextEncoder;
-
+// TextEncoder comes from the shared jest globals, which jsdom lacks.
 const encoder = new TextEncoder();
 
 let mockLiveUpdates = true;
@@ -14,9 +10,8 @@ const mockGet = jest.fn();
 
 jest.mock('./useOkapiKy', () => () => ({ get: mockGet }));
 
-jest.mock('@folio/stripes/core', () => ({
-  useStripes: () => ({ config: { reshare: { liveUpdates: mockLiveUpdates } } }),
-}));
+jest.mock('@folio/stripes/core', () => require('../testing/stripesCore')
+  .makeStripesCoreMock(() => undefined, () => ({ liveUpdates: mockLiveUpdates })));
 
 const abortError = () => Object.assign(new Error('Aborted'), { name: 'AbortError' });
 

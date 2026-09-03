@@ -3,14 +3,14 @@ import { Route } from 'react-router-dom';
 import { createMemoryHistory } from 'history';
 import { fireEvent, waitFor } from '@folio/jest-config-stripes/testing-library/react';
 
+import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
+import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
 import { quietQueryLog } from '../test/quietQueryLog';
-import { renderWithRs } from '../test/renderWithRs';
-import { makeOkapiKyMock } from '../test/okapiKyMock';
 import EditRoute from './EditRoute';
 
 const mockOkapi = makeOkapiKyMock();
 
-jest.mock('@folio/stripes-components/lib/Icon', () => require('../test/iconMock').default);
+jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
 jest.mock('@folio/stripes-components/lib/TextArea', () => require('../test/textAreaMock').default);
 
 jest.mock('@folio/stripes/core', () => require('../test/stripesCore').makeStripesCoreMock(() => mockOkapi));

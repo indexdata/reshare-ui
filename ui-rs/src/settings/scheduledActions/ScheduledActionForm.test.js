@@ -1,14 +1,14 @@
 import React from 'react';
 import { fireEvent, screen, waitFor } from '@folio/jest-config-stripes/testing-library/react';
 
+import { renderWithRs, settleQueries } from '@projectreshare/stripes-reshare/testing/renderWithRs';
+import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
 import { quietQueryLog } from '../../test/quietQueryLog';
-import { renderWithRs, settleQueries } from '../../test/renderWithRs';
-import { makeOkapiKyMock } from '../../test/okapiKyMock';
 import ScheduledActionForm from './ScheduledActionForm';
 
 const mockOkapi = makeOkapiKyMock();
 
-jest.mock('@folio/stripes-components/lib/Icon', () => require('../../test/iconMock').default);
+jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
 jest.mock('@folio/stripes/core', () => require('../../test/stripesCore').makeStripesCoreMock(() => mockOkapi));
 
 const PRESETS = [

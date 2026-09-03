@@ -1,5 +1,6 @@
-global.$RefreshReg$ = () => {};
-global.$RefreshSig$ = () => type => type;
+// Mocks for packages that misbehave under jest. These name ui-rs's own
+// dependencies, so they stay with the app; the browser-API stubs they sit
+// alongside come from @projectreshare/stripes-reshare/testing/jest/globals.
 
 // MultiColumnList wraps its rows in react-virtualized-auto-sizer, which measures
 // its parent's height/width — both 0 under jsdom, so it renders no rows. Hand the
@@ -17,42 +18,6 @@ jest.mock('@folio/stripes-components/lib/HotKeys', () => {
 
   return { HotKeys: Passthrough, FocusTrap: Passthrough };
 });
-
-// jsdom doesn't implement ResizeObserver; Stripes' TextArea constructs one to
-// auto-grow on input. Minimal no-op stub so forms with a TextArea can render.
-if (typeof global.ResizeObserver === 'undefined') {
-  global.ResizeObserver = class {
-    observe() {}
-
-    unobserve() {}
-
-    disconnect() {}
-  };
-}
-
-// jsdom exposes neither TextDecoder nor TextEncoder; BrokerEvents constructs a
-// TextDecoder to read the event stream, which route tests mount.
-if (typeof global.TextDecoder === 'undefined') {
-  // eslint-disable-next-line global-require
-  const { TextDecoder, TextEncoder } = require('util');
-  global.TextDecoder = TextDecoder;
-  global.TextEncoder = TextEncoder;
-}
-
-// jsdom doesn't implement matchMedia; Stripes' responsive components
-// (MultiColumnList, MultiSelection) call it at render. Minimal no-match stub.
-if (typeof window !== 'undefined' && !window.matchMedia) {
-  window.matchMedia = () => ({
-    matches: false,
-    media: '',
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  });
-}
 
 // currency-codes/data is a CJS array export. Jest's CJS/ESM interop exposes it
 // as a namespace object, but stripes-components calls .filter() on the import

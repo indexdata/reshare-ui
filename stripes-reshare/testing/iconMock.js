@@ -4,7 +4,7 @@ import React from 'react';
 // console noise. Tiny API surface, so swap it for a pass-through. Mock the deep
 // module path because internal stripes-components imports go directly to it,
 // bypassing the @folio/stripes/components barrel:
-//   jest.mock('@folio/stripes-components/lib/Icon', () => require('../test/iconMock').default);
+//   jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
 // forwardRef and forward the DOM-safe props a caller might set on the icon —
 // id and any aria-* (e.g. a Tooltip labelling its trigger) — while dropping
 // Icon's own styling props so they don't leak onto the span as unknown DOM attrs.

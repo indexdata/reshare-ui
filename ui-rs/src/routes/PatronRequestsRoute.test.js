@@ -3,15 +3,15 @@ import { Route, useLocation } from 'react-router-dom';
 import { createMemoryHistory } from 'history';
 import { act, fireEvent, screen, within, waitFor } from '@folio/jest-config-stripes/testing-library/react';
 
-import { renderWithRs } from '../test/renderWithRs';
-import { makeOkapiKyMock } from '../test/okapiKyMock';
+import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
+import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
 import AppNameContext from '../AppNameContext';
 import PatronRequestsRoute from './PatronRequestsRoute';
 import { buildPatronRequestsCql } from '../util/buildPatronRequestsCql';
 
 const mockOkapi = makeOkapiKyMock();
 
-jest.mock('@folio/stripes-components/lib/Icon', () => require('../test/iconMock').default);
+jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
 jest.mock('@folio/stripes/core', () => require('../test/stripesCore').makeStripesCoreMock(() => mockOkapi));
 jest.mock('../util/buildPatronRequestsCql', () => {
   const actual = jest.requireActual('../util/buildPatronRequestsCql');

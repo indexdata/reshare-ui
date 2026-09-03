@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { fireEvent, screen } from '@folio/jest-config-stripes/testing-library/react';
 
-import { renderWithRs } from '../../../../test/renderWithRs';
-import { makeOkapiKyMock } from '../../../../test/okapiKyMock';
+import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
+import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
 import TransactionLog from './TransactionLog';
 
 // Jest permits hoisted mock factories to reference variables prefixed with mock.
 const mockOkapi = makeOkapiKyMock();
 
-jest.mock('@folio/stripes-components/lib/Icon', () => require('../../../../test/iconMock').default);
+jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
 
 // Jest cannot parse react-syntax-highlighter's ESM entry points.
 jest.mock('react-syntax-highlighter', () => ({

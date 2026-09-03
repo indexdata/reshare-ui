@@ -1,11 +1,11 @@
-const path = require('path');
 const config = require('@folio/jest-config-stripes');
 
 module.exports = {
   ...config,
   setupFiles: [
     ...(config.setupFiles || []),
-    path.join(__dirname, './test/jest/setupFiles.js'),
+    require.resolve('@projectreshare/stripes-reshare/testing/jest/globals'),
+    require.resolve('./test/jest/setupFiles'),
   ],
   // @projectreshare/stripes-reshare and @k-int/stripes-kint-components are
   // installed straight from git source (no build step) and ship untranspiled

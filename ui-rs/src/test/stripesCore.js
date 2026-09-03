@@ -1,38 +1,17 @@
-import React from 'react';
+import { makeStripesCoreMock as makeSharedMock } from '@projectreshare/stripes-reshare/testing/stripesCore';
 
-// Real @folio/stripes/core transitively requires the virtual `stripes-config`
-// module, which only exists when the app is running. Route tests mock the module
-// with `makeStripesCoreMock`, covering only the named exports our routes touch.
-
-// ReShare app-shell flags read via useStripes().config.reshare. One stub serves
-// every route test; `getReshareOverrides` layers per-test flags over it.
+// ReShare app-shell flags ui-rs routes read via useStripes().config.reshare.
+// One stub serves every route test; a test's own overrides layer over it.
 const reshareConfigStub = {
   showCost: true,
   sharedIndex: { type: 'folio', ui: 'https://shared-index.example' },
   patronURL: '/users?qindex=barcode&query={patronid}',
 };
 
-// `getOkapiKy` is a getter, not the ky mock itself: the jest.mock factory that
-// calls this is hoisted above the test's module-scope `const mockOkapi = ...`, so
-// the value must be read lazily (at render) rather than captured here.
-// `getReshareOverrides` is read at render for the same reason as `getOkapiKy`, so a
-// test can flip a flag (e.g. `liveUpdates`) per case rather than per file.
-const makeStripesCoreMock = (getOkapiKy, getReshareOverrides = () => ({})) => ({
-  useStripes: () => ({
-    currency: 'USD',
-    hasPerm: () => true,
-    config: { reshare: { ...reshareConfigStub, ...getReshareOverrides() } },
-  }),
-  useOkapiKy: () => getOkapiKy(),
-  CalloutContext: React.createContext(null),
-  // Permission gate → always render children (test grants all perms).
-  IfPermission: ({ children }) => children,
-  // AppIcon reaches a webpack asset registry that jest doesn't provide; stub it out.
-  AppIcon: () => null,
-  // Pluggable renders registered UI plugins via a webpack-time module registry the
-  // app build provides; jest has none, so render nothing. PatronRequestForm mounts
-  // a `<Pluggable type="rs-siquery">` (shared-index search) that's inert in tests.
-  Pluggable: () => null,
-});
+// Both arguments stay getters, read at render — see the shared mock.
+const makeStripesCoreMock = (getOkapiKy, getReshareOverrides = () => ({})) => makeSharedMock(
+  getOkapiKy,
+  () => ({ ...reshareConfigStub, ...getReshareOverrides() }),
+);
 
 export { makeStripesCoreMock };

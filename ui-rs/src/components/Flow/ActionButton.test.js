@@ -1,10 +1,10 @@
 import React from 'react';
 import { act, screen } from '@folio/jest-config-stripes/testing-library/react';
 
-import { renderWithRs } from '../../test/renderWithRs';
+import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import ActionButton from './ActionButton';
 
-jest.mock('@folio/stripes-components/lib/Icon', () => require('../../test/iconMock').default);
+jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
 
 const request = { id: 'pr-1', requesterRequestId: 'pr-1' };
 const RECORD_KEY = `broker/patron_requests/${request.id}`;

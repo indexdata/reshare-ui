@@ -9,7 +9,7 @@
   },
   "license": "Apache-2.0",
   "scripts": {
-    "lint": "eslint ./src",
+    "lint": "eslint ./src ./testing",
     "test": "jest"
   },
   "dependencies": {

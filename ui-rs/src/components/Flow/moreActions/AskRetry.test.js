@@ -1,10 +1,10 @@
 import React from 'react';
 import { fireEvent, screen, waitFor } from '@folio/jest-config-stripes/testing-library/react';
 
-import { renderWithRs } from '../../../test/renderWithRs';
+import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import AskRetry from './AskRetry';
 
-jest.mock('@folio/stripes-components/lib/Icon', () => require('../../../test/iconMock').default);
+jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
 
 // Stub the TextArea leaf: under jsdom the real one measures layout and adds
 // noise; a plain textarea keeps the note field driveable via fireEvent.change.

@@ -6,7 +6,7 @@ import {
   within,
 } from '@folio/jest-config-stripes/testing-library/react';
 
-import { renderWithRs } from '../test/renderWithRs';
+import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { useNotificationList } from '../components/chat/useNotifications';
 import FlowRoute from './FlowRoute';
 
@@ -16,7 +16,7 @@ jest.mock('../components/chat/useNotifications', () => ({
   useNotificationList: jest.fn(),
 }));
 
-jest.mock('@folio/stripes-components/lib/Icon', () => require('../test/iconMock').default);
+jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
 
 jest.mock('@projectreshare/stripes-reshare', () => ({
   ...jest.requireActual('@projectreshare/stripes-reshare'),

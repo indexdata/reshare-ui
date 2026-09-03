@@ -1,10 +1,10 @@
 import React from 'react';
 import { fireEvent, screen } from '@folio/jest-config-stripes/testing-library/react';
 
-import { renderWithRs } from '../../test/renderWithRs';
+import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import EventLog from './EventLog';
 
-jest.mock('@folio/stripes-components/lib/Icon', () => require('../../test/iconMock').default);
+jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
 
 // Jest cannot parse react-syntax-highlighter's ESM entry points.
 jest.mock('react-syntax-highlighter', () => ({
