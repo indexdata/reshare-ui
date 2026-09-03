@@ -19,7 +19,7 @@ const fieldMap = [
   },
   {
     fieldName: 'lendersOfLastResort',
-    valueType: 'stringArray',
+    valueType: 'symbolList',
   },
   {
     fieldName: 'includeRequestingAgencyInfo',

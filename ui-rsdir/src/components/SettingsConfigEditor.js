@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { useQueryClient } from 'react-query';
+import { useInfiniteQuery, useQueryClient } from 'react-query';
 import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
 import {
   Button,
@@ -15,13 +15,62 @@ import css from './SettingsConfigEditor.css';
 
 const STRING_ARRAY = 'stringarray';
 const STRING_MAP = 'stringmap';
+const SYMBOL_LIST = 'symbollist';
 const SUB_FIELD = 'subfield';
 const OBJECT_ARRAY = 'objectarray';
+const SYMBOL_PAGE_SIZE = 1000;
 const INTEGER_PATTERN = /^-?\d+$/;
 
 const normalizedValueType = valueType => valueType?.toLowerCase?.() || 'string';
 
 const isObject = value => value && typeof value === 'object' && !Array.isArray(value);
+
+const containsValueType = (fields, targetType) => fields.some(field => {
+  const type = normalizedValueType(field.valueType);
+
+  return type === targetType ||
+    (type === SUB_FIELD && Array.isArray(field.subMap) && containsValueType(field.subMap, targetType)) ||
+    (type === OBJECT_ARRAY && Array.isArray(field.objectMap) && containsValueType(field.objectMap, targetType));
+});
+
+const normalizeList = data => (Array.isArray(data) ? data : (data?.items || []));
+
+const loadedEntryCount = pages => pages.reduce((count, page) => count + normalizeList(page).length, 0);
+
+const nextInstitutionPageOffset = (lastPage, pages) => {
+  const loadedCount = loadedEntryCount(pages);
+  const lastPageSize = normalizeList(lastPage).length;
+  const totalCount = pages[0]?.about?.count ?? lastPage?.about?.count;
+
+  if (lastPageSize === 0) {
+    return undefined;
+  }
+
+  if (Number.isFinite(totalCount)) {
+    return loadedCount < totalCount ? loadedCount : undefined;
+  }
+
+  return lastPageSize === SYMBOL_PAGE_SIZE ? loadedCount : undefined;
+};
+
+const isValidSymbol = value => isObject(value) &&
+  typeof value.authority === 'string' && !!value.authority &&
+  typeof value.symbol === 'string' && !!value.symbol;
+
+const symbolKey = value => JSON.stringify([value.authority, value.symbol]);
+
+const symbolLabel = value => `${value.authority}:${value.symbol}`;
+
+const normalizedSymbols = value => (Array.isArray(value) ? value : [])
+  .filter(isValidSymbol)
+  .map(({ authority, symbol }) => ({ authority, symbol }));
+
+const symbolValuesFromEntries = data => [...new Map(normalizeList(data)
+  .flatMap(entry => (Array.isArray(entry?.symbols) ? entry.symbols : []))
+  .filter(isValidSymbol)
+  .map(({ authority, symbol }) => ({ authority, symbol }))
+  .map(symbolValue => [symbolKey(symbolValue), symbolValue])).values()]
+  .sort((left, right) => symbolLabel(left).localeCompare(symbolLabel(right)));
 
 const validateFieldDefinition = (field, path = field.fieldName) => {
   const type = normalizedValueType(field.valueType);
@@ -72,6 +121,10 @@ const toEditorValue = (value, field) => {
     return Array.isArray(value) ? [...value] : [];
   }
 
+  if (type === SYMBOL_LIST) {
+    return normalizedSymbols(value);
+  }
+
   if (type === STRING_MAP) {
     return isObject(value) ? { ...value } : {};
   }
@@ -106,6 +159,10 @@ const valueForPatch = (value, field) => {
 
   if (type === STRING_ARRAY) {
     return Array.isArray(value) ? [...value] : [];
+  }
+
+  if (type === SYMBOL_LIST) {
+    return normalizedSymbols(value);
   }
 
   if (type === STRING_MAP) {
@@ -151,7 +208,7 @@ const valueForPatch = (value, field) => {
 const isEmptyFieldValue = (value, field) => {
   const type = normalizedValueType(field.valueType);
 
-  if (type === STRING_ARRAY || type === OBJECT_ARRAY) {
+  if (type === STRING_ARRAY || type === SYMBOL_LIST || type === OBJECT_ARRAY) {
     return !Array.isArray(value) || value.length === 0;
   }
 
@@ -226,6 +283,56 @@ const SettingsConfigEditor = ({
   const editingFieldsRef = useRef({});
   const activeResourcePathRef = useRef(resourcePath);
   const previousResourcePathRef = useRef(resourcePath);
+  const hasSymbolList = useMemo(
+    () => containsValueType(fieldMapping, SYMBOL_LIST),
+    [fieldMapping],
+  );
+  const institutionEntriesQuery = useInfiniteQuery({
+    queryKey: ['directory/entries', 'type=Institution', 'symbolList'],
+    queryFn: ({ pageParam = 0 }) => {
+      const params = new URLSearchParams();
+      params.append('cql', 'type=Institution');
+      params.append('limit', SYMBOL_PAGE_SIZE);
+      params.append('offset', pageParam);
+
+      return ky(`directory/entries?${params.toString()}`).json();
+    },
+    enabled: hasSymbolList,
+    getNextPageParam: nextInstitutionPageOffset,
+    staleTime: 2 * 60 * 1000,
+  });
+  const {
+    data: institutionEntriesData,
+    fetchNextPage: fetchNextInstitutionPage,
+    hasNextPage: hasNextInstitutionPage,
+    isError: institutionEntriesHaveError,
+    isFetchingNextPage: isFetchingNextInstitutionPage,
+    isLoading: institutionEntriesAreLoading,
+  } = institutionEntriesQuery;
+  const institutionEntries = useMemo(
+    () => institutionEntriesData?.pages?.flatMap(normalizeList) || [],
+    [institutionEntriesData],
+  );
+  const validSymbolValues = useMemo(
+    () => symbolValuesFromEntries(institutionEntries),
+    [institutionEntries],
+  );
+
+  useEffect(() => {
+    if (hasSymbolList && hasNextInstitutionPage &&
+      !isFetchingNextInstitutionPage && !institutionEntriesHaveError) {
+      fetchNextInstitutionPage();
+    }
+  }, [
+    fetchNextInstitutionPage,
+    hasSymbolList,
+    hasNextInstitutionPage,
+    institutionEntriesData,
+    institutionEntriesHaveError,
+    isFetchingNextInstitutionPage,
+  ]);
+  const symbolsAreLoading = institutionEntriesAreLoading ||
+    isFetchingNextInstitutionPage || hasNextInstitutionPage;
 
   activeResourcePathRef.current = resourcePath;
 
@@ -446,6 +553,31 @@ const SettingsConfigEditor = ({
     }
   };
 
+  const addSymbolListValue = (field, parentField) => event => {
+    const path = pathForField(field, parentField);
+    const nextValue = validSymbolValues.find(symbolValue => symbolKey(symbolValue) === event.target.value);
+
+    if (!nextValue) {
+      return;
+    }
+
+    setDraftFieldValue(field, parentField, current => {
+      const currentValues = Array.isArray(current) ? current : [];
+      return currentValues.some(symbolValue => symbolKey(symbolValue) === symbolKey(nextValue)) ?
+        currentValues :
+        [...currentValues, { ...nextValue }];
+    });
+    setFieldErrors(current => ({ ...current, [path]: undefined }));
+  };
+
+  const removeSymbolListValue = (field, parentField, index) => {
+    const path = pathForField(field, parentField);
+    setDraftFieldValue(field, parentField, current => (
+      (Array.isArray(current) ? current : []).filter((_value, valueIndex) => valueIndex !== index)
+    ));
+    setFieldErrors(current => ({ ...current, [path]: undefined }));
+  };
+
   const handleNewStringMapEntryChange = (path, property) => event => {
     setNewStringMapEntries(current => ({
       ...current,
@@ -565,6 +697,39 @@ const SettingsConfigEditor = ({
     const childPath = newObjectChildPath(field, parentField, child);
     setNewObjectChildValue(field, parentField, child, current => (
       current.filter((value, valueIndex) => valueIndex !== index)
+    ));
+    setFieldErrors(current => ({
+      ...current,
+      [childPath]: undefined,
+      [`${pathForField(field, parentField)}.new`]: undefined,
+    }));
+  };
+
+  const addObjectSymbolListValue = (field, parentField, child) => event => {
+    const childPath = newObjectChildPath(field, parentField, child);
+    const nextValue = validSymbolValues.find(symbolValue => symbolKey(symbolValue) === event.target.value);
+
+    if (!nextValue) {
+      return;
+    }
+
+    setNewObjectChildValue(field, parentField, child, current => {
+      const currentValues = Array.isArray(current) ? current : [];
+      return currentValues.some(symbolValue => symbolKey(symbolValue) === symbolKey(nextValue)) ?
+        currentValues :
+        [...currentValues, { ...nextValue }];
+    });
+    setFieldErrors(current => ({
+      ...current,
+      [childPath]: undefined,
+      [`${pathForField(field, parentField)}.new`]: undefined,
+    }));
+  };
+
+  const removeObjectSymbolListValue = (field, parentField, child, index) => {
+    const childPath = newObjectChildPath(field, parentField, child);
+    setNewObjectChildValue(field, parentField, child, current => (
+      (Array.isArray(current) ? current : []).filter((_value, valueIndex) => valueIndex !== index)
     ));
     setFieldErrors(current => ({
       ...current,
@@ -774,6 +939,92 @@ const SettingsConfigEditor = ({
       });
   };
 
+  const symbolOptionsForValue = value => {
+    const selectedValues = new Set(normalizedSymbols(value).map(symbolKey));
+
+    return [
+      {
+        label: intl.formatMessage({
+          id: 'ui-rsdir.settingsConfig.selectSymbol',
+          defaultMessage: 'Select a symbol',
+        }),
+        value: '',
+      },
+      ...validSymbolValues
+        .filter(symbolValue => !selectedValues.has(symbolKey(symbolValue)))
+        .map(symbolValue => ({ label: symbolLabel(symbolValue), value: symbolKey(symbolValue) })),
+    ];
+  };
+
+  const renderSymbolListValues = (field, isEditing, parentField) => {
+    const path = pathForField(field, parentField);
+    const controlPath = controlPathForField(field, parentField);
+    const value = isEditing ? draftFieldValue(field, parentField) : committedFieldValue(field, parentField);
+    const symbolValues = Array.isArray(value) ? value : [];
+
+    return (
+      <div className={css.structuredValues}>
+        {symbolValues.map((symbolValue, index) => (
+          <div className={css.structuredValue} key={`${symbolKey(symbolValue)}-${index}`}>
+            <span className={css.structuredValueText}>{symbolLabel(symbolValue)}</span>
+            {isEditing &&
+              <IconButton
+                aria-label={intl.formatMessage({
+                  id: 'ui-rsdir.settingsConfig.removeSymbol',
+                  defaultMessage: 'Remove {symbol} from {field}',
+                }, { field: labelForPath(path), symbol: symbolLabel(symbolValue) })}
+                disabled={savingFields[topFieldName(field, parentField)]}
+                icon="times"
+                iconSize="small"
+                id={`remove-${controlIdPrefix}-${controlPath}-${index}`}
+                onClick={() => removeSymbolListValue(field, parentField, index)}
+                size="small"
+              />
+            }
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderSymbolListInput = (field, parentField) => {
+    const path = pathForField(field, parentField);
+    const controlPath = controlPathForField(field, parentField);
+    const value = draftFieldValue(field, parentField);
+    const isSaving = savingFields[topFieldName(field, parentField)];
+
+    return (
+      <div>
+        {renderSymbolListValues(field, true, parentField)}
+        <div className={css.structuredAdd}>
+          <div className={css.structuredInput}>
+            <Select
+              aria-label={intl.formatMessage({
+                id: 'ui-rsdir.settingsConfig.selectSymbolForField',
+                defaultMessage: 'Select a symbol for {field}',
+              }, { field: labelForPath(path) })}
+              dataOptions={symbolOptionsForValue(value)}
+              disabled={isSaving || symbolsAreLoading || institutionEntriesHaveError}
+              error={fieldErrors[path]}
+              id={`${controlIdPrefix}-${controlPath}`}
+              marginBottom0
+              onChange={addSymbolListValue(field, parentField)}
+              value=""
+            />
+          </div>
+        </div>
+        {institutionEntriesHaveError &&
+          <div className={css.subFieldError} role="alert">
+            <FormattedMessage
+              id="ui-rsdir.settingsConfig.symbolsLoadError"
+              defaultMessage="Unable to load available symbols."
+            />
+          </div>
+        }
+      </div>
+    );
+  };
+
   const renderStringArrayValues = (field, isEditing, parentField) => {
     const path = pathForField(field, parentField);
     const controlPath = controlPathForField(field, parentField);
@@ -961,6 +1212,18 @@ const SettingsConfigEditor = ({
       );
     }
 
+    if (type === SYMBOL_LIST) {
+      return (
+        <div className={css.structuredValues}>
+          {normalizedSymbols(value).map((symbolValue, index) => (
+            <span className={css.structuredValue} key={`${symbolKey(symbolValue)}-${index}`}>
+              {symbolLabel(symbolValue)}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
     if (type === STRING_MAP) {
       return (
         <div className={css.structuredValues}>
@@ -1105,6 +1368,63 @@ const SettingsConfigEditor = ({
     );
   };
 
+  const renderNewObjectSymbolListInput = (field, parentField, child) => {
+    const childPath = newObjectChildPath(field, parentField, child);
+    const controlPath = childPath.split('.').join('-');
+    const objectValue = newObjectValue(field, parentField);
+    const symbolValues = Array.isArray(objectValue[child.fieldName]) ? objectValue[child.fieldName] : [];
+    const isSaving = savingFields[topFieldName(field, parentField)];
+
+    return (
+      <div>
+        <div className={css.structuredValues}>
+          {symbolValues.map((symbolValue, index) => (
+            <div className={css.structuredValue} key={`${symbolKey(symbolValue)}-${index}`}>
+              <span className={css.structuredValueText}>{symbolLabel(symbolValue)}</span>
+              <IconButton
+                aria-label={intl.formatMessage({
+                  id: 'ui-rsdir.settingsConfig.removeSymbol',
+                  defaultMessage: 'Remove {symbol} from {field}',
+                }, { field: labelForPath(childPath), symbol: symbolLabel(symbolValue) })}
+                disabled={isSaving}
+                icon="times"
+                iconSize="small"
+                id={`remove-${controlIdPrefix}-${controlPath}-${index}`}
+                onClick={() => removeObjectSymbolListValue(field, parentField, child, index)}
+                size="small"
+              />
+            </div>
+          ))}
+        </div>
+        <div className={css.structuredAdd}>
+          <div className={css.structuredInput}>
+            <Select
+              aria-label={intl.formatMessage({
+                id: 'ui-rsdir.settingsConfig.selectSymbolForField',
+                defaultMessage: 'Select a symbol for {field}',
+              }, { field: labelForPath(childPath) })}
+              dataOptions={symbolOptionsForValue(symbolValues)}
+              disabled={isSaving || symbolsAreLoading || institutionEntriesHaveError}
+              error={fieldErrors[childPath]}
+              id={`${controlIdPrefix}-${controlPath}`}
+              marginBottom0
+              onChange={addObjectSymbolListValue(field, parentField, child)}
+              value=""
+            />
+          </div>
+        </div>
+        {institutionEntriesHaveError &&
+          <div className={css.subFieldError} role="alert">
+            <FormattedMessage
+              id="ui-rsdir.settingsConfig.symbolsLoadError"
+              defaultMessage="Unable to load available symbols."
+            />
+          </div>
+        }
+      </div>
+    );
+  };
+
   const renderNewObjectStringMapInput = (field, parentField, child) => {
     const childPath = newObjectChildPath(field, parentField, child);
     const controlPath = childPath.split('.').join('-');
@@ -1215,6 +1535,10 @@ const SettingsConfigEditor = ({
 
     if (type === STRING_ARRAY) {
       return renderNewObjectStringArrayInput(field, parentField, child);
+    }
+
+    if (type === SYMBOL_LIST) {
+      return renderNewObjectSymbolListInput(field, parentField, child);
     }
 
     if (type === STRING_MAP) {
@@ -1340,6 +1664,10 @@ const SettingsConfigEditor = ({
       return renderStringArrayInput(field, parentField);
     }
 
+    if (type === SYMBOL_LIST) {
+      return renderSymbolListInput(field, parentField);
+    }
+
     if (type === STRING_MAP) {
       return renderStringMapInput(field, parentField);
     }
@@ -1380,6 +1708,10 @@ const SettingsConfigEditor = ({
 
     if (type === STRING_ARRAY) {
       return renderStringArrayValues(field, false, parentField);
+    }
+
+    if (type === SYMBOL_LIST) {
+      return renderSymbolListValues(field, false, parentField);
     }
 
     if (type === STRING_MAP) {
