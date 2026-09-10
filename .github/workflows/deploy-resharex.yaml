@@ -94,8 +94,16 @@ jobs:
       - name: upload builds
         if: ${{ !env.ACT }}
         run: |
-          aws s3 sync ./rs1 s3://reshare-bundles/rs1 --acl public-read --delete
-          aws s3 sync ./rs2 s3://reshare-bundles/rs2 --acl public-read --delete
-          aws s3 sync ./rs3 s3://reshare-bundles/rs3 --acl public-read --delete
-          aws s3 sync ./consortial s3://reshare-bundles/consortial --acl public-read --delete
+          set -euo pipefail
+          # Hashed chunk filenames change on every build, so they're safe to cache
+          # forever; index.html is not hashed and must always be revalidated so
+          # clients pick up the chunk names from the build that's actually live,
+          # otherwise a stale index.html can reference chunks --delete just removed.
+          for tenant in rs1 rs2 rs3 consortial; do
+            aws s3 sync "./${tenant}" "s3://reshare-bundles/${tenant}" --acl public-read --delete \
+              --cache-control "public,max-age=31536000,immutable" \
+              --exclude "index.html"
+            aws s3 cp "./${tenant}/index.html" "s3://reshare-bundles/${tenant}/index.html" --acl public-read \
+              --cache-control "no-cache, no-store, must-revalidate"
+          done
         working-directory: ./environments/platform-resharex
