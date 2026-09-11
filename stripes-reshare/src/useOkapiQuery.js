@@ -16,7 +16,7 @@ import useOkapiKy from './useOkapiKy';
 // refreshed behind, where an evicted one is an empty pane. Costs memory.
 const CACHE_BEYOND_STALE = 30 * 60 * 1000;
 
-const sharableQueryOptions = ['cacheTime', 'enabled', 'initialData', 'initialDataUpdatedAt', 'staleTime'];
+const sharableQueryOptions = ['cacheTime', 'enabled', 'initialData', 'initialDataUpdatedAt', 'keepPreviousData', 'onError', 'onSettled', 'onSuccess', 'refetchOnWindowFocus', 'staleTime', 'useErrorBoundary'];
 const useOkapiQueryConfig = (path, { kyOpt = {}, searchParams = {}, ns = false, ...opt } = {}, keys = []) => {
   const okapiKy = useOkapiKy().extend(kyOpt);
 
