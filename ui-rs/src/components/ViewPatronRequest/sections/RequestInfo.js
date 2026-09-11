@@ -12,6 +12,7 @@ import formattedDateTime from '../../../util/formattedDateTime';
 
 const RequestInfo = ({ record = {} }) => {
   const illRequest = record.illRequest || {};
+  const bibliographicInfo = illRequest.bibliographicInfo || {};
   const serviceInfo = illRequest.serviceInfo || {};
   const deliveryInfo = illRequest.deliveryInfo || {};
   const pickupLocation = deliveryInfo.pickupLocation || deliveryInfo?.address?.physicalAddress?.line1;
@@ -23,16 +24,22 @@ const RequestInfo = ({ record = {} }) => {
         roundedBorder
       >
         <Row>
-          <Col xs={6}>
+          <Col xs={3}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.hrid" />}
               value={record.requesterRequestId}
             />
           </Col>
-          <Col xs={6}>
+          <Col xs={3}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.fullId" />}
               value={record.id}
+            />
+          </Col>
+          <Col xs={6}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rs.information.supplierUniqueRecordId" />}
+              value={bibliographicInfo.supplierUniqueRecordId}
             />
           </Col>
         </Row>

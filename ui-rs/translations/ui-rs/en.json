@@ -76,6 +76,7 @@
   "closeNewPatronRequest": "Close new patron request",
   "information.hrid": "Request ID",
   "information.fullId": "Full ID",
+  "information.supplierUniqueRecordId": "System ID",
   "information.lastUpdated": "Last updated",
   "information.pickupLocation": "Pickup location",
   "information.deliveryUrl": "Delivery URL",
