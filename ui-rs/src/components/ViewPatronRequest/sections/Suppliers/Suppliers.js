@@ -19,7 +19,7 @@ const SupplierCard = ({ supplier, position }) => {
     <Card
       headerStart={`${position}. ${entry?.name ?? supplier.supplierSymbol}`}
       headerEnd={entry?.id && (
-        <Link to={`/directory/entries/view/${entry.id}`}>
+        <Link to={`/directory/entries/${entry.id}`}>
           <FormattedMessage id="ui-rs.viewInDirectory" />
         </Link>
       )}

@@ -4,10 +4,11 @@ import { Form } from 'react-final-form';
 import arrayMutators from 'final-form-arrays';
 import { useMutation, useQueryClient } from 'react-query';
 import { Prompt, useParams, useHistory, useLocation } from 'react-router-dom';
-import { Button, Pane, PaneFooter, KeyValue } from '@folio/stripes/components';
+import { Button, KeyValue, Pane, PaneFooter } from '@folio/stripes/components';
 import { CalloutContext, useOkapiKy, useStripes } from '@folio/stripes/core';
 import { useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import EntryForm from '../components/EntryForm';
+import { ENTRY_PANE_ID, EntryLoadingPane } from '../components/EntryPane';
 import { getAddressPlugin } from '../util/addressPlugin';
 import {
   apiAddressesToFormAddresses,
@@ -30,7 +31,9 @@ const EditEntryRoute = () => {
 
   const op = id ? EDIT : CREATE;
 
-  const close = useCloseDirect(op === CREATE ? `/directory/entries${location.search}` : `/directory/entries/entry-points/${id}/edit${location.search}`);
+  // Cancel and Close return to the previous page after a DirectLink;
+  // otherwise, the parent URL is the list for create or the entry view for edit.
+  const close = useCloseDirect();
 
   const entryQuery = useOkapiQuery(`directory/entries/by-id/${id}`, {
     staleTime: 2 * 60 * 1000,
@@ -47,7 +50,7 @@ const EditEntryRoute = () => {
         type: 'success',
         message: <FormattedMessage id="ui-rsdir.create.success" />
       });
-      history.push(`/directory/entries/view/${createdEntry.id}`);
+      history.push(`/directory/entries/${createdEntry.id}${location.search}`);
     },
     onError: async (err) => {
       callout.sendCallout({
@@ -99,7 +102,7 @@ const EditEntryRoute = () => {
     };
   }, [addressPlugin, entryQuery.data, op]);
 
-  if (op === EDIT && !entryQuery.isSuccess) return null;
+  if (op === EDIT && !entryQuery.isSuccess) return <EntryLoadingPane />;
 
   const submit = (values, form) => {
     const submitValues = {
@@ -168,27 +171,34 @@ const EditEntryRoute = () => {
       mutators={{ ...arrayMutators }}
       keepDirtyOnReinitialize
     >
-      {({ handleSubmit, pristine, submitting, submitSucceeded, invalid }) => (
-        <Pane
-          defaultWidth="fill"
-          centerContent
-          onClose={close}
-          dismissible
-          footer={getFooter(handleSubmit, pristine, submitting, invalid)}
-          paneTitle={
-            op === CREATE
+      {({ handleSubmit, pristine, submitting, submitSucceeded, invalid }) => {
+        const body = (
+          <>
+            <form onSubmit={handleSubmit} id="form-entry">
+              <EntryForm addressPlugin={addressPlugin} />
+            </form>
+            <FormattedMessage id="ui-rsdir.confirmDirtyNavigate">
+              {prompt => <Prompt when={!pristine && !(submitting || submitSucceeded)} message={prompt[0]} />}
+            </FormattedMessage>
+          </>
+        );
+        return (
+          <Pane
+            id={ENTRY_PANE_ID}
+            defaultWidth="fill"
+            centerContent
+            dismissible
+            onClose={close}
+            footer={getFooter(handleSubmit, pristine, submitting, invalid)}
+            paneTitle={op === CREATE
               ? <FormattedMessage id="ui-rsdir.createEntry" />
-              : <FormattedMessage id="ui-rsdir.editEntry" values={{ name: initialValues.name }} />
-          }
-        >
-          <form onSubmit={handleSubmit} id="form-entry">
-            <EntryForm addressPlugin={addressPlugin} />
-          </form>
-          <FormattedMessage id="ui-rsdir.confirmDirtyNavigate">
-            {prompt => <Prompt when={!pristine && !(submitting || submitSucceeded)} message={prompt[0]} />}
-          </FormattedMessage>
-        </Pane>
-      )}
+              : entryQuery.data.name}
+            paneSub={op === EDIT && <FormattedMessage id="ui-rsdir.edit" />}
+          >
+            {body}
+          </Pane>
+        );
+      }}
     </Form>
   );
 };

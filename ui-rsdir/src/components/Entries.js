@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { useHistory, useRouteMatch, useLocation } from 'react-router-dom';
+import { matchPath, useHistory, useRouteMatch, useLocation } from 'react-router-dom';
 import {
   Paneset,
   Pane,
@@ -9,6 +9,7 @@ import {
   Button,
   PaneMenu,
 } from '@folio/stripes/components';
+import { DirectLink } from '@projectreshare/stripes-reshare';
 import SearchAndFilter from './SearchAndFilter';
 
 const Entries = ({
@@ -28,6 +29,7 @@ const Entries = ({
   const [offset, setOffset] = useState(0);
 
   const entries = entriesQuery?.data?.pages?.[offset / perPage]?.items || [];
+  const openEntry = matchPath(location.pathname, { path: `${match.path}/:id` })?.params;
   const sparseEntries = (new Array(offset)).concat(entries);
   const totalCount = entriesQuery?.data?.pages?.[0]?.about?.count || 0;
 
@@ -45,10 +47,6 @@ const Entries = ({
         .map(s => `${s.authority}:${s.symbol}`)
         .join(', ');
     },
-  };
-
-  const handleNew = () => {
-    history.push(`${match.url}/create${location.search}`);
   };
 
   return (
@@ -74,14 +72,16 @@ const Entries = ({
         paneTitle={intl.formatMessage({ id: 'ui-rsdir.entries.resultsCount' }, { count: totalCount })}
         lastMenu={
           <PaneMenu>
-            <Button
+            <DirectLink
+              component={Button}
               id="clickable-new-entry"
-              onClick={handleNew}
+              to={`${match.url}/create`}
+              preserveSearch
               buttonStyle="primary paneHeaderNewButton"
               marginBottom0
             >
               <FormattedMessage id="ui-rsdir.new" />
-            </Button>
+            </DirectLink>
           </PaneMenu>
         }
       >
@@ -97,11 +97,13 @@ const Entries = ({
           }}
           formatter={resultsFormatter}
           isEmptyMessage={intl.formatMessage({ id: 'stripes-smart-components.sas.noResults.noTerms' })}
+          isSelected={({ item, criteria }) => !!criteria && item?.id === criteria.id}
           loading={entriesQuery.isFetching}
           onNeedMoreData={fetchMore}
-          onRowClick={(_e, rowData) => history.push(`${match.url}/entry-points/${rowData.id}${location.search}`)}
+          onRowClick={(_e, rowData) => history.push(`${match.url}/${rowData.id}${location.search}`)}
           pageAmount={perPage}
           pagingType={MCLPagingTypes.PREV_NEXT}
+          selectedRow={openEntry}
           totalCount={totalCount}
         />
       </Pane>
