@@ -10,6 +10,7 @@ import {
   IconButton,
   KeyValue,
   Modal,
+  ModalFooter,
   MultiColumnList,
   Row,
 } from '@folio/stripes/components';
@@ -248,28 +249,6 @@ const EntryOwnedTiersEditor = ({ id }) => {
           {({ dirty, handleSubmit, pristine, submitting, invalid }) => (
             <Modal
               dismissible
-              footer={(
-                <>
-                  <Button
-                    buttonStyle="default"
-                    id="clickable-cancel-entry-owned-tier"
-                    marginBottom0
-                    onClick={closeModal}
-                  >
-                    <FormattedMessage id="ui-rsdir.cancel" />
-                  </Button>
-                  <Button
-                    buttonStyle="primary"
-                    disabled={pristine || submitting || invalid}
-                    id="clickable-save-entry-owned-tier"
-                    marginBottom0
-                    onClick={handleSubmit}
-                    type="submit"
-                  >
-                    <FormattedMessage id={editingTier ? 'ui-rsdir.edit.submit' : 'ui-rsdir.create'} />
-                  </Button>
-                </>
-              )}
               id="entry-owned-tier-modal"
               label={
                 editingTier
@@ -284,6 +263,24 @@ const EntryOwnedTiersEditor = ({ id }) => {
                 <FormattedMessage id="ui-rsdir.confirmDirtyNavigate">
                   {prompt => <Prompt when={dirty && !submitting} message={prompt[0]} />}
                 </FormattedMessage>
+                <ModalFooter>
+                  <Button
+                    buttonStyle="primary"
+                    disabled={pristine || submitting || invalid}
+                    id="clickable-save-entry-owned-tier"
+                    onClick={handleSubmit}
+                    type="submit"
+                  >
+                    <FormattedMessage id={editingTier ? 'ui-rsdir.edit.submit' : 'ui-rsdir.create'} />
+                  </Button>
+                  <Button
+                    buttonStyle="default"
+                    id="clickable-cancel-entry-owned-tier"
+                    onClick={closeModal}
+                  >
+                    <FormattedMessage id="ui-rsdir.cancel" />
+                  </Button>
+                </ModalFooter>
               </form>
             </Modal>
           )}
