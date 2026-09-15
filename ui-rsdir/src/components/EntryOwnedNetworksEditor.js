@@ -9,12 +9,12 @@ import {
   Col,
   IconButton,
   KeyValue,
+  Layout,
   Modal,
   ModalFooter,
-  MultiColumnList,
   Row,
 } from '@folio/stripes/components';
-import { useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { SimpleTable, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import NetworkForm from './NetworkForm';
 
 const entryPath = id => `directory/entries/by-id/${id}`;
@@ -175,33 +175,32 @@ const EntryOwnedNetworksEditor = ({ id }) => {
     setIsModalOpen(false);
   };
 
-  const formatter = {
-    name: network => networkLabel(network),
-    priority: network => network.priority,
-    actions: network => (
-      <>
-        <IconButton
-          aria-label={intl.formatMessage({ id: 'ui-rsdir.network.edit.action' })}
-          icon="edit"
-          id={`clickable-edit-network-${network.id}`}
-          onClick={event => {
-            event.stopPropagation();
-            openEditModal(network);
-          }}
-        />
-        <IconButton
-          aria-label={intl.formatMessage({ id: 'ui-rsdir.networks.delete' })}
-          disabled={deleter.isLoading && deletingNetworkId === network.id}
-          icon="trash"
-          id={`clickable-delete-network-${network.id}`}
-          onClick={event => {
-            event.stopPropagation();
-            deleter.mutate(network.id);
-          }}
-        />
-      </>
-    ),
-  };
+  const columns = [
+    { key: 'name', label: intl.formatMessage({ id: 'ui-rsdir.networks.current' }), render: networkLabel, sort: true },
+    { key: 'priority', label: intl.formatMessage({ id: 'ui-rsdir.network.priority' }), fit: true },
+    {
+      key: 'actions',
+      label: '',
+      fit: true,
+      render: network => (
+        <Layout className="full flex justify-end">
+          <IconButton
+            aria-label={intl.formatMessage({ id: 'ui-rsdir.network.edit.action' }, { name: networkLabel(network) })}
+            icon="edit"
+            id={`clickable-edit-network-${network.id}`}
+            onClick={() => openEditModal(network)}
+          />
+          <IconButton
+            aria-label={intl.formatMessage({ id: 'ui-rsdir.networks.delete.action' }, { name: networkLabel(network) })}
+            disabled={deleter.isLoading && deletingNetworkId === network.id}
+            icon="trash"
+            id={`clickable-delete-network-${network.id}`}
+            onClick={() => deleter.mutate(network.id)}
+          />
+        </Layout>
+      ),
+    },
+  ];
 
   if (!entryQuery.isSuccess) {
     return null;
@@ -280,19 +279,14 @@ const EntryOwnedNetworksEditor = ({ id }) => {
           )}
         </Form>
       )}
-      <MultiColumnList
-        contentData={networks}
-        formatter={formatter}
+      <SimpleTable
         id="entry-owned-networks-list"
-        isEmptyMessage={intl.formatMessage({ id: 'ui-rsdir.networks.empty' })}
+        defaultSortColumn="name"
+        caption={intl.formatMessage({ id: 'ui-rsdir.entry.section.networks' })}
+        columns={columns}
+        rows={networks}
+        emptyMessage={intl.formatMessage({ id: 'ui-rsdir.networks.empty' })}
         loading={networksQuery.isFetching}
-        onRowClick={(_event, network) => openEditModal(network)}
-        visibleColumns={['name', 'priority', 'actions']}
-        columnMapping={{
-          name: intl.formatMessage({ id: 'ui-rsdir.networks.current' }),
-          priority: intl.formatMessage({ id: 'ui-rsdir.network.priority' }),
-          actions: '',
-        }}
       />
     </div>
   );
