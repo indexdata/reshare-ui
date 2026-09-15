@@ -7,11 +7,11 @@ import {
   Col,
   IconButton,
   KeyValue,
-  MultiColumnList,
+  Layout,
   Row,
   Select,
 } from '@folio/stripes/components';
-import { useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { SimpleTable, useOkapiQuery } from '@projectreshare/stripes-reshare';
 
 const entryTiersPath = id => `directory/entries/by-id/${id}/tiers`;
 const tiersPath = 'directory/tiers';
@@ -127,18 +127,25 @@ const EntryTiersEditor = ({ id }) => {
     }
   };
 
-  const formatter = {
-    name: tier => tierLabel(tier),
-    actions: tier => (
-      <IconButton
-        aria-label={intl.formatMessage({ id: 'ui-rsdir.tiers.delete' })}
-        disabled={deleteTier.isLoading && deletingTierId === tier.id}
-        icon="trash"
-        id={`clickable-delete-tier-${tier.id}`}
-        onClick={() => deleteTier.mutate(tier.id)}
-      />
-    ),
-  };
+  const columns = [
+    { key: 'name', label: intl.formatMessage({ id: 'ui-rsdir.tiers.current' }), render: tierLabel, sort: true },
+    {
+      key: 'actions',
+      label: '',
+      fit: true,
+      render: tier => (
+        <Layout className="full flex justify-end">
+          <IconButton
+            aria-label={intl.formatMessage({ id: 'ui-rsdir.tiers.delete.action' }, { name: tierLabel(tier) })}
+            disabled={deleteTier.isLoading && deletingTierId === tier.id}
+            icon="trash"
+            id={`clickable-delete-tier-${tier.id}`}
+            onClick={() => deleteTier.mutate(tier.id)}
+          />
+        </Layout>
+      ),
+    },
+  ];
 
   if (!entryTiersQuery.isSuccess || !tiersQuery.isSuccess) {
     return null;
@@ -167,17 +174,14 @@ const EntryTiersEditor = ({ id }) => {
           </Button>
         </Col>
       </Row>
-      <MultiColumnList
-        contentData={entryTiers}
-        formatter={formatter}
+      <SimpleTable
         id="entry-tiers-list"
-        isEmptyMessage={intl.formatMessage({ id: 'ui-rsdir.tiers.empty' })}
+        defaultSortColumn="name"
+        caption={intl.formatMessage({ id: 'ui-rsdir.entry.section.tiers' })}
+        columns={columns}
+        rows={entryTiers}
+        emptyMessage={intl.formatMessage({ id: 'ui-rsdir.tiers.empty' })}
         loading={entryTiersQuery.isFetching || tiersQuery.isFetching}
-        visibleColumns={['name', 'actions']}
-        columnMapping={{
-          name: intl.formatMessage({ id: 'ui-rsdir.tiers.current' }),
-          actions: '',
-        }}
       />
     </div>
   );
