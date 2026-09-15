@@ -43,11 +43,11 @@
 }
 
 .table tbody tr {
-  background-color: var(--color-fill-table-row-even);
+  background-color: var(--color-fill-table-row-odd);
 }
 
 .table tbody tr:nth-child(even) {
-  background-color: var(--color-fill-table-row-odd);
+  background-color: var(--color-fill-table-row-even);
 }
 
 .cell {
