@@ -42,42 +42,6 @@ const ViewEntry = ({ entry }) => {
       .join(', ');
   };
 
-  const formatClosure = (closure) => {
-    if (!closure) {
-      return null;
-    }
-    return (
-      <Card
-        headerStart={
-          <Headline margin="none">
-            <FormattedMessage
-              id="ui-rsdir.closure.header"
-              values={{ reason: closure.reason }}
-            />
-          </Headline>
-        }
-        cardStyle="positive"
-        roundedBorder
-        marginBottom0
-      >
-        <Row>
-          <Col xs={3}>
-            <KeyValue
-              label={<FormattedMessage id="ui-rsdir.closure.startDate" />}
-              value={closure.startDate}
-            />
-          </Col>
-          <Col xs={3}>
-            <KeyValue
-              label={<FormattedMessage id="ui-rsdir.closure.endDate" />}
-              value={closure.endDate}
-            />
-          </Col>
-        </Row>
-      </Card>
-    );
-  };
-
   const formatAddress = (address) => {
     const addressComponents = apiAddressToDisplayComponents(
       address,
@@ -193,11 +157,6 @@ const ViewEntry = ({ entry }) => {
           { entry.addresses.map((address) => {
             return (<React.Fragment key={address.id}>{formatAddress(address)}</React.Fragment>);
           })}
-        </Row>
-      }
-      { entry.closures &&
-        <Row>
-          { entry.closures.map((it) => { return (<React.Fragment key={it.id}>{formatClosure(it)}</React.Fragment>); }) }
         </Row>
       }
     </>

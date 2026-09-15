@@ -23,6 +23,10 @@ const entry = {
   type: 'Institution',
   symbols: [{ authority: 'ISIL', symbol: 'FIX-1' }],
   lmsConfig: { address: 'fixture-lms-address' },
+  closures: [
+    { id: 'c1', entry: 'e1', startDate: '2026-03-02', endDate: '2026-06-01', reason: 'fixture-closure' },
+    { id: 'c2', entry: 'e1', startDate: '2026-05-04', endDate: '2026-05-06', reason: 'fixture-later-closure' },
+  ],
 };
 
 const responses = (overrides = {}) => ({
@@ -51,6 +55,12 @@ const sectionLink = (section) => screen.getByRole('link', { name: `ui-rsdir.entr
 const findSectionLink = (section) => screen.findByRole('link', { name: `ui-rsdir.entry.section.${section}` });
 const querySectionLink = (section) => screen.queryByRole('link', { name: `ui-rsdir.entry.section.${section}` });
 
+const closuresList = () => within(document.getElementById('entry-closures-list'));
+const columnHeader = (column) => closuresList().getByRole('columnheader', { name: `ui-rsdir.closure.${column}.column` });
+const closureOrder = () => closuresList().getAllByRole('row')
+  .map(row => ['fixture-closure', 'fixture-later-closure'].find(reason => within(row).queryByText(reason)))
+  .filter(Boolean);
+
 const entryRow = () => within(document.getElementById('entries-list')).getByText('fixture-entry').closest('[class*="mclRow"]');
 const at = (history) => `${history.location.pathname}${history.location.search}`;
 
@@ -63,6 +73,8 @@ describe('directory entries', () => {
   beforeEach(() => {
     mockOkapi.mockClear();
     mockOkapi.post.mockClear();
+    mockOkapi.patch.mockClear();
+    mockOkapi.delete.mockClear();
     mockOkapi.setResponses(responses());
   });
 
@@ -129,6 +141,85 @@ describe('directory entries', () => {
     renderDirectory(['/directory/entries/e1/tiers']);
     expect(await screen.findByRole('button', { name: 'ui-rsdir.add' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'ui-rsdir.tiers.add' })).not.toBeInTheDocument();
+  });
+
+  it('lists, adds and removes the closures of an entry', async () => {
+    renderDirectory(['/directory/entries/e1/closures']);
+
+    expect(await screen.findByText('fixture-closure')).toBeInTheDocument();
+    expect(sectionLink('closures')).toHaveAttribute('aria-current', 'page');
+
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.add' }));
+    fireEvent.change(screen.getByLabelText(/ui-rsdir\.closure\.reason/), { target: { value: 'fixture-new-closure' } });
+    fireEvent.change(screen.getByLabelText(/ui-rsdir\.closure\.startDate/), { target: { value: '2026-04-01' } });
+    fireEvent.change(screen.getByLabelText(/ui-rsdir\.closure\.endDate/), { target: { value: '2026-04-03' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.create' }));
+
+    await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledWith(
+      'directory/closures',
+      { json: { entry: 'e1', startDate: '2026-04-01', endDate: '2026-04-03', reason: 'fixture-new-closure' } }
+    ));
+
+    fireEvent.click(document.getElementById('clickable-delete-closure-c1'));
+    await waitFor(() => expect(mockOkapi.delete).toHaveBeenCalledWith('directory/closures/c1'));
+  });
+
+  it('sorts closures by either date, newest first by default', async () => {
+    renderDirectory(['/directory/entries/e1/closures']);
+    expect(await screen.findByText('fixture-closure')).toBeInTheDocument();
+
+    expect(closureOrder()).toEqual(['fixture-later-closure', 'fixture-closure']);
+    expect(columnHeader('startDate')).toHaveAttribute('aria-sort', 'descending');
+
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.closure.endDate.column' }));
+    expect(closureOrder()).toEqual(['fixture-closure', 'fixture-later-closure']);
+    expect(columnHeader('endDate')).toHaveAttribute('aria-sort', 'descending');
+    expect(columnHeader('startDate')).toHaveAttribute('aria-sort', 'none');
+
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.closure.startDate.column' }));
+    expect(closureOrder()).toEqual(['fixture-later-closure', 'fixture-closure']);
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.closure.startDate.column' }));
+    expect(closureOrder()).toEqual(['fixture-closure', 'fixture-later-closure']);
+    expect(columnHeader('startDate')).toHaveAttribute('aria-sort', 'ascending');
+
+    expect(screen.queryByRole('button', { name: 'ui-rsdir.closure.reason' })).not.toBeInTheDocument();
+  });
+
+  it('opens a closure for editing from its row button', async () => {
+    renderDirectory(['/directory/entries/e1/closures']);
+    expect(await screen.findByText('fixture-closure')).toBeInTheDocument();
+
+    fireEvent.click(document.getElementById('clickable-edit-closure-c1'));
+    expect(screen.getByLabelText(/ui-rsdir\.closure\.reason/)).toHaveValue('fixture-closure');
+
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.cancel' }));
+    expect(screen.queryByLabelText(/ui-rsdir\.closure\.reason/)).not.toBeInTheDocument();
+  });
+
+  it('patches only the fields an edit changed and closes the modal', async () => {
+    renderDirectory(['/directory/entries/e1/closures']);
+    expect(await screen.findByText('fixture-closure')).toBeInTheDocument();
+
+    fireEvent.click(document.getElementById('clickable-edit-closure-c1'));
+    fireEvent.change(screen.getByLabelText(/ui-rsdir\.closure\.endDate/), { target: { value: '2026-06-08' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.edit.submit' }));
+
+    await waitFor(() => expect(mockOkapi.patch).toHaveBeenCalledWith(
+      'directory/closures/c1',
+      { json: { endDate: '2026-06-08' } }
+    ));
+    await waitFor(() => expect(screen.queryByLabelText(/ui-rsdir\.closure\.reason/)).not.toBeInTheDocument());
+  });
+
+  it('refuses an edit that ends a closure before it starts', async () => {
+    renderDirectory(['/directory/entries/e1/closures']);
+    expect(await screen.findByText('fixture-closure')).toBeInTheDocument();
+
+    fireEvent.click(document.getElementById('clickable-edit-closure-c1'));
+    fireEvent.change(screen.getByLabelText(/ui-rsdir\.closure\.endDate/), { target: { value: '2026-03-01' } });
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'ui-rsdir.edit.submit' })).toBeDisabled());
+    expect(mockOkapi.patch).not.toHaveBeenCalled();
   });
 
   it('creates an entry without a sections pane and opens the new entry', async () => {
