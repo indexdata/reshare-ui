@@ -7,6 +7,7 @@ export { BrokerEventsProvider } from './src/BrokerEvents';
 export { default as RequestCacheSync } from './src/RequestCacheSync';
 export { default as DirectLink } from './src/DirectLink/DirectLink';
 export { default as useCloseDirect } from './src/DirectLink/useCloseDirect';
+export { default as SimpleTable } from './src/SimpleTable/SimpleTable';
 
 
 // Hooks
