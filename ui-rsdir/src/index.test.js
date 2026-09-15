@@ -73,6 +73,7 @@ describe('directory entries', () => {
   beforeEach(() => {
     mockOkapi.mockClear();
     mockOkapi.post.mockClear();
+    mockOkapi.patch.mockClear();
     mockOkapi.delete.mockClear();
     mockOkapi.setResponses(responses());
   });
@@ -193,6 +194,32 @@ describe('directory entries', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.cancel' }));
     expect(screen.queryByLabelText(/ui-rsdir\.closure\.reason/)).not.toBeInTheDocument();
+  });
+
+  it('patches only the fields an edit changed and closes the modal', async () => {
+    renderDirectory(['/directory/entries/e1/closures']);
+    expect(await screen.findByText('fixture-closure')).toBeInTheDocument();
+
+    fireEvent.click(document.getElementById('clickable-edit-closure-c1'));
+    fireEvent.change(screen.getByLabelText(/ui-rsdir\.closure\.endDate/), { target: { value: '2026-06-08' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.edit.submit' }));
+
+    await waitFor(() => expect(mockOkapi.patch).toHaveBeenCalledWith(
+      'directory/closures/c1',
+      { json: { endDate: '2026-06-08' } }
+    ));
+    await waitFor(() => expect(screen.queryByLabelText(/ui-rsdir\.closure\.reason/)).not.toBeInTheDocument());
+  });
+
+  it('refuses an edit that ends a closure before it starts', async () => {
+    renderDirectory(['/directory/entries/e1/closures']);
+    expect(await screen.findByText('fixture-closure')).toBeInTheDocument();
+
+    fireEvent.click(document.getElementById('clickable-edit-closure-c1'));
+    fireEvent.change(screen.getByLabelText(/ui-rsdir\.closure\.endDate/), { target: { value: '2026-03-01' } });
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'ui-rsdir.edit.submit' })).toBeDisabled());
+    expect(mockOkapi.patch).not.toHaveBeenCalled();
   });
 
   it('creates an entry without a sections pane and opens the new entry', async () => {
