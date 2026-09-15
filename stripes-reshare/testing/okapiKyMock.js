@@ -88,7 +88,8 @@ const makeOkapiKyMock = () => {
   // mockResolvedValueOnce/mockRejectedValueOnce.
   okapiKy.post = jest.fn(async () => ({ json: async () => ({ id: 'new-1' }) }));
   okapiKy.put = jest.fn(async () => ({ json: async () => ({}) }));
-  // DELETE responds 204 with no body, so nothing here resolves a json payload.
+  // PATCH and DELETE respond 204 with no body, so nothing here resolves a json payload.
+  okapiKy.patch = jest.fn(async () => ({}));
   okapiKy.delete = jest.fn(async () => ({}));
 
   // BrokerEventsProvider opens the broker's event stream with `okapiKy.get(path, opts)`

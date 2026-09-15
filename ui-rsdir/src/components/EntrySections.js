@@ -11,6 +11,7 @@ export const SECTIONS = [
   { key: 'illconfig', segment: 'illconfig', labelId: 'ui-rsdir.entry.section.illConfig' },
   { key: 'tiers', segment: 'tiers', labelId: 'ui-rsdir.entry.section.tiers' },
   { key: 'networks', segment: 'networks', labelId: 'ui-rsdir.entry.section.networks' },
+  { key: 'closures', segment: 'closures', labelId: 'ui-rsdir.entry.section.closures' },
 ];
 
 export const sectionAt = (pathname, entryUrl) => {
