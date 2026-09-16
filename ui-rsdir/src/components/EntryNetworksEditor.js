@@ -42,6 +42,9 @@ const EntryNetworksEditor = ({ id }) => {
 
   const networksQuery = useOkapiQuery(networksPath, {
     staleTime: 2 * 60 * 1000,
+    searchParams: {
+      limit: '1000',
+    },
   });
 
   const entryNetworks = useMemo(() => normalizeList(entryNetworksQuery.data), [entryNetworksQuery.data]);

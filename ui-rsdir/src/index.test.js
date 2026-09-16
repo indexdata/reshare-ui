@@ -32,7 +32,9 @@ const entry = {
 const responses = (overrides = {}) => ({
   'directory/entries': { items: [entry], about: { count: 1 } },
   'directory/entries/by-id/e1': entry,
+  'directory/entries/by-id/e1/networks': [],
   'directory/entries/by-id/e1/tiers': [],
+  'directory/networks': [],
   'directory/tiers': [],
   ...overrides,
 });
@@ -132,6 +134,7 @@ describe('directory entries', () => {
   it('manages tiers for a consortium and picks them for any other entry', async () => {
     const { unmount } = renderDirectory(['/directory/entries/e1/tiers']);
     expect(await screen.findByRole('button', { name: 'ui-rsdir.tiers.add' })).toBeInTheDocument();
+    expect(mockOkapi.calledUrls()).toContain('directory/tiers?limit=1000');
     expect(sectionLink('tiers')).toHaveAttribute('aria-current', 'page');
     unmount();
 
@@ -141,6 +144,13 @@ describe('directory entries', () => {
     renderDirectory(['/directory/entries/e1/tiers']);
     expect(await screen.findByRole('button', { name: 'ui-rsdir.add' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'ui-rsdir.tiers.add' })).not.toBeInTheDocument();
+  });
+
+  it('loads all available networks when picking entry memberships', async () => {
+    renderDirectory(['/directory/entries/e1/networks']);
+
+    expect(await screen.findByRole('button', { name: 'ui-rsdir.networks.add' })).toBeInTheDocument();
+    expect(mockOkapi.calledUrls()).toContain('directory/networks?limit=1000');
   });
 
   it('lists, adds and removes the closures of an entry', async () => {
