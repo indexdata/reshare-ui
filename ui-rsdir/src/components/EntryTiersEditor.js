@@ -42,6 +42,9 @@ const EntryTiersEditor = ({ id }) => {
 
   const tiersQuery = useOkapiQuery(tiersPath, {
     staleTime: 2 * 60 * 1000,
+    searchParams: {
+      limit: '1000',
+    },
   });
 
   const entryTiers = useMemo(() => normalizeList(entryTiersQuery.data), [entryTiersQuery.data]);
