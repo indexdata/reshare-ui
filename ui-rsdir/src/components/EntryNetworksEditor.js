@@ -7,11 +7,10 @@ import {
   Col,
   IconButton,
   KeyValue,
-  MultiColumnList,
   Row,
   Select,
 } from '@folio/stripes/components';
-import { useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { SimpleTable, useOkapiQuery } from '@projectreshare/stripes-reshare';
 
 const entryNetworksPath = id => `directory/entries/by-id/${id}/networks`;
 const networksPath = 'directory/networks';
@@ -130,18 +129,23 @@ const EntryNetworksEditor = ({ id }) => {
     }
   };
 
-  const formatter = {
-    name: network => networkLabel(network),
-    actions: network => (
-      <IconButton
-        aria-label={intl.formatMessage({ id: 'ui-rsdir.networks.delete' })}
-        disabled={deleteNetwork.isLoading && deletingNetworkId === network.id}
-        icon="trash"
-        id={`clickable-delete-network-${network.id}`}
-        onClick={() => deleteNetwork.mutate(network.id)}
-      />
-    ),
-  };
+  const columns = [
+    { key: 'name', label: intl.formatMessage({ id: 'ui-rsdir.networks.current' }), render: networkLabel, sort: true },
+    {
+      key: 'actions',
+      label: '',
+      fit: true,
+      render: network => (
+        <IconButton
+          aria-label={intl.formatMessage({ id: 'ui-rsdir.networks.delete.action' }, { name: networkLabel(network) })}
+          disabled={deleteNetwork.isLoading && deletingNetworkId === network.id}
+          icon="trash"
+          id={`clickable-delete-network-${network.id}`}
+          onClick={() => deleteNetwork.mutate(network.id)}
+        />
+      ),
+    },
+  ];
 
   if (!entryNetworksQuery.isSuccess || !networksQuery.isSuccess) {
     return null;
@@ -170,17 +174,14 @@ const EntryNetworksEditor = ({ id }) => {
           </Button>
         </Col>
       </Row>
-      <MultiColumnList
-        contentData={entryNetworks}
-        formatter={formatter}
+      <SimpleTable
         id="entry-networks-list"
-        isEmptyMessage={intl.formatMessage({ id: 'ui-rsdir.networks.empty' })}
+        defaultSortColumn="name"
+        caption={intl.formatMessage({ id: 'ui-rsdir.entry.section.networks' })}
+        columns={columns}
+        rows={entryNetworks}
+        emptyMessage={intl.formatMessage({ id: 'ui-rsdir.networks.empty' })}
         loading={entryNetworksQuery.isFetching || networksQuery.isFetching}
-        visibleColumns={['name', 'actions']}
-        columnMapping={{
-          name: intl.formatMessage({ id: 'ui-rsdir.networks.current' }),
-          actions: '',
-        }}
       />
     </div>
   );

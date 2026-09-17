@@ -3,7 +3,7 @@ import { FormattedMessage, useIntl } from 'react-intl';
 import { Form } from 'react-final-form';
 import { Prompt } from 'react-router-dom';
 import { useMutation, useQueryClient } from 'react-query';
-import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
+import { CalloutContext, useOkapiKy, useStripes } from '@folio/stripes/core';
 import {
   Button,
   Col,
@@ -11,10 +11,9 @@ import {
   KeyValue,
   Modal,
   ModalFooter,
-  MultiColumnList,
   Row,
 } from '@folio/stripes/components';
-import { useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { SimpleTable, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import TierForm from './TierForm';
 
 const entryPath = id => `directory/entries/by-id/${id}`;
@@ -40,6 +39,7 @@ const tierLabel = tier => tier?.name || tier?.id || '';
 const EntryOwnedTiersEditor = ({ id }) => {
   const callout = useContext(CalloutContext);
   const intl = useIntl();
+  const stripes = useStripes();
   const ky = useOkapiKy();
   const queryClient = useQueryClient();
   const [editingTier, setEditingTier] = useState();
@@ -179,35 +179,43 @@ const EntryOwnedTiersEditor = ({ id }) => {
     setIsModalOpen(false);
   };
 
-  const formatter = {
-    name: tier => tierLabel(tier),
-    level: tier => tier.level,
-    type: tier => tier.type,
-    cost: tier => tier.cost,
-    actions: tier => (
-      <>
-        <IconButton
-          aria-label={intl.formatMessage({ id: 'ui-rsdir.tier.edit.action' })}
-          icon="edit"
-          id={`clickable-edit-tier-${tier.id}`}
-          onClick={event => {
-            event.stopPropagation();
-            openEditModal(tier);
-          }}
-        />
-        <IconButton
-          aria-label={intl.formatMessage({ id: 'ui-rsdir.tiers.delete' })}
-          disabled={deleter.isLoading && deletingTierId === tier.id}
-          icon="trash"
-          id={`clickable-delete-tier-${tier.id}`}
-          onClick={event => {
-            event.stopPropagation();
-            deleter.mutate(tier.id);
-          }}
-        />
-      </>
-    ),
-  };
+  const columns = [
+    { key: 'name', label: intl.formatMessage({ id: 'ui-rsdir.tiers.current' }), render: tierLabel, sort: true },
+    { key: 'level', label: intl.formatMessage({ id: 'ui-rsdir.tier.level' }), fit: true },
+    { key: 'type', label: intl.formatMessage({ id: 'ui-rsdir.tier.type' }), fit: true },
+    {
+      key: 'cost',
+      label: intl.formatMessage({ id: 'ui-rsdir.tier.cost' }),
+      fit: true,
+      render: tier => (Number.isFinite(tier.cost)
+        ? intl.formatNumber(tier.cost, { style: 'currency', currency: stripes.currency })
+        : ''),
+      // Not the default comparator: it collates as text, which puts 1.5 before 1.25.
+      sort: (a, b) => (a.cost ?? 0) - (b.cost ?? 0),
+    },
+    {
+      key: 'actions',
+      label: '',
+      fit: true,
+      render: tier => (
+        <>
+          <IconButton
+            aria-label={intl.formatMessage({ id: 'ui-rsdir.tier.edit.action' }, { name: tierLabel(tier) })}
+            icon="edit"
+            id={`clickable-edit-tier-${tier.id}`}
+            onClick={() => openEditModal(tier)}
+          />
+          <IconButton
+            aria-label={intl.formatMessage({ id: 'ui-rsdir.tiers.delete.action' }, { name: tierLabel(tier) })}
+            disabled={deleter.isLoading && deletingTierId === tier.id}
+            icon="trash"
+            id={`clickable-delete-tier-${tier.id}`}
+            onClick={() => deleter.mutate(tier.id)}
+          />
+        </>
+      ),
+    },
+  ];
 
   if (!entryQuery.isSuccess) {
     return null;
@@ -286,21 +294,14 @@ const EntryOwnedTiersEditor = ({ id }) => {
           )}
         </Form>
       )}
-      <MultiColumnList
-        contentData={tiers}
-        formatter={formatter}
+      <SimpleTable
         id="entry-owned-tiers-list"
-        isEmptyMessage={intl.formatMessage({ id: 'ui-rsdir.tiers.empty' })}
+        defaultSortColumn="name"
+        caption={intl.formatMessage({ id: 'ui-rsdir.entry.section.tiers' })}
+        columns={columns}
+        rows={tiers}
+        emptyMessage={intl.formatMessage({ id: 'ui-rsdir.tiers.empty' })}
         loading={tiersQuery.isFetching}
-        onRowClick={(_event, tier) => openEditModal(tier)}
-        visibleColumns={['name', 'level', 'type', 'cost', 'actions']}
-        columnMapping={{
-          name: intl.formatMessage({ id: 'ui-rsdir.tiers.current' }),
-          level: intl.formatMessage({ id: 'ui-rsdir.tier.level' }),
-          type: intl.formatMessage({ id: 'ui-rsdir.tier.type' }),
-          cost: intl.formatMessage({ id: 'ui-rsdir.tier.cost' }),
-          actions: '',
-        }}
       />
     </div>
   );
