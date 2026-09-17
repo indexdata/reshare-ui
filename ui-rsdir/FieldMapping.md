@@ -85,6 +85,19 @@ Represents a JSON array of strings. Existing strings are displayed as removable 
 
 Setting `required: true` requires the array to contain at least one string.
 
+### `symbolList`
+
+Represents a JSON array of symbol objects containing `authority` and `symbol` properties. Existing symbols are displayed as removable `authority:name` blocks. The editor provides Authority and Name fields plus an Add button for appending symbols; both values are required, trimmed, and compared exactly when preventing duplicates.
+
+```js
+{
+  fieldName: 'lendersOfLastResort',
+  valueType: 'symbolList',
+}
+```
+
+The Name field is stored in the object's `symbol` property. Setting `required: true` requires the array to contain at least one symbol.
+
 ### `stringMap`
 
 Represents a JSON object whose property values are strings. Entries are displayed as removable `key: value` blocks. The editor provides key and value fields for adding entries, rejects duplicate keys, and does not add blank keys or values.

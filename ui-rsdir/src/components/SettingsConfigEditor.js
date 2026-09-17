@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { useInfiniteQuery, useQueryClient } from 'react-query';
+import { useQueryClient } from 'react-query';
 import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
 import {
   Button,
@@ -18,40 +18,11 @@ const STRING_MAP = 'stringmap';
 const SYMBOL_LIST = 'symbollist';
 const SUB_FIELD = 'subfield';
 const OBJECT_ARRAY = 'objectarray';
-const SYMBOL_PAGE_SIZE = 1000;
 const INTEGER_PATTERN = /^-?\d+$/;
 
 const normalizedValueType = valueType => valueType?.toLowerCase?.() || 'string';
 
 const isObject = value => value && typeof value === 'object' && !Array.isArray(value);
-
-const containsValueType = (fields, targetType) => fields.some(field => {
-  const type = normalizedValueType(field.valueType);
-
-  return type === targetType ||
-    (type === SUB_FIELD && Array.isArray(field.subMap) && containsValueType(field.subMap, targetType)) ||
-    (type === OBJECT_ARRAY && Array.isArray(field.objectMap) && containsValueType(field.objectMap, targetType));
-});
-
-const normalizeList = data => (Array.isArray(data) ? data : (data?.items || []));
-
-const loadedEntryCount = pages => pages.reduce((count, page) => count + normalizeList(page).length, 0);
-
-const nextInstitutionPageOffset = (lastPage, pages) => {
-  const loadedCount = loadedEntryCount(pages);
-  const lastPageSize = normalizeList(lastPage).length;
-  const totalCount = pages[0]?.about?.count ?? lastPage?.about?.count;
-
-  if (lastPageSize === 0) {
-    return undefined;
-  }
-
-  if (Number.isFinite(totalCount)) {
-    return loadedCount < totalCount ? loadedCount : undefined;
-  }
-
-  return lastPageSize === SYMBOL_PAGE_SIZE ? loadedCount : undefined;
-};
 
 const isValidSymbol = value => isObject(value) &&
   typeof value.authority === 'string' && !!value.authority &&
@@ -64,13 +35,6 @@ const symbolLabel = value => `${value.authority}:${value.symbol}`;
 const normalizedSymbols = value => (Array.isArray(value) ? value : [])
   .filter(isValidSymbol)
   .map(({ authority, symbol }) => ({ authority, symbol }));
-
-const symbolValuesFromEntries = data => [...new Map(normalizeList(data)
-  .flatMap(entry => (Array.isArray(entry?.symbols) ? entry.symbols : []))
-  .filter(isValidSymbol)
-  .map(({ authority, symbol }) => ({ authority, symbol }))
-  .map(symbolValue => [symbolKey(symbolValue), symbolValue])).values()]
-  .sort((left, right) => symbolLabel(left).localeCompare(symbolLabel(right)));
 
 const validateFieldDefinition = (field, path = field.fieldName) => {
   const type = normalizedValueType(field.valueType);
@@ -277,63 +241,14 @@ const SettingsConfigEditor = ({
   const [savingFields, setSavingFields] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [newStringValues, setNewStringValues] = useState({});
+  const [newSymbolValues, setNewSymbolValues] = useState({});
+  const [symbolEntryErrors, setSymbolEntryErrors] = useState({});
   const [newStringMapEntries, setNewStringMapEntries] = useState({});
   const [stringMapEntryErrors, setStringMapEntryErrors] = useState({});
   const [newObjectValues, setNewObjectValues] = useState({});
   const editingFieldsRef = useRef({});
   const activeResourcePathRef = useRef(resourcePath);
   const previousResourcePathRef = useRef(resourcePath);
-  const hasSymbolList = useMemo(
-    () => containsValueType(fieldMapping, SYMBOL_LIST),
-    [fieldMapping],
-  );
-  const institutionEntriesQuery = useInfiniteQuery({
-    queryKey: ['directory/entries', 'type=Institution', 'symbolList'],
-    queryFn: ({ pageParam = 0 }) => {
-      const params = new URLSearchParams();
-      params.append('cql', 'type=Institution');
-      params.append('limit', SYMBOL_PAGE_SIZE);
-      params.append('offset', pageParam);
-
-      return ky(`directory/entries?${params.toString()}`).json();
-    },
-    enabled: hasSymbolList,
-    getNextPageParam: nextInstitutionPageOffset,
-    staleTime: 2 * 60 * 1000,
-  });
-  const {
-    data: institutionEntriesData,
-    fetchNextPage: fetchNextInstitutionPage,
-    hasNextPage: hasNextInstitutionPage,
-    isError: institutionEntriesHaveError,
-    isFetchingNextPage: isFetchingNextInstitutionPage,
-    isLoading: institutionEntriesAreLoading,
-  } = institutionEntriesQuery;
-  const institutionEntries = useMemo(
-    () => institutionEntriesData?.pages?.flatMap(normalizeList) || [],
-    [institutionEntriesData],
-  );
-  const validSymbolValues = useMemo(
-    () => symbolValuesFromEntries(institutionEntries),
-    [institutionEntries],
-  );
-
-  useEffect(() => {
-    if (hasSymbolList && hasNextInstitutionPage &&
-      !isFetchingNextInstitutionPage && !institutionEntriesHaveError) {
-      fetchNextInstitutionPage();
-    }
-  }, [
-    fetchNextInstitutionPage,
-    hasSymbolList,
-    hasNextInstitutionPage,
-    institutionEntriesData,
-    institutionEntriesHaveError,
-    isFetchingNextInstitutionPage,
-  ]);
-  const symbolsAreLoading = institutionEntriesAreLoading ||
-    isFetchingNextInstitutionPage || hasNextInstitutionPage;
-
   activeResourcePathRef.current = resourcePath;
 
   const booleanOptions = useMemo(() => [
@@ -366,6 +281,8 @@ const SettingsConfigEditor = ({
       setSavingFields({});
       setFieldErrors({});
       setNewStringValues({});
+      setNewSymbolValues({});
+      setSymbolEntryErrors({});
       setNewStringMapEntries({});
       setStringMapEntryErrors({});
       setNewObjectValues({});
@@ -480,6 +397,8 @@ const SettingsConfigEditor = ({
   const clearTransientState = rootPath => {
     setFieldErrors(current => omitRootPath(current, rootPath));
     setNewStringValues(current => omitRootPath(current, rootPath));
+    setNewSymbolValues(current => omitRootPath(current, rootPath));
+    setSymbolEntryErrors(current => omitRootPath(current, rootPath));
     setNewStringMapEntries(current => omitRootPath(current, rootPath));
     setStringMapEntryErrors(current => omitRootPath(current, rootPath));
     setNewObjectValues(current => omitRootPath(current, rootPath));
@@ -553,21 +472,54 @@ const SettingsConfigEditor = ({
     }
   };
 
-  const addSymbolListValue = (field, parentField) => event => {
-    const path = pathForField(field, parentField);
-    const nextValue = validSymbolValues.find(symbolValue => symbolKey(symbolValue) === event.target.value);
+  const handleNewSymbolChange = (path, property) => event => {
+    setNewSymbolValues(current => ({
+      ...current,
+      [path]: {
+        authority: '',
+        symbol: '',
+        ...current[path],
+        [property]: event.target.value,
+      },
+    }));
+    setSymbolEntryErrors(current => ({ ...current, [path]: undefined }));
+  };
 
-    if (!nextValue) {
+  const addSymbolListValue = (field, parentField) => {
+    const path = pathForField(field, parentField);
+    const newValue = newSymbolValues[path] || { authority: '', symbol: '' };
+    const nextValue = {
+      authority: newValue.authority.trim(),
+      symbol: newValue.symbol.trim(),
+    };
+
+    if (!isValidSymbol(nextValue)) {
       return;
     }
 
-    setDraftFieldValue(field, parentField, current => {
-      const currentValues = Array.isArray(current) ? current : [];
-      return currentValues.some(symbolValue => symbolKey(symbolValue) === symbolKey(nextValue)) ?
-        currentValues :
-        [...currentValues, { ...nextValue }];
-    });
+    const currentValues = draftFieldValue(field, parentField) || [];
+    if (currentValues.some(symbolValue => symbolKey(symbolValue) === symbolKey(nextValue))) {
+      setSymbolEntryErrors(current => ({
+        ...current,
+        [path]: intl.formatMessage({
+          id: 'ui-rsdir.settingsConfig.duplicateSymbol',
+          defaultMessage: 'The symbol {symbol} already exists.',
+        }, { symbol: symbolLabel(nextValue) }),
+      }));
+      return;
+    }
+
+    setDraftFieldValue(field, parentField, current => [...(Array.isArray(current) ? current : []), nextValue]);
+    setNewSymbolValues(current => ({ ...current, [path]: { authority: '', symbol: '' } }));
+    setSymbolEntryErrors(current => ({ ...current, [path]: undefined }));
     setFieldErrors(current => ({ ...current, [path]: undefined }));
+  };
+
+  const handleNewSymbolKeyDown = (field, parentField) => event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      addSymbolListValue(field, parentField);
+    }
   };
 
   const removeSymbolListValue = (field, parentField, index) => {
@@ -575,6 +527,7 @@ const SettingsConfigEditor = ({
     setDraftFieldValue(field, parentField, current => (
       (Array.isArray(current) ? current : []).filter((_value, valueIndex) => valueIndex !== index)
     ));
+    setSymbolEntryErrors(current => ({ ...current, [path]: undefined }));
     setFieldErrors(current => ({ ...current, [path]: undefined }));
   };
 
@@ -705,20 +658,37 @@ const SettingsConfigEditor = ({
     }));
   };
 
-  const addObjectSymbolListValue = (field, parentField, child) => event => {
+  const addObjectSymbolListValue = (field, parentField, child) => {
     const childPath = newObjectChildPath(field, parentField, child);
-    const nextValue = validSymbolValues.find(symbolValue => symbolKey(symbolValue) === event.target.value);
+    const newValue = newSymbolValues[childPath] || { authority: '', symbol: '' };
+    const nextValue = {
+      authority: newValue.authority.trim(),
+      symbol: newValue.symbol.trim(),
+    };
 
-    if (!nextValue) {
+    if (!isValidSymbol(nextValue)) {
       return;
     }
 
-    setNewObjectChildValue(field, parentField, child, current => {
-      const currentValues = Array.isArray(current) ? current : [];
-      return currentValues.some(symbolValue => symbolKey(symbolValue) === symbolKey(nextValue)) ?
-        currentValues :
-        [...currentValues, { ...nextValue }];
-    });
+    const objectValue = newObjectValue(field, parentField);
+    const currentValues = objectValue[child.fieldName] || [];
+    if (currentValues.some(symbolValue => symbolKey(symbolValue) === symbolKey(nextValue))) {
+      setSymbolEntryErrors(current => ({
+        ...current,
+        [childPath]: intl.formatMessage({
+          id: 'ui-rsdir.settingsConfig.duplicateSymbol',
+          defaultMessage: 'The symbol {symbol} already exists.',
+        }, { symbol: symbolLabel(nextValue) }),
+      }));
+      return;
+    }
+
+    setNewObjectChildValue(field, parentField, child, current => [
+      ...(Array.isArray(current) ? current : []),
+      nextValue,
+    ]);
+    setNewSymbolValues(current => ({ ...current, [childPath]: { authority: '', symbol: '' } }));
+    setSymbolEntryErrors(current => ({ ...current, [childPath]: undefined }));
     setFieldErrors(current => ({
       ...current,
       [childPath]: undefined,
@@ -731,6 +701,7 @@ const SettingsConfigEditor = ({
     setNewObjectChildValue(field, parentField, child, current => (
       (Array.isArray(current) ? current : []).filter((_value, valueIndex) => valueIndex !== index)
     ));
+    setSymbolEntryErrors(current => ({ ...current, [childPath]: undefined }));
     setFieldErrors(current => ({
       ...current,
       [childPath]: undefined,
@@ -939,23 +910,6 @@ const SettingsConfigEditor = ({
       });
   };
 
-  const symbolOptionsForValue = value => {
-    const selectedValues = new Set(normalizedSymbols(value).map(symbolKey));
-
-    return [
-      {
-        label: intl.formatMessage({
-          id: 'ui-rsdir.settingsConfig.selectSymbol',
-          defaultMessage: 'Select a symbol',
-        }),
-        value: '',
-      },
-      ...validSymbolValues
-        .filter(symbolValue => !selectedValues.has(symbolKey(symbolValue)))
-        .map(symbolValue => ({ label: symbolLabel(symbolValue), value: symbolKey(symbolValue) })),
-    ];
-  };
-
   const renderSymbolListValues = (field, isEditing, parentField) => {
     const path = pathForField(field, parentField);
     const controlPath = controlPathForField(field, parentField);
@@ -990,37 +944,56 @@ const SettingsConfigEditor = ({
   const renderSymbolListInput = (field, parentField) => {
     const path = pathForField(field, parentField);
     const controlPath = controlPathForField(field, parentField);
-    const value = draftFieldValue(field, parentField);
+    const newValue = newSymbolValues[path] || { authority: '', symbol: '' };
     const isSaving = savingFields[topFieldName(field, parentField)];
+    const canAdd = !!newValue.authority.trim() && !!newValue.symbol.trim();
 
     return (
       <div>
         {renderSymbolListValues(field, true, parentField)}
         <div className={css.structuredAdd}>
           <div className={css.structuredInput}>
-            <Select
+            <TextField
               aria-label={intl.formatMessage({
-                id: 'ui-rsdir.settingsConfig.selectSymbolForField',
-                defaultMessage: 'Select a symbol for {field}',
+                id: 'ui-rsdir.settingsConfig.newSymbolAuthority',
+                defaultMessage: 'New authority for {field}',
               }, { field: labelForPath(path) })}
-              dataOptions={symbolOptionsForValue(value)}
-              disabled={isSaving || symbolsAreLoading || institutionEntriesHaveError}
-              error={fieldErrors[path]}
-              id={`${controlIdPrefix}-${controlPath}`}
+              disabled={isSaving}
+              error={symbolEntryErrors[path] || fieldErrors[path]}
+              id={`${controlIdPrefix}-${controlPath}-authority`}
+              label={<FormattedMessage id="ui-rsdir.settingsConfig.symbolAuthority" defaultMessage="Authority" />}
               marginBottom0
-              onChange={addSymbolListValue(field, parentField)}
-              value=""
+              onChange={handleNewSymbolChange(path, 'authority')}
+              onKeyDown={handleNewSymbolKeyDown(field, parentField)}
+              value={newValue.authority}
             />
+          </div>
+          <div className={css.structuredInput}>
+            <TextField
+              aria-label={intl.formatMessage({
+                id: 'ui-rsdir.settingsConfig.newSymbolName',
+                defaultMessage: 'New name for {field}',
+              }, { field: labelForPath(path) })}
+              disabled={isSaving}
+              id={`${controlIdPrefix}-${controlPath}-name`}
+              label={<FormattedMessage id="ui-rsdir.settingsConfig.symbolName" defaultMessage="Name" />}
+              marginBottom0
+              onChange={handleNewSymbolChange(path, 'symbol')}
+              onKeyDown={handleNewSymbolKeyDown(field, parentField)}
+              value={newValue.symbol}
+            />
+          </div>
+          <div className={css.structuredAddButton}>
+            <Button
+              disabled={isSaving || !canAdd}
+              id={`add-${controlIdPrefix}-${controlPath}`}
+              marginBottom0
+              onClick={() => addSymbolListValue(field, parentField)}
+            >
+              <FormattedMessage id="ui-rsdir.add" defaultMessage="Add" />
+            </Button>
           </div>
         </div>
-        {institutionEntriesHaveError &&
-          <div className={css.subFieldError} role="alert">
-            <FormattedMessage
-              id="ui-rsdir.settingsConfig.symbolsLoadError"
-              defaultMessage="Unable to load available symbols."
-            />
-          </div>
-        }
       </div>
     );
   };
@@ -1281,6 +1254,8 @@ const SettingsConfigEditor = ({
     ]);
     setNewObjectValues(current => omitRootPath(current, path));
     setNewStringValues(current => omitRootPath(current, objectPath));
+    setNewSymbolValues(current => omitRootPath(current, objectPath));
+    setSymbolEntryErrors(current => omitRootPath(current, objectPath));
     setNewStringMapEntries(current => omitRootPath(current, objectPath));
     setStringMapEntryErrors(current => omitRootPath(current, objectPath));
     setFieldErrors(current => ({
@@ -1373,7 +1348,9 @@ const SettingsConfigEditor = ({
     const controlPath = childPath.split('.').join('-');
     const objectValue = newObjectValue(field, parentField);
     const symbolValues = Array.isArray(objectValue[child.fieldName]) ? objectValue[child.fieldName] : [];
+    const newValue = newSymbolValues[childPath] || { authority: '', symbol: '' };
     const isSaving = savingFields[topFieldName(field, parentField)];
+    const canAdd = !!newValue.authority.trim() && !!newValue.symbol.trim();
 
     return (
       <div>
@@ -1398,29 +1375,57 @@ const SettingsConfigEditor = ({
         </div>
         <div className={css.structuredAdd}>
           <div className={css.structuredInput}>
-            <Select
+            <TextField
               aria-label={intl.formatMessage({
-                id: 'ui-rsdir.settingsConfig.selectSymbolForField',
-                defaultMessage: 'Select a symbol for {field}',
+                id: 'ui-rsdir.settingsConfig.newSymbolAuthority',
+                defaultMessage: 'New authority for {field}',
               }, { field: labelForPath(childPath) })}
-              dataOptions={symbolOptionsForValue(symbolValues)}
-              disabled={isSaving || symbolsAreLoading || institutionEntriesHaveError}
-              error={fieldErrors[childPath]}
-              id={`${controlIdPrefix}-${controlPath}`}
+              disabled={isSaving}
+              error={symbolEntryErrors[childPath] || fieldErrors[childPath]}
+              id={`${controlIdPrefix}-${controlPath}-authority`}
+              label={<FormattedMessage id="ui-rsdir.settingsConfig.symbolAuthority" defaultMessage="Authority" />}
               marginBottom0
-              onChange={addObjectSymbolListValue(field, parentField, child)}
-              value=""
+              onChange={handleNewSymbolChange(childPath, 'authority')}
+              onKeyDown={event => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  addObjectSymbolListValue(field, parentField, child);
+                }
+              }}
+              value={newValue.authority}
             />
+          </div>
+          <div className={css.structuredInput}>
+            <TextField
+              aria-label={intl.formatMessage({
+                id: 'ui-rsdir.settingsConfig.newSymbolName',
+                defaultMessage: 'New name for {field}',
+              }, { field: labelForPath(childPath) })}
+              disabled={isSaving}
+              id={`${controlIdPrefix}-${controlPath}-name`}
+              label={<FormattedMessage id="ui-rsdir.settingsConfig.symbolName" defaultMessage="Name" />}
+              marginBottom0
+              onChange={handleNewSymbolChange(childPath, 'symbol')}
+              onKeyDown={event => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  addObjectSymbolListValue(field, parentField, child);
+                }
+              }}
+              value={newValue.symbol}
+            />
+          </div>
+          <div className={css.structuredAddButton}>
+            <Button
+              disabled={isSaving || !canAdd}
+              id={`add-${controlIdPrefix}-${controlPath}`}
+              marginBottom0
+              onClick={() => addObjectSymbolListValue(field, parentField, child)}
+            >
+              <FormattedMessage id="ui-rsdir.add" defaultMessage="Add" />
+            </Button>
           </div>
         </div>
-        {institutionEntriesHaveError &&
-          <div className={css.subFieldError} role="alert">
-            <FormattedMessage
-              id="ui-rsdir.settingsConfig.symbolsLoadError"
-              defaultMessage="Unable to load available symbols."
-            />
-          </div>
-        }
       </div>
     );
   };

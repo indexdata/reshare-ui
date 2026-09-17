@@ -1,13 +1,11 @@
 import React from 'react';
 // Provided by the shared Stripes test environment.
 // eslint-disable-next-line import/no-extraneous-dependencies
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import SettingsConfigEditor from './SettingsConfigEditor';
 
 const mockPatch = jest.fn();
 const mockKy = jest.fn();
-const mockUseInfiniteQuery = jest.fn();
-const mockFetchNextPage = jest.fn();
 
 mockKy.patch = mockPatch;
 
@@ -26,7 +24,6 @@ jest.mock('@folio/stripes/core', () => {
 });
 
 jest.mock('react-query', () => ({
-  useInfiniteQuery: config => mockUseInfiniteQuery(config),
   useQueryClient: () => ({
     getQueryData: jest.fn(),
     invalidateQueries: jest.fn(),
@@ -47,8 +44,19 @@ jest.mock('@folio/stripes/components', () => ({
       {dataOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
     </select>
   ),
-  TextField: ({ 'aria-label': ariaLabel, id, onChange, value }) => (
-    <input aria-label={ariaLabel} id={id} onChange={onChange} value={value} />
+  TextField: ({ 'aria-label': ariaLabel, disabled, error, id, onChange, onKeyDown, value }) => (
+    <>
+      <input
+        aria-label={ariaLabel}
+        aria-invalid={!!error}
+        disabled={disabled}
+        id={id}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        value={value}
+      />
+      {error && <span role="alert">{error}</span>}
+    </>
   ),
   Tooltip: ({ children }) => children({ ariaIds: {}, ref: jest.fn() }),
 }));
@@ -59,25 +67,10 @@ describe('SettingsConfigEditor symbolList', () => {
   beforeEach(() => {
     mockPatch.mockReset();
     mockKy.mockReset();
-    mockUseInfiniteQuery.mockReset();
-    mockFetchNextPage.mockReset();
-    mockUseInfiniteQuery.mockReturnValue({
-      data: {
-        pages: [
-          { items: [{ symbols: [{ authority: 'TEST', symbol: 'ANINST' }] }], about: { count: 2 } },
-          { items: [{ symbols: [{ authority: 'TEST', symbol: 'ANINSTTOO' }, { authority: '', symbol: 'INVALID' }] }] },
-        ],
-      },
-      fetchNextPage: mockFetchNextPage,
-      hasNextPage: false,
-      isError: false,
-      isFetchingNextPage: false,
-      isLoading: false,
-    });
     mockPatch.mockResolvedValue({ text: () => Promise.resolve('') });
   });
 
-  it('loads institution symbols, filters selected values, and patches a symbol-object array', async () => {
+  it('adds manual symbol values and patches a symbol-object array', async () => {
     render(
       <SettingsConfigEditor
         configKey="config"
@@ -98,20 +91,24 @@ describe('SettingsConfigEditor symbolList', () => {
 
     expect(screen.getByText('TEST:ANINST')).toBeInTheDocument();
     expect(screen.getByText('OLD:MISSING')).toBeInTheDocument();
-    expect(mockUseInfiniteQuery).toHaveBeenCalledWith(expect.objectContaining({
-      enabled: true,
-      queryKey: ['directory/entries', 'type=Institution', 'symbolList'],
-    }));
+    expect(mockKy).not.toHaveBeenCalled();
 
     fireEvent.click(document.getElementById('edit-settings-config-selectedSymbols'));
 
-    const selector = screen.getByRole('combobox', { name: 'Select a symbol for {field}' });
-    expect(within(selector).queryByRole('option', { name: 'TEST:ANINST' })).not.toBeInTheDocument();
-    const newSymbolOption = within(selector).getByRole('option', { name: 'TEST:ANINSTTOO' });
+    const authorityInput = screen.getByRole('textbox', { name: 'New authority for {field}' });
+    const nameInput = screen.getByRole('textbox', { name: 'New name for {field}' });
+    const addButton = document.getElementById('add-settings-config-selectedSymbols');
 
-    fireEvent.change(selector, { target: { value: newSymbolOption.value } });
+    expect(addButton).toBeDisabled();
+    fireEvent.change(authorityInput, { target: { value: ' TEST ' } });
+    expect(addButton).toBeDisabled();
+    fireEvent.change(nameInput, { target: { value: ' ANINSTTOO ' } });
+    expect(addButton).toBeEnabled();
+    fireEvent.click(addButton);
+
     expect(screen.getByText('TEST:ANINSTTOO')).toBeInTheDocument();
-    expect(within(selector).queryByRole('option', { name: 'TEST:ANINSTTOO' })).not.toBeInTheDocument();
+    expect(authorityInput).toHaveValue('');
+    expect(nameInput).toHaveValue('');
 
     fireEvent.click(document.getElementById('remove-settings-config-selectedSymbols-1'));
     fireEvent.click(document.getElementById('save-settings-config-selectedSymbols'));
@@ -131,7 +128,7 @@ describe('SettingsConfigEditor symbolList', () => {
     ));
   });
 
-  it('ignores legacy strings and malformed symbol objects', () => {
+  it('ignores malformed values and requires both manual fields', () => {
     render(
       <SettingsConfigEditor
         configKey="config"
@@ -152,76 +149,18 @@ describe('SettingsConfigEditor symbolList', () => {
 
     fireEvent.click(document.getElementById('edit-settings-config-selectedSymbols'));
 
-    const selector = screen.getByRole('combobox', { name: 'Select a symbol for {field}' });
-    expect(within(selector).getByRole('option', { name: 'TEST:ANINST' })).toBeInTheDocument();
-    expect(within(selector).getByRole('option', { name: 'TEST:ANINSTTOO' })).toBeInTheDocument();
+    const authorityInput = screen.getByRole('textbox', { name: 'New authority for {field}' });
+    const nameInput = screen.getByRole('textbox', { name: 'New name for {field}' });
+    const addButton = document.getElementById('add-settings-config-selectedSymbols');
+
+    fireEvent.change(authorityInput, { target: { value: 'TEST' } });
+    expect(addButton).toBeDisabled();
+    fireEvent.change(authorityInput, { target: { value: '   ' } });
+    fireEvent.change(nameInput, { target: { value: 'ANINST' } });
+    expect(addButton).toBeDisabled();
   });
 
-  it('requests successive institution pages and waits for completion', async () => {
-    mockUseInfiniteQuery.mockReturnValue({
-      data: {
-        pages: [{
-          items: [{ symbols: [{ authority: 'TEST', symbol: 'ANINST' }] }],
-          about: { count: 2 },
-        }],
-      },
-      fetchNextPage: mockFetchNextPage,
-      hasNextPage: true,
-      isError: false,
-      isFetchingNextPage: false,
-      isLoading: false,
-    });
-
-    render(
-      <SettingsConfigEditor
-        configKey="config"
-        fieldLabelId={path => path}
-        fieldMapping={fieldMapping}
-        initialResource={{ config: { selectedSymbols: [] } }}
-        resourcePath="directory/entries/by-id/entry-id"
-        successMessage="Saved"
-      />
-    );
-
-    await waitFor(() => expect(mockFetchNextPage).toHaveBeenCalledTimes(1));
-    fireEvent.click(document.getElementById('edit-settings-config-selectedSymbols'));
-    expect(screen.getByRole('combobox', { name: 'Select a symbol for {field}' })).toBeDisabled();
-
-    const queryConfig = mockUseInfiniteQuery.mock.calls[0][0];
-    const firstPage = { items: [{ id: 'one' }], about: { count: 2 } };
-    const lastPage = { items: [{ id: 'two' }] };
-    expect(queryConfig.getNextPageParam(firstPage, [firstPage])).toEqual(1);
-    expect(queryConfig.getNextPageParam(lastPage, [firstPage, lastPage])).toBeUndefined();
-
-    const json = jest.fn().mockResolvedValue({ items: [] });
-    mockKy.mockReturnValue({ json });
-    await queryConfig.queryFn({ pageParam: 1000 });
-    expect(mockKy).toHaveBeenCalledWith(
-      'directory/entries?cql=type%3DInstitution&limit=1000&offset=1000',
-    );
-    expect(json).toHaveBeenCalledTimes(1);
-  });
-
-  it('keeps symbols with colliding display labels distinct', async () => {
-    mockUseInfiniteQuery.mockReturnValue({
-      data: {
-        pages: [{
-          items: [{
-            symbols: [
-              { authority: 'A:B', symbol: 'C' },
-              { authority: 'A', symbol: 'B:C' },
-            ],
-          }],
-          about: { count: 1 },
-        }],
-      },
-      fetchNextPage: mockFetchNextPage,
-      hasNextPage: false,
-      isError: false,
-      isFetchingNextPage: false,
-      isLoading: false,
-    });
-
+  it('supports Enter, preserves colliding labels, and rejects exact duplicates', async () => {
     render(
       <SettingsConfigEditor
         configKey="config"
@@ -235,18 +174,92 @@ describe('SettingsConfigEditor symbolList', () => {
 
     fireEvent.click(document.getElementById('edit-settings-config-selectedSymbols'));
 
-    const selector = screen.getByRole('combobox', { name: 'Select a symbol for {field}' });
-    const collidingOptions = within(selector).getAllByRole('option', { name: 'A:B:C' });
-    expect(collidingOptions).toHaveLength(2);
-    expect(collidingOptions[0].value).not.toEqual(collidingOptions[1].value);
-    const authorityWithColonOption = collidingOptions.find(option => JSON.parse(option.value)[0] === 'A:B');
+    const authorityInput = screen.getByRole('textbox', { name: 'New authority for {field}' });
+    const nameInput = screen.getByRole('textbox', { name: 'New name for {field}' });
 
-    fireEvent.change(selector, { target: { value: authorityWithColonOption.value } });
+    fireEvent.change(authorityInput, { target: { value: 'A:B' } });
+    fireEvent.change(nameInput, { target: { value: 'C' } });
+    fireEvent.keyDown(nameInput, { key: 'Enter' });
+    fireEvent.change(authorityInput, { target: { value: 'A' } });
+    fireEvent.change(nameInput, { target: { value: 'B:C' } });
+    fireEvent.keyDown(authorityInput, { key: 'Enter' });
+
+    expect(screen.getAllByText('A:B:C')).toHaveLength(2);
+
+    fireEvent.change(authorityInput, { target: { value: 'A:B' } });
+    fireEvent.change(nameInput, { target: { value: 'C' } });
+    fireEvent.click(document.getElementById('add-settings-config-selectedSymbols'));
+    expect(screen.getAllByText('A:B:C')).toHaveLength(2);
+    expect(screen.getByRole('alert')).toHaveTextContent('The symbol {symbol} already exists.');
+    expect(authorityInput).toHaveValue('A:B');
+    expect(nameInput).toHaveValue('C');
+
+    fireEvent.change(authorityInput, { target: { value: 'A:B ' } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.keyDown(nameInput, { key: 'Enter' });
+    expect(screen.getByRole('alert')).toHaveTextContent('The symbol {symbol} already exists.');
+    expect(screen.getAllByText('A:B:C')).toHaveLength(2);
     fireEvent.click(document.getElementById('save-settings-config-selectedSymbols'));
 
     await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(
       'directory/entries/by-id/entry-id',
-      { json: { config: { selectedSymbols: [{ authority: 'A:B', symbol: 'C' }] } } },
+      {
+        json: {
+          config: {
+            selectedSymbols: [
+              { authority: 'A:B', symbol: 'C' },
+              { authority: 'A', symbol: 'B:C' },
+            ],
+          },
+        },
+      },
     ));
+  });
+
+  it('adds symbols while assembling an object-array value and clears transient inputs', () => {
+    const objectFieldMapping = [{
+      fieldName: 'groups',
+      valueType: 'objectArray',
+      objectMap: [{ fieldName: 'symbols', valueType: 'symbolList', required: true }],
+    }];
+
+    render(
+      <SettingsConfigEditor
+        configKey="config"
+        fieldLabelId={path => path}
+        fieldMapping={objectFieldMapping}
+        initialResource={{ config: { groups: [] } }}
+        resourcePath="directory/entries/by-id/entry-id"
+        successMessage="Saved"
+      />
+    );
+
+    fireEvent.click(document.getElementById('edit-settings-config-groups'));
+    const authorityInput = screen.getByRole('textbox', { name: 'New authority for {field}' });
+    const nameInput = screen.getByRole('textbox', { name: 'New name for {field}' });
+
+    fireEvent.change(authorityInput, { target: { value: 'ISIL' } });
+    fireEvent.change(nameInput, { target: { value: 'ABC' } });
+    fireEvent.click(document.getElementById('add-settings-config-groups-new-symbols'));
+
+    expect(screen.getByText('ISIL:ABC')).toBeInTheDocument();
+    expect(authorityInput).toHaveValue('');
+    expect(nameInput).toHaveValue('');
+
+    fireEvent.change(authorityInput, { target: { value: 'ISIL' } });
+    fireEvent.change(nameInput, { target: { value: 'ABC' } });
+    fireEvent.click(document.getElementById('add-settings-config-groups-new-symbols'));
+    expect(screen.getByRole('alert')).toHaveTextContent('The symbol {symbol} already exists.');
+    expect(authorityInput).toHaveValue('ISIL');
+    expect(nameInput).toHaveValue('ABC');
+
+    fireEvent.change(nameInput, { target: { value: 'ABD' } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    fireEvent.click(document.getElementById('add-settings-config-groups'));
+    expect(screen.getByText('ISIL:ABC')).toBeInTheDocument();
+    expect(authorityInput).toHaveValue('');
+    expect(nameInput).toHaveValue('');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
