@@ -9,7 +9,6 @@ import {
   Col,
   IconButton,
   KeyValue,
-  Layout,
   Modal,
   ModalFooter,
   Row,
@@ -183,7 +182,7 @@ const EntryOwnedNetworksEditor = ({ id }) => {
       label: '',
       fit: true,
       render: network => (
-        <Layout className="full flex justify-end">
+        <>
           <IconButton
             aria-label={intl.formatMessage({ id: 'ui-rsdir.network.edit.action' }, { name: networkLabel(network) })}
             icon="edit"
@@ -197,7 +196,7 @@ const EntryOwnedNetworksEditor = ({ id }) => {
             id={`clickable-delete-network-${network.id}`}
             onClick={() => deleter.mutate(network.id)}
           />
-        </Layout>
+        </>
       ),
     },
   ];

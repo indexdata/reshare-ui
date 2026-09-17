@@ -7,7 +7,6 @@ import {
   Col,
   IconButton,
   KeyValue,
-  Layout,
   Row,
   Select,
 } from '@folio/stripes/components';
@@ -134,15 +133,13 @@ const EntryTiersEditor = ({ id }) => {
       label: '',
       fit: true,
       render: tier => (
-        <Layout className="full flex justify-end">
-          <IconButton
-            aria-label={intl.formatMessage({ id: 'ui-rsdir.tiers.delete.action' }, { name: tierLabel(tier) })}
-            disabled={deleteTier.isLoading && deletingTierId === tier.id}
-            icon="trash"
-            id={`clickable-delete-tier-${tier.id}`}
-            onClick={() => deleteTier.mutate(tier.id)}
-          />
-        </Layout>
+        <IconButton
+          aria-label={intl.formatMessage({ id: 'ui-rsdir.tiers.delete.action' }, { name: tierLabel(tier) })}
+          disabled={deleteTier.isLoading && deletingTierId === tier.id}
+          icon="trash"
+          id={`clickable-delete-tier-${tier.id}`}
+          onClick={() => deleteTier.mutate(tier.id)}
+        />
       ),
     },
   ];

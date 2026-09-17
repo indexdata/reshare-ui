@@ -7,7 +7,6 @@ import {
   Col,
   IconButton,
   KeyValue,
-  Layout,
   Row,
   Select,
 } from '@folio/stripes/components';
@@ -134,15 +133,13 @@ const EntryNetworksEditor = ({ id }) => {
       label: '',
       fit: true,
       render: network => (
-        <Layout className="full flex justify-end">
-          <IconButton
-            aria-label={intl.formatMessage({ id: 'ui-rsdir.networks.delete.action' }, { name: networkLabel(network) })}
-            disabled={deleteNetwork.isLoading && deletingNetworkId === network.id}
-            icon="trash"
-            id={`clickable-delete-network-${network.id}`}
-            onClick={() => deleteNetwork.mutate(network.id)}
-          />
-        </Layout>
+        <IconButton
+          aria-label={intl.formatMessage({ id: 'ui-rsdir.networks.delete.action' }, { name: networkLabel(network) })}
+          disabled={deleteNetwork.isLoading && deletingNetworkId === network.id}
+          icon="trash"
+          id={`clickable-delete-network-${network.id}`}
+          onClick={() => deleteNetwork.mutate(network.id)}
+        />
       ),
     },
   ];

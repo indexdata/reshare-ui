@@ -9,7 +9,6 @@ import {
   Col,
   IconButton,
   KeyValue,
-  Layout,
   Modal,
   ModalFooter,
   Row,
@@ -199,7 +198,7 @@ const EntryOwnedTiersEditor = ({ id }) => {
       label: '',
       fit: true,
       render: tier => (
-        <Layout className="full flex justify-end">
+        <>
           <IconButton
             aria-label={intl.formatMessage({ id: 'ui-rsdir.tier.edit.action' }, { name: tierLabel(tier) })}
             icon="edit"
@@ -213,7 +212,7 @@ const EntryOwnedTiersEditor = ({ id }) => {
             id={`clickable-delete-tier-${tier.id}`}
             onClick={() => deleter.mutate(tier.id)}
           />
-        </Layout>
+        </>
       ),
     },
   ];
