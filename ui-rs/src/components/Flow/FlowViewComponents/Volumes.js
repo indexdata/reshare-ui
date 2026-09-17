@@ -1,14 +1,9 @@
 import React, { useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { Accordion, Button, ConfirmationModal, Icon, Layout, MultiColumnList, NoValue } from '@folio/stripes/components';
-import { useIsActionPending, usePerformAction } from '@projectreshare/stripes-reshare';
+import { Accordion, Button, ConfirmationModal, Icon, NoValue } from '@folio/stripes/components';
+import { SimpleTable, useIsActionPending, usePerformAction } from '@projectreshare/stripes-reshare';
 
 import actionMeta from '../actionMeta';
-
-// A blank header and a lone icon give MCL little to measure, so floor the column.
-// No max, deliberately: MCL then stretches the last column over the row's slack,
-// which is what carries the right-aligned button out to the trailing edge.
-const COLUMN_WIDTHS = { remove: { min: 60 } };
 
 // Items attached to a lending request, whether the LMS supplied them or a lender
 // attached them by hand. Broker embeds them on the request, so nothing is fetched
@@ -37,16 +32,32 @@ const Volumes = ({ request, actions = [] }) => {
     }
   };
 
-  const formatter = {
-    callNumber: item => item.callNumber || <NoValue />,
-    title: item => item.title || <NoValue />,
-    // UNKNOWN is also where a skipped LMS operation (integration off, manual LMS)
-    // leaves an item, so it reads as blank rather than as a fault.
-    lmsStatus: item => (item.lmsStatus && item.lmsStatus !== 'UNKNOWN'
-      ? <FormattedMessage id={`ui-rs.flow.volumes.lmsStatus.${item.lmsStatus}`} />
-      : <NoValue />),
-    remove: item => (
-      <Layout className="full flex justify-end">
+  const columns = [
+    { key: 'barcode', label: <FormattedMessage id="ui-rs.flow.volumes.itemBarcode" /> },
+    {
+      key: 'callNumber',
+      label: <FormattedMessage id="ui-rs.flow.volumes.callNumber" />,
+      render: item => item.callNumber || <NoValue />,
+    },
+    {
+      key: 'title',
+      label: <FormattedMessage id="ui-rs.flow.volumes.title" />,
+      render: item => item.title || <NoValue />,
+    },
+    {
+      key: 'lmsStatus',
+      label: <FormattedMessage id="ui-rs.flow.volumes.lmsStatus" />,
+      // UNKNOWN is also where a skipped LMS operation (integration off, manual LMS)
+      // leaves an item, so it reads as blank rather than as a fault.
+      render: item => (item.lmsStatus && item.lmsStatus !== 'UNKNOWN'
+        ? <FormattedMessage id={`ui-rs.flow.volumes.lmsStatus.${item.lmsStatus}`} />
+        : <NoValue />),
+    },
+    ...(canRemove ? [{
+      key: 'actions',
+      label: '',
+      fit: true,
+      render: item => (
         <Button
           buttonStyle="slim"
           marginBottom0
@@ -56,16 +67,8 @@ const Volumes = ({ request, actions = [] }) => {
         >
           <Icon icon={actionMeta['remove-item']?.icon} />
         </Button>
-      </Layout>
-    ),
-  };
-
-  const visibleColumns = [
-    'barcode',
-    'callNumber',
-    'title',
-    'lmsStatus',
-    ...(canRemove ? ['remove'] : []),
+      ),
+    }] : []),
   ];
 
   return (
@@ -73,18 +76,11 @@ const Volumes = ({ request, actions = [] }) => {
       id="volumes"
       label={<FormattedMessage id="ui-rs.flow.sections.volumes" />}
     >
-      <MultiColumnList
-        columnMapping={{
-          barcode: <FormattedMessage id="ui-rs.flow.volumes.itemBarcode" />,
-          callNumber: <FormattedMessage id="ui-rs.flow.volumes.callNumber" />,
-          title: <FormattedMessage id="ui-rs.flow.volumes.title" />,
-          lmsStatus: <FormattedMessage id="ui-rs.flow.volumes.lmsStatus" />,
-          remove: '',
-        }}
-        columnWidths={COLUMN_WIDTHS}
-        contentData={items}
-        formatter={formatter}
-        visibleColumns={visibleColumns}
+      <SimpleTable
+        id="volumes-list"
+        caption={intl.formatMessage({ id: 'ui-rs.flow.sections.volumes' })}
+        columns={columns}
+        rows={items}
       />
       <ConfirmationModal
         open={!!pendingRemoval}
