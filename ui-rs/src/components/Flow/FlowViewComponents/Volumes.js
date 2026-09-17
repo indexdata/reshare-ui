@@ -40,6 +40,11 @@ const Volumes = ({ request, actions = [] }) => {
   const formatter = {
     callNumber: item => item.callNumber || <NoValue />,
     title: item => item.title || <NoValue />,
+    // UNKNOWN is also where a skipped LMS operation (integration off, manual LMS)
+    // leaves an item, so it reads as blank rather than as a fault.
+    lmsStatus: item => (item.lmsStatus && item.lmsStatus !== 'UNKNOWN'
+      ? <FormattedMessage id={`ui-rs.flow.volumes.lmsStatus.${item.lmsStatus}`} />
+      : <NoValue />),
     remove: item => (
       <Layout className="full flex justify-end">
         <Button
@@ -59,6 +64,7 @@ const Volumes = ({ request, actions = [] }) => {
     'barcode',
     'callNumber',
     'title',
+    'lmsStatus',
     ...(canRemove ? ['remove'] : []),
   ];
 
@@ -72,6 +78,7 @@ const Volumes = ({ request, actions = [] }) => {
           barcode: <FormattedMessage id="ui-rs.flow.volumes.itemBarcode" />,
           callNumber: <FormattedMessage id="ui-rs.flow.volumes.callNumber" />,
           title: <FormattedMessage id="ui-rs.flow.volumes.title" />,
+          lmsStatus: <FormattedMessage id="ui-rs.flow.volumes.lmsStatus" />,
           remove: '',
         }}
         columnWidths={COLUMN_WIDTHS}

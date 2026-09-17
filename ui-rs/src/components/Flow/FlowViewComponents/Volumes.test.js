@@ -19,8 +19,8 @@ const messages = {
 };
 
 const items = [
-  { id: 'i-1', barcode: '30001000123456', title: 'Volume 1', callNumber: 'PN1993.5' },
-  { id: 'i-2', barcode: '30001000654321', title: 'Volume 2' },
+  { id: 'i-1', barcode: '30001000123456', title: 'Volume 1', callNumber: 'PN1993.5', lmsStatus: 'CHECKED_OUT' },
+  { id: 'i-2', barcode: '30001000654321', title: 'Volume 2', lmsStatus: 'UNKNOWN' },
 ];
 
 const removable = [{ name: 'remove-item' }, { name: 'ship' }];
@@ -50,6 +50,19 @@ describe('Volumes accordion', () => {
     renderVolumes({ id: 'pr-1', items: [items[0]] }, []);
     expect(screen.getByText('ui-rs.flow.volumes.title')).toBeInTheDocument();
     expect(screen.getByText('Volume 1')).toBeInTheDocument();
+  });
+
+  it('shows each confirmed LMS status and leaves unconfirmed ones blank', () => {
+    renderVolumes({ id: 'pr-1', items }, []);
+
+    expect(screen.getByText('ui-rs.flow.volumes.lmsStatus')).toBeInTheDocument();
+    expect(screen.getByText('ui-rs.flow.volumes.lmsStatus.CHECKED_OUT')).toBeInTheDocument();
+    expect(screen.queryByText('ui-rs.flow.volumes.lmsStatus.UNKNOWN')).not.toBeInTheDocument();
+  });
+
+  it('treats an item without an LMS status as unconfirmed', () => {
+    renderVolumes({ id: 'pr-1', items: [{ id: 'i-3', barcode: '30001000999999' }] }, []);
+    expect(screen.queryByText(/^ui-rs\.flow\.volumes\.lmsStatus\./)).not.toBeInTheDocument();
   });
 
   it('offers removal only when the action is available', () => {
