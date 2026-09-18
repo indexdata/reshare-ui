@@ -6,3 +6,7 @@
     background-color: #f7d5af;
     font-weight: bold;
 }
+
+.supplierNote {
+    white-space: pre-wrap;
+}

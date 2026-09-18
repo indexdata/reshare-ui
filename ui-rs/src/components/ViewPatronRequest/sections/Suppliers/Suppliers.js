@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { FormattedMessage } from 'react-intl';
-import { useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { ReasonUnfilled, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import {
   Accordion,
   Card,
@@ -9,17 +9,21 @@ import {
   Loading,
   Row,
 } from '@folio/stripes/components';
-import useDirectoryEntry from '../../../../util/useDirectoryEntry';
 import css from './Suppliers.css';
 
+// Normalize known open-code values for case-insensitive translation lookup.
+const reasonUnfilledCode = (reason) => ReasonUnfilled.find(
+  code => code.toLowerCase() === reason.toLowerCase()
+) ?? reason;
+
 const SupplierCard = ({ supplier, position }) => {
-  const { data: entry } = useDirectoryEntry(supplier.supplierSymbol);
+  const { reasonUnfilled, note } = supplier;
 
   return (
     <Card
-      headerStart={`${position}. ${entry?.name ?? supplier.supplierSymbol}`}
-      headerEnd={entry?.id && (
-        <Link to={`/directory/entries/${entry.id}`}>
+      headerStart={`${position}. ${supplier.supplierName || supplier.supplierSymbol}`}
+      headerEnd={supplier.directoryEntryId && (
+        <Link to={`/directory/entries/${supplier.directoryEntryId}`}>
           <FormattedMessage id="ui-rs.viewInDirectory" />
         </Link>
       )}
@@ -56,13 +60,26 @@ const SupplierCard = ({ supplier, position }) => {
             )}
           </KeyValue>
         </Col>
-        <Col xs={6}>
-          <KeyValue
-            label={<FormattedMessage id="ui-rs.suppliers.supplierRequestId" />}
-            value={supplier.supplierRequestID}
-          />
-        </Col>
+        {reasonUnfilled && (
+          <Col xs={6}>
+            <KeyValue label={<FormattedMessage id="ui-rs.suppliers.reasonUnfilled" />}>
+              <FormattedMessage
+                id={`stripes-reshare.iso18626.ReasonUnfilled.${reasonUnfilledCode(reasonUnfilled)}`}
+                defaultMessage={reasonUnfilled}
+              />
+            </KeyValue>
+          </Col>
+        )}
       </Row>
+      {note && (
+        <Row>
+          <Col xs={12}>
+            <KeyValue label={<FormattedMessage id="ui-rs.suppliers.note" />}>
+              <div className={css.supplierNote}>{note}</div>
+            </KeyValue>
+          </Col>
+        </Row>
+      )}
     </Card>
   );
 };

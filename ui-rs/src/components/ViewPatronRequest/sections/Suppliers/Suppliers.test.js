@@ -2,7 +2,6 @@ import { screen } from '@folio/jest-config-stripes/testing-library/react';
 
 import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
-import { quietQueryLog } from '../../../../test/quietQueryLog';
 import Suppliers from './Suppliers';
 
 // Jest permits hoisted mock factories to reference variables prefixed with mock.
@@ -15,36 +14,35 @@ jest.mock('@folio/stripes/core', () => require('../../../../test/stripesCore').m
 const skipped = {
   id: 'ls-1',
   supplierSymbol: 'ISIL:SUP-A',
+  supplierName: 'Library A',
+  directoryEntryId: 'ent-a',
   ordinal: 0,
   supplierStatus: 'skipped',
   lastStatus: 'Unfilled',
-  supplierRequestID: 'SUP-9',
 };
 
 const selected = {
   id: 'ls-2',
   supplierSymbol: 'ISIL:SUP-B',
+  supplierName: 'Library B',
+  directoryEntryId: 'ent-b',
   ordinal: 1,
   supplierStatus: 'selected',
   lastStatus: 'WillSupply',
 };
 
-const renderSection = (record = { id: 'pr-1', side: 'borrowing', requesterRequestId: 'REQ-101' }) => (
-  renderWithRs(<Suppliers record={record} />)
+const renderSection = (record = { id: 'pr-1', side: 'borrowing', requesterRequestId: 'REQ-101' }, opts) => (
+  renderWithRs(<Suppliers record={record} />, opts)
 );
 
 describe('Suppliers', () => {
-  quietQueryLog(/directory entry not found/);
-
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('lists the rota in order, naming each supplier from the directory', async () => {
+  it('lists the rota in order, naming each supplier from the broker', async () => {
     mockOkapi.setResponses({
       'broker/located_suppliers': { items: [skipped, selected] },
-      'directory/entries/by-symbol/ISIL:SUP-A': { id: 'ent-a', name: 'Library A' },
-      'directory/entries/by-symbol/ISIL:SUP-B': { id: 'ent-b', name: 'Library B' },
     });
     renderSection();
 
@@ -59,7 +57,6 @@ describe('Suppliers', () => {
     // Both render through their defaultMessage, the raw code, until the key lands.
     expect(screen.getByText('skipped')).toBeInTheDocument();
     expect(screen.getByText('Unfilled')).toBeInTheDocument();
-    expect(screen.getByText('SUP-9')).toBeInTheDocument();
 
     const links = screen.getAllByRole('link', { name: 'ui-rs.viewInDirectory' });
     expect(links.map(l => l.getAttribute('href'))).toEqual([
@@ -68,17 +65,57 @@ describe('Suppliers', () => {
     ]);
   });
 
-  it('falls back to the bare symbol, with no link, when the directory has no entry', async () => {
+  it('falls back to the bare symbol, with no link, for a supplier not in the directory', async () => {
+    // Crosslink currently serializes a nameless peer as an empty string.
     mockOkapi.setResponses({
-      'broker/located_suppliers': { items: [skipped] },
-      'directory/entries/by-symbol/ISIL:SUP-A': () => {
-        throw Object.assign(new Error('directory entry not found'), { status: 404 });
+      'broker/located_suppliers': {
+        items: [{ ...skipped, supplierName: '', directoryEntryId: undefined }],
       },
     });
     renderSection();
 
     expect(await screen.findByText('1. ISIL:SUP-A')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'ui-rs.viewInDirectory' })).not.toBeInTheDocument();
+  });
+
+  it('omits reason and note when neither is present', async () => {
+    mockOkapi.setResponses({
+      'broker/located_suppliers': { items: [skipped] },
+    });
+    renderSection();
+
+    await screen.findByText('1. Library A');
+    expect(screen.queryByText('ui-rs.suppliers.reasonUnfilled')).not.toBeInTheDocument();
+    expect(screen.queryByText('ui-rs.suppliers.note')).not.toBeInTheDocument();
+  });
+
+  it('translates a known reason case-insensitively and shows its note', async () => {
+    mockOkapi.setResponses({
+      'broker/located_suppliers': {
+        items: [{
+          ...skipped,
+          reasonUnfilled: 'notonshelf',
+          note: 'Shelf checked twice.\nTry us again next week.',
+        }],
+      },
+    });
+    renderSection(undefined, {
+      messages: { 'stripes-reshare.iso18626.ReasonUnfilled.NotOnShelf': 'Not on shelf' },
+    });
+
+    expect(await screen.findByText('Not on shelf')).toBeInTheDocument();
+    expect(screen.getByText(/Shelf checked twice/)).toHaveTextContent('Try us again next week.');
+  });
+
+  it('shows an unrecognised reason as received', async () => {
+    mockOkapi.setResponses({
+      'broker/located_suppliers': {
+        items: [{ ...skipped, reasonUnfilled: 'Currently no books available' }],
+      },
+    });
+    renderSection();
+
+    expect(await screen.findByText('Currently no books available')).toBeInTheDocument();
   });
 
   it('shows the empty state when nothing was located, without a wasted fetch', async () => {
