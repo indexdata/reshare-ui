@@ -216,6 +216,61 @@ describe('SettingsConfigEditor symbolList', () => {
     ));
   });
 
+  it('uses a field-specific save error message and preserves the draft after a failed patch', async () => {
+    const saveError = Object.assign(new Error('Request failed'), {
+      response: { status: 400 },
+    });
+    mockPatch.mockRejectedValueOnce(saveError);
+
+    render(
+      <SettingsConfigEditor
+        configKey="config"
+        fieldLabelId={path => path}
+        fieldMapping={[{
+          ...fieldMapping[0],
+          getSaveErrorMessage: error => (error.response?.status === 400 ? 'Check the symbols.' : undefined),
+        }]}
+        initialResource={{
+          config: {
+            selectedSymbols: [{ authority: 'TEST', symbol: 'ANINST' }],
+          },
+        }}
+        resourcePath="directory/entries/by-id/entry-id"
+        successMessage="Saved"
+      />
+    );
+
+    fireEvent.click(document.getElementById('edit-settings-config-selectedSymbols'));
+    fireEvent.click(document.getElementById('save-settings-config-selectedSymbols'));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Check the symbols.');
+    expect(screen.getByText('TEST:ANINST')).toBeInTheDocument();
+    expect(document.getElementById('save-settings-config-selectedSymbols')).toBeInTheDocument();
+  });
+
+  it('falls back to the original error message when the field does not override it', async () => {
+    mockPatch.mockRejectedValueOnce(new Error('Request failed'));
+
+    render(
+      <SettingsConfigEditor
+        configKey="config"
+        fieldLabelId={path => path}
+        fieldMapping={[{
+          ...fieldMapping[0],
+          getSaveErrorMessage: () => undefined,
+        }]}
+        initialResource={{ config: { selectedSymbols: [] } }}
+        resourcePath="directory/entries/by-id/entry-id"
+        successMessage="Saved"
+      />
+    );
+
+    fireEvent.click(document.getElementById('edit-settings-config-selectedSymbols'));
+    fireEvent.click(document.getElementById('save-settings-config-selectedSymbols'));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Request failed');
+  });
+
   it('adds symbols while assembling an object-array value and clears transient inputs', () => {
     const objectFieldMapping = [{
       fieldName: 'groups',

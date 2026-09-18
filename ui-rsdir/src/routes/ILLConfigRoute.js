@@ -20,6 +20,12 @@ const fieldMap = [
   {
     fieldName: 'lendersOfLastResort',
     valueType: 'symbolList',
+    getSaveErrorMessage: error => (error.response?.status === 400 ? (
+      <FormattedMessage
+        id="ui-rsdir.illConfig.lendersOfLastResort.invalid"
+        defaultMessage="Please make sure all Lenders of Last Resort symbols are valid and not duplicated."
+      />
+    ) : undefined),
   },
   {
     fieldName: 'includeRequestingAgencyInfo',

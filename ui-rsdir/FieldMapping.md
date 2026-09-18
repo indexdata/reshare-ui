@@ -22,6 +22,7 @@ Each top-level mapping is displayed in its own card and saved independently. Sav
 | `required` | boolean | No | Prevents saving when the value is empty. For an `objectArray` child, it also prevents adding an object without that value. |
 | `validChoices` | array | No | Renders a scalar field as a select containing these choices plus an empty choice. Values are converted to strings in the editor. |
 | `defaultDesc` | string | No | Displays a question-mark tooltip beside the field label, using this value when no translated description is available. |
+| `getSaveErrorMessage` | function | No | Receives a failed PATCH error and may return a field-specific React node or string. Returning `undefined` uses the error's default message. |
 
 Use `valueType`, not `type`, when declaring a field type.
 

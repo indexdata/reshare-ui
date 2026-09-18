@@ -117,6 +117,7 @@
   "illConfig.iso18626Url" : "ISO 18626 URL",
   "illConfig.iso18626Vendor" : "ISO 18626 Vendor",
   "illConfig.lendersOfLastResort" : "Lenders of Last Resort",
+  "illConfig.lendersOfLastResort.invalid" : "Please make sure all Lenders of Last Resort symbols are valid and not duplicated.",
   "illConfig.includeRequestingAgencyInfo" : "Include Requesting Agency Info",
   "illConfig.includeSupplierInfo" : "Include Supplier Info",
   "illConfig.includeReturnInfo" : "Include Return Info",

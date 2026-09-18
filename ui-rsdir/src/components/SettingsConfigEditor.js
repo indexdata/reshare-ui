@@ -900,7 +900,7 @@ const SettingsConfigEditor = ({
 
         setFieldErrors(current => ({
           ...current,
-          [fieldName]: error.message,
+          [fieldName]: field.getSaveErrorMessage?.(error) ?? error.message,
         }));
       })
       .finally(() => {
