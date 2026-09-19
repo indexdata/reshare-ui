@@ -79,7 +79,7 @@ Represents a JSON array of strings. Existing strings are displayed as removable 
 
 ```js
 {
-  fieldName: 'lendersOfLastResort',
+  fieldName: 'tags',
   valueType: 'stringArray',
 }
 ```
@@ -88,7 +88,7 @@ Setting `required: true` requires the array to contain at least one string.
 
 ### `symbolList`
 
-Represents a JSON array of symbol objects containing `authority` and `symbol` properties. Existing symbols are displayed as removable `authority:name` blocks. The editor provides Authority and Name fields plus an Add button for appending symbols; both values are required, trimmed, and compared exactly when preventing duplicates.
+Represents a JSON array of symbol objects containing `authority` and `symbol` properties. Existing symbols are displayed as removable `authority:symbol` blocks. The editor provides Authority and Name fields plus an Add button for appending symbols; both values are required, trimmed, and compared exactly when preventing duplicates.
 
 ```js
 {
@@ -97,7 +97,45 @@ Represents a JSON array of symbol objects containing `authority` and `symbol` pr
 }
 ```
 
-The Name field is stored in the object's `symbol` property. Setting `required: true` requires the array to contain at least one symbol.
+The Name field is stored in the object's `symbol` property. A stored value has this shape:
+
+```js
+[
+  { authority: 'ISIL', symbol: 'US-NYPL' },
+  { authority: 'OCLC', symbol: 'ZYU' },
+]
+```
+
+Setting `required: true` requires the array to contain at least one symbol. A `symbolList` may also be nested within a `subField`:
+
+```js
+{
+  fieldName: 'routing',
+  valueType: 'subField',
+  subMap: [
+    {
+      fieldName: 'preferredLenders',
+      valueType: 'symbolList',
+    },
+  ],
+}
+```
+
+It may also be a field within each object in an `objectArray`:
+
+```js
+{
+  fieldName: 'groups',
+  valueType: 'objectArray',
+  objectMap: [
+    {
+      fieldName: 'symbols',
+      valueType: 'symbolList',
+      required: true,
+    },
+  ],
+}
+```
 
 ### `stringMap`
 
@@ -170,7 +208,7 @@ Represents a JSON array of objects. It requires an `objectMap` defining the fiel
 
 Each object is displayed as a removable block containing its mapped fields. New objects are assembled in a separate form and must contain at least one mapped value. All required object fields must be supplied before the object can be added. Existing objects are removed and re-added rather than edited in place.
 
-An `objectMap` may contain scalar fields, fields with `validChoices`, `stringArray`, and `stringMap`. It may not contain `subField` or another `objectArray`.
+An `objectMap` may contain scalar fields, fields with `validChoices`, `stringArray`, `symbolList`, and `stringMap`. It may not contain `subField` or another `objectArray`.
 
 Setting `required: true` on the `objectArray` itself requires at least one object.
 
@@ -259,8 +297,8 @@ const fieldMap = [
         valueType: 'integer',
       },
       {
-        fieldName: 'tags',
-        valueType: 'stringArray',
+        fieldName: 'symbols',
+        valueType: 'symbolList',
       },
     ],
   },
