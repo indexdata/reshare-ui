@@ -22,6 +22,7 @@ Each top-level mapping is displayed in its own card and saved independently. Sav
 | `required` | boolean | No | Prevents saving when the value is empty. For an `objectArray` child, it also prevents adding an object without that value. |
 | `validChoices` | array | No | Renders a scalar field as a select containing these choices plus an empty choice. Values are converted to strings in the editor. |
 | `defaultDesc` | string | No | Displays a question-mark tooltip beside the field label, using this value when no translated description is available. |
+| `getSaveErrorMessage` | function | No | Receives a failed PATCH error and may return a field-specific React node or string. Returning `undefined` uses the error's default message. |
 
 Use `valueType`, not `type`, when declaring a field type.
 
@@ -78,12 +79,63 @@ Represents a JSON array of strings. Existing strings are displayed as removable 
 
 ```js
 {
-  fieldName: 'lendersOfLastResort',
+  fieldName: 'tags',
   valueType: 'stringArray',
 }
 ```
 
 Setting `required: true` requires the array to contain at least one string.
+
+### `symbolList`
+
+Represents a JSON array of symbol objects containing `authority` and `symbol` properties. Existing symbols are displayed as removable `authority:symbol` blocks. The editor provides Authority and Name fields plus an Add button for appending symbols; both values are required, trimmed, and compared exactly when preventing duplicates.
+
+```js
+{
+  fieldName: 'lendersOfLastResort',
+  valueType: 'symbolList',
+}
+```
+
+The Name field is stored in the object's `symbol` property. A stored value has this shape:
+
+```js
+[
+  { authority: 'ISIL', symbol: 'US-NYPL' },
+  { authority: 'OCLC', symbol: 'ZYU' },
+]
+```
+
+Setting `required: true` requires the array to contain at least one symbol. A `symbolList` may also be nested within a `subField`:
+
+```js
+{
+  fieldName: 'routing',
+  valueType: 'subField',
+  subMap: [
+    {
+      fieldName: 'preferredLenders',
+      valueType: 'symbolList',
+    },
+  ],
+}
+```
+
+It may also be a field within each object in an `objectArray`:
+
+```js
+{
+  fieldName: 'groups',
+  valueType: 'objectArray',
+  objectMap: [
+    {
+      fieldName: 'symbols',
+      valueType: 'symbolList',
+      required: true,
+    },
+  ],
+}
+```
 
 ### `stringMap`
 
@@ -156,7 +208,7 @@ Represents a JSON array of objects. It requires an `objectMap` defining the fiel
 
 Each object is displayed as a removable block containing its mapped fields. New objects are assembled in a separate form and must contain at least one mapped value. All required object fields must be supplied before the object can be added. Existing objects are removed and re-added rather than edited in place.
 
-An `objectMap` may contain scalar fields, fields with `validChoices`, `stringArray`, and `stringMap`. It may not contain `subField` or another `objectArray`.
+An `objectMap` may contain scalar fields, fields with `validChoices`, `stringArray`, `symbolList`, and `stringMap`. It may not contain `subField` or another `objectArray`.
 
 Setting `required: true` on the `objectArray` itself requires at least one object.
 
@@ -245,8 +297,8 @@ const fieldMap = [
         valueType: 'integer',
       },
       {
-        fieldName: 'tags',
-        valueType: 'stringArray',
+        fieldName: 'symbols',
+        valueType: 'symbolList',
       },
     ],
   },

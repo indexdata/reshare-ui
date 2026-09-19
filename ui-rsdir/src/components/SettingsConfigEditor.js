@@ -15,6 +15,7 @@ import css from './SettingsConfigEditor.css';
 
 const STRING_ARRAY = 'stringarray';
 const STRING_MAP = 'stringmap';
+const SYMBOL_LIST = 'symbollist';
 const SUB_FIELD = 'subfield';
 const OBJECT_ARRAY = 'objectarray';
 const INTEGER_PATTERN = /^-?\d+$/;
@@ -22,6 +23,18 @@ const INTEGER_PATTERN = /^-?\d+$/;
 const normalizedValueType = valueType => valueType?.toLowerCase?.() || 'string';
 
 const isObject = value => value && typeof value === 'object' && !Array.isArray(value);
+
+const isValidSymbol = value => isObject(value) &&
+  typeof value.authority === 'string' && !!value.authority &&
+  typeof value.symbol === 'string' && !!value.symbol;
+
+const symbolKey = value => JSON.stringify([value.authority, value.symbol]);
+
+const symbolLabel = value => `${value.authority}:${value.symbol}`;
+
+const normalizedSymbols = value => (Array.isArray(value) ? value : [])
+  .filter(isValidSymbol)
+  .map(({ authority, symbol }) => ({ authority, symbol }));
 
 const validateFieldDefinition = (field, path = field.fieldName) => {
   const type = normalizedValueType(field.valueType);
@@ -72,6 +85,10 @@ const toEditorValue = (value, field) => {
     return Array.isArray(value) ? [...value] : [];
   }
 
+  if (type === SYMBOL_LIST) {
+    return normalizedSymbols(value);
+  }
+
   if (type === STRING_MAP) {
     return isObject(value) ? { ...value } : {};
   }
@@ -106,6 +123,10 @@ const valueForPatch = (value, field) => {
 
   if (type === STRING_ARRAY) {
     return Array.isArray(value) ? [...value] : [];
+  }
+
+  if (type === SYMBOL_LIST) {
+    return normalizedSymbols(value);
   }
 
   if (type === STRING_MAP) {
@@ -151,7 +172,7 @@ const valueForPatch = (value, field) => {
 const isEmptyFieldValue = (value, field) => {
   const type = normalizedValueType(field.valueType);
 
-  if (type === STRING_ARRAY || type === OBJECT_ARRAY) {
+  if (type === STRING_ARRAY || type === SYMBOL_LIST || type === OBJECT_ARRAY) {
     return !Array.isArray(value) || value.length === 0;
   }
 
@@ -220,13 +241,14 @@ const SettingsConfigEditor = ({
   const [savingFields, setSavingFields] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [newStringValues, setNewStringValues] = useState({});
+  const [newSymbolValues, setNewSymbolValues] = useState({});
+  const [symbolEntryErrors, setSymbolEntryErrors] = useState({});
   const [newStringMapEntries, setNewStringMapEntries] = useState({});
   const [stringMapEntryErrors, setStringMapEntryErrors] = useState({});
   const [newObjectValues, setNewObjectValues] = useState({});
   const editingFieldsRef = useRef({});
   const activeResourcePathRef = useRef(resourcePath);
   const previousResourcePathRef = useRef(resourcePath);
-
   activeResourcePathRef.current = resourcePath;
 
   const booleanOptions = useMemo(() => [
@@ -259,6 +281,8 @@ const SettingsConfigEditor = ({
       setSavingFields({});
       setFieldErrors({});
       setNewStringValues({});
+      setNewSymbolValues({});
+      setSymbolEntryErrors({});
       setNewStringMapEntries({});
       setStringMapEntryErrors({});
       setNewObjectValues({});
@@ -373,6 +397,8 @@ const SettingsConfigEditor = ({
   const clearTransientState = rootPath => {
     setFieldErrors(current => omitRootPath(current, rootPath));
     setNewStringValues(current => omitRootPath(current, rootPath));
+    setNewSymbolValues(current => omitRootPath(current, rootPath));
+    setSymbolEntryErrors(current => omitRootPath(current, rootPath));
     setNewStringMapEntries(current => omitRootPath(current, rootPath));
     setStringMapEntryErrors(current => omitRootPath(current, rootPath));
     setNewObjectValues(current => omitRootPath(current, rootPath));
@@ -444,6 +470,65 @@ const SettingsConfigEditor = ({
       event.preventDefault();
       addStringArrayValue(field, parentField);
     }
+  };
+
+  const handleNewSymbolChange = (path, property) => event => {
+    setNewSymbolValues(current => ({
+      ...current,
+      [path]: {
+        authority: '',
+        symbol: '',
+        ...current[path],
+        [property]: event.target.value,
+      },
+    }));
+    setSymbolEntryErrors(current => ({ ...current, [path]: undefined }));
+  };
+
+  const addSymbolListValue = (field, parentField) => {
+    const path = pathForField(field, parentField);
+    const newValue = newSymbolValues[path] || { authority: '', symbol: '' };
+    const nextValue = {
+      authority: newValue.authority.trim(),
+      symbol: newValue.symbol.trim(),
+    };
+
+    if (!isValidSymbol(nextValue)) {
+      return;
+    }
+
+    const currentValues = draftFieldValue(field, parentField) || [];
+    if (currentValues.some(symbolValue => symbolKey(symbolValue) === symbolKey(nextValue))) {
+      setSymbolEntryErrors(current => ({
+        ...current,
+        [path]: intl.formatMessage({
+          id: 'ui-rsdir.settingsConfig.duplicateSymbol',
+          defaultMessage: 'The symbol {symbol} already exists.',
+        }, { symbol: symbolLabel(nextValue) }),
+      }));
+      return;
+    }
+
+    setDraftFieldValue(field, parentField, current => [...(Array.isArray(current) ? current : []), nextValue]);
+    setNewSymbolValues(current => ({ ...current, [path]: { authority: '', symbol: '' } }));
+    setSymbolEntryErrors(current => ({ ...current, [path]: undefined }));
+    setFieldErrors(current => ({ ...current, [path]: undefined }));
+  };
+
+  const handleNewSymbolKeyDown = (field, parentField) => event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      addSymbolListValue(field, parentField);
+    }
+  };
+
+  const removeSymbolListValue = (field, parentField, index) => {
+    const path = pathForField(field, parentField);
+    setDraftFieldValue(field, parentField, current => (
+      (Array.isArray(current) ? current : []).filter((_value, valueIndex) => valueIndex !== index)
+    ));
+    setSymbolEntryErrors(current => ({ ...current, [path]: undefined }));
+    setFieldErrors(current => ({ ...current, [path]: undefined }));
   };
 
   const handleNewStringMapEntryChange = (path, property) => event => {
@@ -566,6 +651,57 @@ const SettingsConfigEditor = ({
     setNewObjectChildValue(field, parentField, child, current => (
       current.filter((value, valueIndex) => valueIndex !== index)
     ));
+    setFieldErrors(current => ({
+      ...current,
+      [childPath]: undefined,
+      [`${pathForField(field, parentField)}.new`]: undefined,
+    }));
+  };
+
+  const addObjectSymbolListValue = (field, parentField, child) => {
+    const childPath = newObjectChildPath(field, parentField, child);
+    const newValue = newSymbolValues[childPath] || { authority: '', symbol: '' };
+    const nextValue = {
+      authority: newValue.authority.trim(),
+      symbol: newValue.symbol.trim(),
+    };
+
+    if (!isValidSymbol(nextValue)) {
+      return;
+    }
+
+    const objectValue = newObjectValue(field, parentField);
+    const currentValues = objectValue[child.fieldName] || [];
+    if (currentValues.some(symbolValue => symbolKey(symbolValue) === symbolKey(nextValue))) {
+      setSymbolEntryErrors(current => ({
+        ...current,
+        [childPath]: intl.formatMessage({
+          id: 'ui-rsdir.settingsConfig.duplicateSymbol',
+          defaultMessage: 'The symbol {symbol} already exists.',
+        }, { symbol: symbolLabel(nextValue) }),
+      }));
+      return;
+    }
+
+    setNewObjectChildValue(field, parentField, child, current => [
+      ...(Array.isArray(current) ? current : []),
+      nextValue,
+    ]);
+    setNewSymbolValues(current => ({ ...current, [childPath]: { authority: '', symbol: '' } }));
+    setSymbolEntryErrors(current => ({ ...current, [childPath]: undefined }));
+    setFieldErrors(current => ({
+      ...current,
+      [childPath]: undefined,
+      [`${pathForField(field, parentField)}.new`]: undefined,
+    }));
+  };
+
+  const removeObjectSymbolListValue = (field, parentField, child, index) => {
+    const childPath = newObjectChildPath(field, parentField, child);
+    setNewObjectChildValue(field, parentField, child, current => (
+      (Array.isArray(current) ? current : []).filter((_value, valueIndex) => valueIndex !== index)
+    ));
+    setSymbolEntryErrors(current => ({ ...current, [childPath]: undefined }));
     setFieldErrors(current => ({
       ...current,
       [childPath]: undefined,
@@ -764,7 +900,7 @@ const SettingsConfigEditor = ({
 
         setFieldErrors(current => ({
           ...current,
-          [fieldName]: error.message,
+          [fieldName]: field.getSaveErrorMessage?.(error) ?? error.message,
         }));
       })
       .finally(() => {
@@ -772,6 +908,94 @@ const SettingsConfigEditor = ({
           setSavingFields(current => ({ ...current, [fieldName]: false }));
         }
       });
+  };
+
+  const renderSymbolListValues = (field, isEditing, parentField) => {
+    const path = pathForField(field, parentField);
+    const controlPath = controlPathForField(field, parentField);
+    const value = isEditing ? draftFieldValue(field, parentField) : committedFieldValue(field, parentField);
+    const symbolValues = Array.isArray(value) ? value : [];
+
+    return (
+      <div className={css.structuredValues}>
+        {symbolValues.map((symbolValue, index) => (
+          <div className={css.structuredValue} key={`${symbolKey(symbolValue)}-${index}`}>
+            <span className={css.structuredValueText}>{symbolLabel(symbolValue)}</span>
+            {isEditing &&
+              <IconButton
+                aria-label={intl.formatMessage({
+                  id: 'ui-rsdir.settingsConfig.removeSymbol',
+                  defaultMessage: 'Remove {symbol} from {field}',
+                }, { field: labelForPath(path), symbol: symbolLabel(symbolValue) })}
+                disabled={savingFields[topFieldName(field, parentField)]}
+                icon="times"
+                iconSize="small"
+                id={`remove-${controlIdPrefix}-${controlPath}-${index}`}
+                onClick={() => removeSymbolListValue(field, parentField, index)}
+                size="small"
+              />
+            }
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderSymbolListInput = (field, parentField) => {
+    const path = pathForField(field, parentField);
+    const controlPath = controlPathForField(field, parentField);
+    const newValue = newSymbolValues[path] || { authority: '', symbol: '' };
+    const isSaving = savingFields[topFieldName(field, parentField)];
+    const canAdd = !!newValue.authority.trim() && !!newValue.symbol.trim();
+
+    return (
+      <div>
+        {renderSymbolListValues(field, true, parentField)}
+        <div className={css.structuredAdd}>
+          <div className={css.structuredInput}>
+            <TextField
+              aria-label={intl.formatMessage({
+                id: 'ui-rsdir.settingsConfig.newSymbolAuthority',
+                defaultMessage: 'New authority for {field}',
+              }, { field: labelForPath(path) })}
+              disabled={isSaving}
+              error={symbolEntryErrors[path] || fieldErrors[path]}
+              id={`${controlIdPrefix}-${controlPath}-authority`}
+              label={<FormattedMessage id="ui-rsdir.settingsConfig.symbolAuthority" defaultMessage="Authority" />}
+              marginBottom0
+              onChange={handleNewSymbolChange(path, 'authority')}
+              onKeyDown={handleNewSymbolKeyDown(field, parentField)}
+              value={newValue.authority}
+            />
+          </div>
+          <div className={css.structuredInput}>
+            <TextField
+              aria-label={intl.formatMessage({
+                id: 'ui-rsdir.settingsConfig.newSymbolName',
+                defaultMessage: 'New name for {field}',
+              }, { field: labelForPath(path) })}
+              disabled={isSaving}
+              id={`${controlIdPrefix}-${controlPath}-name`}
+              label={<FormattedMessage id="ui-rsdir.settingsConfig.symbolName" defaultMessage="Name" />}
+              marginBottom0
+              onChange={handleNewSymbolChange(path, 'symbol')}
+              onKeyDown={handleNewSymbolKeyDown(field, parentField)}
+              value={newValue.symbol}
+            />
+          </div>
+          <div className={css.structuredAddButton}>
+            <Button
+              disabled={isSaving || !canAdd}
+              id={`add-${controlIdPrefix}-${controlPath}`}
+              marginBottom0
+              onClick={() => addSymbolListValue(field, parentField)}
+            >
+              <FormattedMessage id="ui-rsdir.add" defaultMessage="Add" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const renderStringArrayValues = (field, isEditing, parentField) => {
@@ -961,6 +1185,18 @@ const SettingsConfigEditor = ({
       );
     }
 
+    if (type === SYMBOL_LIST) {
+      return (
+        <div className={css.structuredValues}>
+          {normalizedSymbols(value).map((symbolValue, index) => (
+            <span className={css.structuredValue} key={`${symbolKey(symbolValue)}-${index}`}>
+              {symbolLabel(symbolValue)}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
     if (type === STRING_MAP) {
       return (
         <div className={css.structuredValues}>
@@ -1018,6 +1254,8 @@ const SettingsConfigEditor = ({
     ]);
     setNewObjectValues(current => omitRootPath(current, path));
     setNewStringValues(current => omitRootPath(current, objectPath));
+    setNewSymbolValues(current => omitRootPath(current, objectPath));
+    setSymbolEntryErrors(current => omitRootPath(current, objectPath));
     setNewStringMapEntries(current => omitRootPath(current, objectPath));
     setStringMapEntryErrors(current => omitRootPath(current, objectPath));
     setFieldErrors(current => ({
@@ -1100,6 +1338,93 @@ const SettingsConfigEditor = ({
           >
             <FormattedMessage id="ui-rsdir.add" defaultMessage="Add" />
           </Button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderNewObjectSymbolListInput = (field, parentField, child) => {
+    const childPath = newObjectChildPath(field, parentField, child);
+    const controlPath = childPath.split('.').join('-');
+    const objectValue = newObjectValue(field, parentField);
+    const symbolValues = Array.isArray(objectValue[child.fieldName]) ? objectValue[child.fieldName] : [];
+    const newValue = newSymbolValues[childPath] || { authority: '', symbol: '' };
+    const isSaving = savingFields[topFieldName(field, parentField)];
+    const canAdd = !!newValue.authority.trim() && !!newValue.symbol.trim();
+
+    return (
+      <div>
+        <div className={css.structuredValues}>
+          {symbolValues.map((symbolValue, index) => (
+            <div className={css.structuredValue} key={`${symbolKey(symbolValue)}-${index}`}>
+              <span className={css.structuredValueText}>{symbolLabel(symbolValue)}</span>
+              <IconButton
+                aria-label={intl.formatMessage({
+                  id: 'ui-rsdir.settingsConfig.removeSymbol',
+                  defaultMessage: 'Remove {symbol} from {field}',
+                }, { field: labelForPath(childPath), symbol: symbolLabel(symbolValue) })}
+                disabled={isSaving}
+                icon="times"
+                iconSize="small"
+                id={`remove-${controlIdPrefix}-${controlPath}-${index}`}
+                onClick={() => removeObjectSymbolListValue(field, parentField, child, index)}
+                size="small"
+              />
+            </div>
+          ))}
+        </div>
+        <div className={css.structuredAdd}>
+          <div className={css.structuredInput}>
+            <TextField
+              aria-label={intl.formatMessage({
+                id: 'ui-rsdir.settingsConfig.newSymbolAuthority',
+                defaultMessage: 'New authority for {field}',
+              }, { field: labelForPath(childPath) })}
+              disabled={isSaving}
+              error={symbolEntryErrors[childPath] || fieldErrors[childPath]}
+              id={`${controlIdPrefix}-${controlPath}-authority`}
+              label={<FormattedMessage id="ui-rsdir.settingsConfig.symbolAuthority" defaultMessage="Authority" />}
+              marginBottom0
+              onChange={handleNewSymbolChange(childPath, 'authority')}
+              onKeyDown={event => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  addObjectSymbolListValue(field, parentField, child);
+                }
+              }}
+              value={newValue.authority}
+            />
+          </div>
+          <div className={css.structuredInput}>
+            <TextField
+              aria-label={intl.formatMessage({
+                id: 'ui-rsdir.settingsConfig.newSymbolName',
+                defaultMessage: 'New name for {field}',
+              }, { field: labelForPath(childPath) })}
+              disabled={isSaving}
+              id={`${controlIdPrefix}-${controlPath}-name`}
+              label={<FormattedMessage id="ui-rsdir.settingsConfig.symbolName" defaultMessage="Name" />}
+              marginBottom0
+              onChange={handleNewSymbolChange(childPath, 'symbol')}
+              onKeyDown={event => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  addObjectSymbolListValue(field, parentField, child);
+                }
+              }}
+              value={newValue.symbol}
+            />
+          </div>
+          <div className={css.structuredAddButton}>
+            <Button
+              disabled={isSaving || !canAdd}
+              id={`add-${controlIdPrefix}-${controlPath}`}
+              marginBottom0
+              onClick={() => addObjectSymbolListValue(field, parentField, child)}
+            >
+              <FormattedMessage id="ui-rsdir.add" defaultMessage="Add" />
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -1215,6 +1540,10 @@ const SettingsConfigEditor = ({
 
     if (type === STRING_ARRAY) {
       return renderNewObjectStringArrayInput(field, parentField, child);
+    }
+
+    if (type === SYMBOL_LIST) {
+      return renderNewObjectSymbolListInput(field, parentField, child);
     }
 
     if (type === STRING_MAP) {
@@ -1340,6 +1669,10 @@ const SettingsConfigEditor = ({
       return renderStringArrayInput(field, parentField);
     }
 
+    if (type === SYMBOL_LIST) {
+      return renderSymbolListInput(field, parentField);
+    }
+
     if (type === STRING_MAP) {
       return renderStringMapInput(field, parentField);
     }
@@ -1380,6 +1713,10 @@ const SettingsConfigEditor = ({
 
     if (type === STRING_ARRAY) {
       return renderStringArrayValues(field, false, parentField);
+    }
+
+    if (type === SYMBOL_LIST) {
+      return renderSymbolListValues(field, false, parentField);
     }
 
     if (type === STRING_MAP) {

@@ -56,7 +56,8 @@
   margin-right: var(--gutter-static-one-third);
 }
 
-.stringMapAddButton {
+.stringMapAddButton,
+.structuredAddButton {
   padding-top: 18px;
 }
 
@@ -159,7 +160,8 @@
     flex-basis: 100%;
   }
 
-  .stringMapAddButton {
+  .stringMapAddButton,
+  .structuredAddButton {
     padding-top: 0;
   }
 
