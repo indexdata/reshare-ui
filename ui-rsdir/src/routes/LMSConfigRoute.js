@@ -74,6 +74,27 @@ const fieldMap = [
   {
     fieldName: 'requesterPatronPattern',
     valueType: 'string'
+  },
+  {
+    fieldName: 'patronProfiles',
+    valueType: 'objectArray',
+    objectMap: [
+      {
+        fieldName: 'code',
+        valueType: 'string',
+        required: true
+      },
+      {
+        fieldName: 'name',
+        valueType: 'string',
+        required: true
+      },
+      {
+        fieldName: 'canCreateRequests',
+        valueType: 'boolean',
+        required: true
+      }
+    ]
   }
 ];
 
