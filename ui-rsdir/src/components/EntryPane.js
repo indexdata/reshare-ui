@@ -38,7 +38,7 @@ const EntryPane = ({ entry, actions, children, ...paneProps }) => {
     >
       <div className={css.row}>
         <div className={css.section}>{children}</div>
-        <EntrySections className={css.sections} entryUrl={entryUrl} active={section} />
+        <EntrySections className={css.sections} entryUrl={entryUrl} entryType={entry.type} active={section} />
       </div>
     </Pane>
   );

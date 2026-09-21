@@ -19,10 +19,14 @@ export const sectionAt = (pathname, entryUrl) => {
   return SECTIONS.find(section => section.segment === segment) || SECTIONS[0];
 };
 
-const EntrySections = ({ className, entryUrl, active }) => {
+const EntrySections = ({ className, entryUrl, entryType, active }) => {
   const intl = useIntl();
   const location = useLocation();
   const activeRef = useRef();
+  const sections = SECTIONS.filter(section => (
+    (entryType !== 'Branch' || section.key !== 'catalogconfig')
+    && (entryType === 'Institution' || section.key !== 'lmsconfig')
+  ));
 
   // Section navigation unmounts the focused link. Focus the active section
   // if nothing else has focus; leave focus on a results row or other control.
@@ -34,7 +38,7 @@ const EntrySections = ({ className, entryUrl, active }) => {
   return (
     <NavList className={className} aria-label={intl.formatMessage({ id: 'ui-rsdir.entry.sections' })}>
       <NavListSection>
-        {SECTIONS.map(section => (
+        {sections.map(section => (
           <NavListItem
             key={section.key}
             id={`clickable-entry-section-${section.key}`}
