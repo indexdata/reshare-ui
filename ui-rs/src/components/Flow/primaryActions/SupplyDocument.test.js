@@ -20,6 +20,8 @@ const renderSupplyDocument = (performAction, withNote = false) => renderWithRs(
   <SupplyDocument request={request} performAction={performAction} withNote={withNote} />
 );
 
+const noteToggle = name => screen.getByRole('button', { name });
+
 describe('SupplyDocument', () => {
   beforeEach(() => jest.clearAllMocks());
 
@@ -39,13 +41,13 @@ describe('SupplyDocument', () => {
 
     expect(screen.queryByText('ui-rs.button.scan')).not.toBeInTheDocument();
     expect(screen.getAllByRole('textbox')).toHaveLength(1);
-    expect(screen.getByText('ui-rs.actions.addNote')).toBeInTheDocument();
+    expect(noteToggle('ui-rs.actions.addNote')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('ui-rs.actions.supply-document.deliveryUrl'), {
       target: { value: '  https://documents.example.org/copy/1  ' },
     });
-    fireEvent.click(screen.getByText('ui-rs.actions.addNote').closest('button'));
-    expect(screen.getByText('ui-rs.actions.hideNoteField')).toBeInTheDocument();
+    fireEvent.click(noteToggle('ui-rs.actions.addNote'));
+    expect(noteToggle('ui-rs.actions.removeNote')).toHaveAttribute('aria-expanded', 'true');
 
     const note = screen.getAllByRole('textbox').find(input => input.getAttribute('name') === 'note');
     fireEvent.change(note, { target: { value: 'Document ready' } });
@@ -68,7 +70,7 @@ describe('SupplyDocument', () => {
     const performAction = jest.fn(() => Promise.resolve());
     renderSupplyDocument(performAction);
 
-    expect(screen.queryByText('ui-rs.actions.addNote')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ui-rs.actions.addNote' })).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('ui-rs.actions.supply-document.deliveryUrl'), {
       target: { value: 'https://documents.example.org/copy/1' },
     });

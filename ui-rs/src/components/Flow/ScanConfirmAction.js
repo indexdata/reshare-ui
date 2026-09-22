@@ -3,9 +3,21 @@ import { FormattedMessage } from 'react-intl';
 import { Form, Field } from 'react-final-form';
 import { Button, Row, Col, TextField } from '@folio/stripes/components';
 import { useIntlCallout, useIsActionPending } from '@projectreshare/stripes-reshare';
-import AddNoteField from '../AddNoteField';
+import { noteParam } from '../AddNoteField';
+import OptionalParams from './OptionalParams';
 
-const ScanConfirmAction = ({ performAction, request, action, prompt, error, success, withNote = false }) => {
+// Omit unset params; a cleared Datepicker yields '' rather than undefined.
+export const compactParams = params => Object.fromEntries(
+  Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')
+);
+
+const defaultActionParams = values => ({ note: values.note });
+
+const ScanConfirmAction = ({
+  performAction, request, action, prompt, error, success, withNote = false,
+  buildActionParams = defaultActionParams, params = [],
+}) => {
+  const optionalParams = [...(withNote ? [noteParam] : []), ...params];
   const sendCallout = useIntlCallout();
   const actionPending = !!useIsActionPending(request.id);
 
@@ -15,7 +27,7 @@ const ScanConfirmAction = ({ performAction, request, action, prompt, error, succ
       return false;
     }
     try {
-      await performAction(action, { note: values.note }, { success, error });
+      await performAction(action, compactParams(buildActionParams(values)), { success, error });
       return undefined;
     } catch (err) {
       return undefined;
@@ -25,7 +37,7 @@ const ScanConfirmAction = ({ performAction, request, action, prompt, error, succ
   return (
     <Form
       onSubmit={onSubmit}
-      render={({ handleSubmit, submitting }) => (
+      render={({ handleSubmit, submitting, invalid }) => (
         <form onSubmit={handleSubmit} autoComplete="off">
           {prompt && <FormattedMessage id={prompt} />}
           {!prompt &&
@@ -38,12 +50,12 @@ const ScanConfirmAction = ({ performAction, request, action, prompt, error, succ
               <Field name="reqId" component={TextField} autoFocus />
             </Col>
             <Col xs={1}>
-              <Button buttonStyle="primary mega" type="submit" disabled={submitting || actionPending}>
+              <Button buttonStyle="primary mega" type="submit" disabled={submitting || invalid || actionPending}>
                 <FormattedMessage id="ui-rs.button.scan" />
               </Button>
             </Col>
           </Row>
-          { withNote && <AddNoteField /> }
+          {optionalParams.length > 0 && <OptionalParams params={optionalParams} />}
         </form>
       )}
     />

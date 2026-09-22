@@ -59,6 +59,10 @@ const fieldMap = [
     fieldName: 'duplicateCheckWindowHours',
     valueType: 'integer',
   },
+  {
+    fieldName: 'defaultLoanPeriod',
+    valueType: 'integer',
+  },
 ];
 
 const ILLConfigRoute = () => {

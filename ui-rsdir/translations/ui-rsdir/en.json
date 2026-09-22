@@ -126,6 +126,7 @@
   "illConfig.noteFieldSeparator" : "Note Field Separator",
   "illConfig.supplierPatronPattern" : "Supplier Patron Pattern",
   "illConfig.duplicateCheckWindowHours" : "Duplicate Check Window (Hours)",
+  "illConfig.defaultLoanPeriod" : "Default Loan Period (Days)",
   "lmsConfig.edit.success" : "LMS configuration updated successfully",
   "lmsConfig.address" : "Address",
   "lmsConfig.fromAgency" : "From Agency",

@@ -6,6 +6,7 @@ export { default as Generic } from './Generic';
 export { default as AddCondition } from './AddCondition';
 export { default as AddItem } from './AddItem';
 export { default as AskRetry } from './AskRetry';
+export { default as Recall } from './Recall';
 export { default as SupplyDocument } from './SupplyDocument';
 
 export const CannotSupply = props => (

@@ -4,7 +4,8 @@ import { FormattedMessage, useIntl } from 'react-intl';
 import { useIsActionPending } from '@projectreshare/stripes-reshare';
 import { Button, Col, Row, TextField } from '@folio/stripes/components';
 import { required } from '@folio/stripes/util';
-import AddNoteField from '../../AddNoteField';
+import { noteParam } from '../../AddNoteField';
+import OptionalParams from '../OptionalParams';
 
 const SupplyDocument = ({ performAction, request, withNote = false }) => {
   const intl = useIntl();
@@ -12,10 +13,7 @@ const SupplyDocument = ({ performAction, request, withNote = false }) => {
 
   const onSubmit = async values => {
     try {
-      await performAction('supply-document', {
-        deliveryUrl: values.deliveryUrl.trim(),
-        ...(withNote ? { note: values.note } : {}),
-      }, {
+      await performAction('supply-document', { deliveryUrl: values.deliveryUrl.trim(), note: values.note }, {
         success: 'ui-rs.actions.supply-document.success',
         error: 'ui-rs.actions.supply-document.error',
       });
@@ -53,7 +51,7 @@ const SupplyDocument = ({ performAction, request, withNote = false }) => {
               </Button>
             </Col>
           </Row>
-          {withNote && <AddNoteField />}
+          {withNote && <OptionalParams params={[noteParam]} />}
         </form>
       )}
     />

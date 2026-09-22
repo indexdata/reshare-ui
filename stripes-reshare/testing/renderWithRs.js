@@ -24,7 +24,7 @@ const makeQueryClient = () => new QueryClient({
 // Intl — around `ui`. The <Route>/<Switch> being exercised stays in the test body
 // (passed as `ui`), not hidden in here; this helper only supplies the shell.
 const renderWithRs = (ui, {
-  initialEntries = ['/'], messages = {}, history
+  initialEntries = ['/'], messages = {}, history, timeZone
 } = {}) => {
   const RouterProvider = history ? Router : MemoryRouter;
   const routerProps = history ? { history } : { initialEntries };
@@ -40,6 +40,7 @@ const renderWithRs = (ui, {
           <IntlProvider
             locale="en"
             messages={messages}
+            timeZone={timeZone}
             onError={ignoreMissingTranslations}
           >
             {ui}

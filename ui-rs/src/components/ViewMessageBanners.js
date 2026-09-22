@@ -4,7 +4,7 @@ import { MessageBanner } from '@folio/stripes/components';
 import { useStripes } from '@folio/stripes/core';
 import { useNotificationList } from './chat/useNotifications';
 
-const ViewMessageBanners = ({ request }) => {
+const ViewMessageBanners = ({ request, actions = [] }) => {
   const stripes = useStripes();
   const { data } = useNotificationList(request?.id);
 
@@ -18,9 +18,9 @@ const ViewMessageBanners = ({ request }) => {
 
   const cancellationRequested = request?.state?.code === 'RES_CANCEL_REQUEST_RECEIVED';
 
-  const dueTooSoon = request.parsedDueDateRS
-    && request?.state?.code === 'RES_AWAIT_SHIP'
-    && new Date(request.parsedDueDateRS) - Date.now() < 1000 * 60 * 60 * 24 * 7;
+  const weekMs = 7 * 24 * 60 * 60 * 1000;
+  const dueTooSoon = request?.dueDate && actions.some(a => a.name === 'ship')
+    && new Date(request.dueDate) - Date.now() < weekMs;
 
   const renderConditionsBanner = () => {
     if (pendingConditions.length > 0) {
@@ -48,7 +48,7 @@ const ViewMessageBanners = ({ request }) => {
       }
       {dueTooSoon &&
         <MessageBanner type="warning">
-          <FormattedMessage id="ui-rs.actions.checkIn.dueTooSoon" />
+          <FormattedMessage id="ui-rs.view.banners.dueTooSoon" />
         </MessageBanner>
       }
       {lastChanceForCost &&

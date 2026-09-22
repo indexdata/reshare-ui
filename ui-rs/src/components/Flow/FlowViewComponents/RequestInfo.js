@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { Accordion, Col, FormattedUTCDate, Headline, KeyValue, Layout, NoValue, Row } from '@folio/stripes/components';
+import { Accordion, Col, Headline, KeyValue, Layout, NoValue, Row } from '@folio/stripes/components';
 
 import formatCosts from '../../../util/formatCosts';
 import { findAgreedCost, formatConditionCost } from '../../../util/formatCondition';
 import { useNotificationList } from '../../chat/useNotifications';
+import DueDate from '../../DueDate';
 
 const RequestInfo = ({ request }) => {
   const intl = useIntl();
@@ -32,8 +33,7 @@ const RequestInfo = ({ request }) => {
   const { data: notifications } = useNotificationList(request?.id);
   const agreedCost = findAgreedCost(notifications?.items, request?.supplierSymbol);
 
-  // The supplier's side of the exchange, as the last ISO 18626 response.
-  const { statusInfo } = request?.illResponse ?? {};
+  const onLoan = ['Loaned', 'Overdue', 'Recalled'].includes(request?.illResponse?.statusInfo?.status);
 
   const location = useLocation();
   const [showStateCode, setShowStateCode] = useState(false);
@@ -83,7 +83,9 @@ const RequestInfo = ({ request }) => {
         <Row>
           {colKeyVal(
             'ui-rs.flow.info.dueDate',
-            statusInfo?.dueDate ? <FormattedUTCDate value={statusInfo.dueDate} /> : <NoValue />
+            (request.dueDate && <DueDate value={request.dueDate} />)
+              || (onLoan && <FormattedMessage id="ui-rs.flow.info.dueDate.openEnded" />)
+              || <NoValue />
           )}
         </Row>
         <Row>

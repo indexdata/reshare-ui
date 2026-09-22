@@ -27,7 +27,7 @@ const removable = [{ name: 'remove-item' }, { name: 'ship' }];
 
 const renderVolumes = (request, actions) => renderWithRs(
   <Volumes request={request} actions={actions} />,
-  { messages }
+  { messages, timeZone: 'UTC' }
 );
 
 describe('Volumes accordion', () => {
@@ -58,6 +58,13 @@ describe('Volumes accordion', () => {
     expect(screen.getByText('ui-rs.flow.volumes.lmsStatus')).toBeInTheDocument();
     expect(screen.getByText('ui-rs.flow.volumes.lmsStatus.CHECKED_OUT')).toBeInTheDocument();
     expect(screen.queryByText('ui-rs.flow.volumes.lmsStatus.UNKNOWN')).not.toBeInTheDocument();
+  });
+
+  it('shows the due date the LMS confirmed at checkout', () => {
+    renderVolumes({ id: 'pr-1', items: [{ ...items[0], lmsDueDate: '2026-10-18T21:00:00Z' }] }, []);
+
+    expect(screen.getByText('ui-rs.flow.volumes.lmsDueDate')).toBeInTheDocument();
+    expect(screen.getByText('10/18/2026, 9:00 PM UTC')).toBeInTheDocument();
   });
 
   it('treats an item without an LMS status as unconfirmed', () => {
