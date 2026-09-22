@@ -54,11 +54,11 @@ const Volumes = ({ request, actions = [] }) => {
         ? <FormattedMessage id={`ui-rs.flow.volumes.lmsStatus.${item.lmsStatus}`} />
         : <NoValue />),
     },
-    {
+    ...(request.side === 'lending' ? [{
       key: 'lmsDueDate',
       label: <FormattedMessage id="ui-rs.flow.volumes.lmsDueDate" />,
       render: item => <DueDate value={item.lmsDueDate} />,
-    },
+    }] : []),
     ...(canRemove ? [{
       key: 'actions',
       label: '',

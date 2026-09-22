@@ -60,8 +60,8 @@ describe('Volumes accordion', () => {
     expect(screen.queryByText('ui-rs.flow.volumes.lmsStatus.UNKNOWN')).not.toBeInTheDocument();
   });
 
-  it('shows the due date the LMS confirmed at checkout', () => {
-    renderVolumes({ id: 'pr-1', items: [{ ...items[0], lmsDueDate: '2026-10-18T21:00:00Z' }] }, []);
+  it('shows the supplier the due date the LMS confirmed at checkout', () => {
+    renderVolumes({ id: 'pr-1', side: 'lending', items: [{ ...items[0], lmsDueDate: '2026-10-18T21:00:00Z' }] }, []);
 
     expect(screen.getByText('ui-rs.flow.volumes.lmsDueDate')).toBeInTheDocument();
     expect(screen.getByText('10/18/2026, 9:00 PM UTC')).toBeInTheDocument();
