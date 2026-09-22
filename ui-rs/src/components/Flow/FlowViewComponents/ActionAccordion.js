@@ -30,8 +30,10 @@ const ActionAccordion = ({ actions = [], request }) => {
         {PrimaryAction &&
           <Layout className="padding-top-gutter">
             <PrimaryAction
+              key={`${request.id}:${primaryActionName}`}
               request={request}
               name={primaryActionName}
+              parameters={primaryActionObj?.parameters}
               performAction={performAction}
               withNote={primaryActionObj?.parameters?.includes('note')}
             />
@@ -45,7 +47,7 @@ const ActionAccordion = ({ actions = [], request }) => {
 
               return (
                 <MoreAction
-                  key={name}
+                  key={`${request.id}:${name}`}
                   name={name}
                   request={request}
                   performAction={performAction}

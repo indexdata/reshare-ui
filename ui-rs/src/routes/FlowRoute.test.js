@@ -17,6 +17,7 @@ jest.mock('../components/chat/useNotifications', () => ({
 }));
 
 jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
+jest.mock('@folio/stripes-components/lib/TextArea', () => require('../test/textAreaMock').default);
 
 jest.mock('@projectreshare/stripes-reshare', () => ({
   ...jest.requireActual('@projectreshare/stripes-reshare'),
@@ -132,8 +133,9 @@ const requestFixture = {
       ],
     },
   },
+  dueDate: '2026-03-01T23:59:59Z',
   illResponse: {
-    statusInfo: { status: 'Loaned', dueDate: '2026-03-01T00:00:00Z' },
+    statusInfo: { status: 'Loaned', dueDate: '2026-03-01T23:59:59Z' },
   },
 };
 
@@ -146,9 +148,9 @@ const messages = {
   'stripes-reshare.actions.someAction.error': 'stripes-reshare.actions.someAction.error',
 };
 
-const renderFlowRoute = (request = requestFixture) => renderWithRs(
-  <FlowRoute request={request} actions={actionsFixture} />,
-  { initialEntries: [`/requests/${request.id}/flow`], messages }
+const renderFlowRoute = (request = requestFixture, { actions = actionsFixture, timeZone = 'UTC' } = {}) => renderWithRs(
+  <FlowRoute request={request} actions={actions} />,
+  { initialEntries: [`/requests/${request.id}/flow`], messages, timeZone }
 );
 
 const rowContaining = (text) => {
@@ -208,8 +210,7 @@ describe('FlowRoute', () => {
     expect(screen.getByText('ui-rs.flow.info.patronQuery').closest('a'))
       .toHaveAttribute('href', expect.stringContaining('qindex=patron'));
 
-    // Due date comes from the supplier's last ISO 18626 response.
-    expect(screen.getByText('3/1/2026')).toBeInTheDocument();
+    expect(screen.getByText(/^3\/1\/2026, 11:59 PM UTC$/)).toBeInTheDocument();
   });
 
   it('hides the requesting user on the lending side', () => {
@@ -339,5 +340,191 @@ describe('FlowRoute', () => {
         error: 'stripes-reshare.actions.someAction.error',
       }
     );
+  });
+
+  describe('due dates', () => {
+    const dueDateInput = label => screen.getByLabelText(label);
+    const toggle = (name, scope = screen) => scope.getByRole('button', { name });
+    const reqIdInput = () => screen.getAllByRole('textbox').find(input => input.getAttribute('name') === 'reqId');
+    const primaryForm = () => within(reqIdInput().closest('form'));
+    const scan = () => {
+      fireEvent.change(reqIdInput(), { target: { value: 'rrid-1' } });
+      fireEvent.click(screen.getByText('ui-rs.button.scan').closest('button'));
+    };
+
+    it.each([
+      ['America/New_York', /^9\/18\/2026, 11:59 PM EDT$/],
+      ['UTC', /^9\/19\/2026, 3:59 AM UTC$/],
+    ])('shows the due date in the viewer zone %s', (timeZone, expected) => {
+      renderFlowRoute({ ...requestFixture, dueDate: '2026-09-18T23:59:59-04:00' }, { timeZone });
+
+      expect(screen.getByText(expected)).toBeInTheDocument();
+    });
+
+    it('tells an open-ended loan from a request that has not shipped', () => {
+      const { unmount } = renderFlowRoute({ ...requestFixture, dueDate: undefined });
+      expect(screen.getByText('ui-rs.flow.info.dueDate.openEnded')).toBeInTheDocument();
+      unmount();
+
+      renderFlowRoute({ ...requestFixture, dueDate: undefined, illResponse: { statusInfo: { status: 'WillSupply' } } });
+      expect(screen.queryByText('ui-rs.flow.info.dueDate.openEnded')).toBeNull();
+    });
+
+    const shipRequest = { ...requestFixture, side: 'lending', state: 'SEARCHING', dueDate: undefined, illResponse: undefined };
+    const shipActions = [{ name: 'ship', primary: true, parameters: ['dueDate', 'note'] }];
+
+    it('ships without a due date unless the override is revealed and filled', async () => {
+      renderFlowRoute(shipRequest, { actions: shipActions });
+
+      expect(screen.queryByLabelText('ui-rs.flow.info.dueDate')).toBeNull();
+      scan();
+
+      await waitFor(() => expect(mockPerformAction).toHaveBeenCalledWith('ship', {}, expect.anything()));
+    });
+
+    it('ships with the overriding due date and note', async () => {
+      renderFlowRoute(shipRequest, { actions: shipActions });
+
+      fireEvent.click(toggle('ui-rs.actions.overrideDueDate'));
+      fireEvent.change(dueDateInput('ui-rs.flow.info.dueDate'), { target: { value: '10/18/2026' } });
+      fireEvent.click(toggle('ui-rs.actions.addNote', primaryForm()));
+      const note = primaryForm().getAllByRole('textbox').find(input => input.getAttribute('name') === 'note');
+      fireEvent.change(note, { target: { value: 'short loan' } });
+      scan();
+
+      await waitFor(() => expect(mockPerformAction).toHaveBeenCalledWith(
+        'ship', { dueDate: '2026-10-18', note: 'short loan' }, expect.anything()
+      ));
+    });
+
+    it('does not ship a mistyped due date as no due date', async () => {
+      renderFlowRoute(shipRequest, { actions: shipActions });
+
+      fireEvent.click(toggle('ui-rs.actions.overrideDueDate'));
+      const input = dueDateInput('ui-rs.flow.info.dueDate');
+      fireEvent.change(input, { target: { value: '02/30/2026' } });
+      fireEvent.blur(input);
+      scan();
+
+      expect(await screen.findByText('ui-rs.actions.dueDate.invalid')).toBeInTheDocument();
+      expect(screen.getByText('ui-rs.button.scan').closest('button')).toBeDisabled();
+      expect(mockPerformAction).not.toHaveBeenCalled();
+    });
+
+    it('ships without a due date that has been collapsed again', async () => {
+      renderFlowRoute(shipRequest, { actions: shipActions });
+      fireEvent.click(toggle('ui-rs.actions.overrideDueDate'));
+      fireEvent.change(dueDateInput('ui-rs.flow.info.dueDate'), { target: { value: '10/18/2026' } });
+      fireEvent.click(toggle('ui-rs.actions.removeDueDateOverride'));
+
+      expect(screen.queryByLabelText('ui-rs.flow.info.dueDate')).toBeNull();
+      scan();
+
+      await waitFor(() => expect(mockPerformAction).toHaveBeenCalledWith('ship', {}, expect.anything()));
+    });
+
+    it('offers no override when the broker does not advertise dueDate', () => {
+      renderFlowRoute(shipRequest, { actions: [{ name: 'ship', primary: true, parameters: ['note'] }] });
+
+      expect(screen.queryByRole('button', { name: 'ui-rs.actions.overrideDueDate' })).toBeNull();
+      expect(toggle('ui-rs.actions.addNote', primaryForm())).toBeInTheDocument();
+    });
+
+    it('resets a revealed override when the request changes', () => {
+      // One Route serves every request, so the form must not carry state across.
+      const Harness = () => {
+        const [request, setRequest] = React.useState(shipRequest);
+        return (
+          <>
+            <button type="button" onClick={() => setRequest({ ...shipRequest, id: 'pr-2' })}>other request</button>
+            <FlowRoute request={request} actions={shipActions} />
+          </>
+        );
+      };
+      renderWithRs(<Harness />, { initialEntries: ['/requests/pr-1/flow'], messages });
+
+      fireEvent.click(toggle('ui-rs.actions.overrideDueDate'));
+      expect(dueDateInput('ui-rs.flow.info.dueDate')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('other request'));
+      expect(screen.queryByLabelText('ui-rs.flow.info.dueDate')).toBeNull();
+    });
+
+    const renewalRequest = { ...requestFixture, side: 'lending', state: 'RENEWAL_PENDING' };
+    const renewalActions = [
+      { name: 'accept-renewal', primary: true, parameters: ['dueDate', 'note'] },
+      { name: 'reject-renewal', primary: false, parameters: ['note'] },
+    ];
+    const acceptRenewal = () => fireEvent.click(
+      screen.getAllByText('stripes-reshare.actions.accept-renewal').map(el => el.closest('button[type="submit"]')).find(Boolean)
+    );
+
+    it('accepts a renewal as open-ended when no date is given, and says so', async () => {
+      renderFlowRoute(renewalRequest, { actions: renewalActions });
+
+      expect(screen.queryByText('ui-rs.button.scan')).toBeNull();
+      expect(screen.getByText('ui-rs.actions.accept-renewal.openEnded')).toBeInTheDocument();
+      acceptRenewal();
+
+      await waitFor(() => expect(mockPerformAction).toHaveBeenCalledWith('accept-renewal', {}, expect.anything()));
+    });
+
+    it('accepts a renewal with a new due date', async () => {
+      renderFlowRoute(renewalRequest, { actions: renewalActions });
+
+      fireEvent.change(dueDateInput('ui-rs.actions.accept-renewal.newDueDate'), { target: { value: '10/18/2026' } });
+      expect(screen.queryByText('ui-rs.actions.accept-renewal.openEnded')).toBeNull();
+      acceptRenewal();
+
+      await waitFor(() => expect(mockPerformAction).toHaveBeenCalledWith(
+        'accept-renewal', { dueDate: '2026-10-18' }, expect.anything()
+      ));
+    });
+
+    it('does not accept a renewal with a mistyped due date', async () => {
+      renderFlowRoute(renewalRequest, { actions: renewalActions });
+
+      fireEvent.change(dueDateInput('ui-rs.actions.accept-renewal.newDueDate'), { target: { value: 'next week' } });
+      acceptRenewal();
+
+      await waitFor(() => expect(
+        screen.getAllByText('stripes-reshare.actions.accept-renewal').map(el => el.closest('button[type="submit"]')).find(Boolean)
+      ).toBeDisabled());
+      expect(mockPerformAction).not.toHaveBeenCalled();
+    });
+
+    it('recalls keeping the current due date unless a new one is given', async () => {
+      renderFlowRoute(
+        { ...requestFixture, side: 'lending', state: 'RECEIVED' },
+        { actions: [{ name: 'recall', primary: false, parameters: ['dueDate', 'note'] }] }
+      );
+
+      fireEvent.click(screen.getByText('stripes-reshare.actions.recall').closest('button'));
+      const dialog = within(await screen.findByRole('dialog'));
+      expect(dialog.getByText('ui-rs.flow.info.dueDate.current')).toBeInTheDocument();
+      expect(dialog.getByText(/^3\/1\/2026/)).toBeInTheDocument();
+
+      fireEvent.click(dialog.getAllByText('stripes-reshare.actions.recall').map(el => el.closest('button')).find(Boolean));
+      await waitFor(() => expect(mockPerformAction).toHaveBeenCalledWith('recall', {}, expect.anything()));
+    });
+
+    it('recalls with a new due date and note', async () => {
+      renderFlowRoute(
+        { ...requestFixture, side: 'lending', state: 'RECEIVED' },
+        { actions: [{ name: 'recall', primary: false, parameters: ['dueDate', 'note'] }] }
+      );
+
+      fireEvent.click(screen.getByText('stripes-reshare.actions.recall').closest('button'));
+      const dialog = within(await screen.findByRole('dialog'));
+      fireEvent.change(dialog.getByLabelText('ui-rs.actions.recall.newDueDate'), { target: { value: '02/18/2026' } });
+      fireEvent.change(dialog.getAllByRole('textbox').find(input => input.name === 'note'), {
+        target: { value: 'Please return promptly' },
+      });
+      fireEvent.click(dialog.getAllByText('stripes-reshare.actions.recall').map(el => el.closest('button')).find(Boolean));
+
+      await waitFor(() => expect(mockPerformAction).toHaveBeenCalledWith(
+        'recall', { dueDate: '2026-02-18', note: 'Please return promptly' }, expect.anything()
+      ));
+    });
   });
 });

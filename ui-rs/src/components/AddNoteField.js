@@ -1,35 +1,22 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Field } from 'react-final-form';
-import { Button, Col, Row, TextField } from '@folio/stripes/components';
+import { TextField } from '@folio/stripes/components';
 import { FormattedMessage } from 'react-intl';
 
-const AddNoteForm = () => {
-  const [noteFieldOpen, setnoteFieldOpen] = useState(false);
+const AddNoteField = () => (
+  <Field
+    name="note"
+    label={<FormattedMessage id="ui-rs.actions.note" />}
+    component={TextField}
+    autoFocus
+  />
+);
 
-  const renderMessageField = () => {
-    if (noteFieldOpen === true) {
-      return (
-        <Field name="note" component={TextField} />
-      );
-    }
-    return null;
-  };
-
-  return (
-    <Row>
-      <Col xs={4}>
-        <Button onClick={() => {
-          setnoteFieldOpen(!noteFieldOpen);
-        }}
-        >
-          {noteFieldOpen ? <FormattedMessage id="ui-rs.actions.hideNoteField" /> : <FormattedMessage id="ui-rs.actions.addNote" />}
-        </Button>
-      </Col>
-      <Col xs={8}>
-        {renderMessageField()}
-      </Col>
-    </Row>
-  );
+export const noteParam = {
+  name: 'note',
+  label: <FormattedMessage id="ui-rs.actions.addNote" />,
+  openLabel: <FormattedMessage id="ui-rs.actions.removeNote" />,
+  field: <AddNoteField />,
 };
 
-export default AddNoteForm;
+export default AddNoteField;

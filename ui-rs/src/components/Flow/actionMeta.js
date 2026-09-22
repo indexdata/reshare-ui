@@ -3,7 +3,7 @@
 // `hidden` keeps an action out of the secondary "More options" list
 // e.g. for when the UI surfaces them elsewhere
 const actionMeta = {
-  'ship': { icon: 'archive' },
+  'ship': { icon: 'archive', primaryOnly: true },
   'supply-document': { icon: 'link', primaryOnly: true },
   'ship-return': { icon: 'archive' },
   'cannot-supply': { icon: 'times-circle-solid' },
@@ -16,7 +16,13 @@ const actionMeta = {
   'add-condition': { icon: 'plus-sign' },
   'add-item': { icon: 'plus-sign' },
   'remove-item': { icon: 'trash', hidden: true },
+  'pullslip-printed': { icon: 'print' },
   'ask-retry': { icon: 'edit' },
+  'recall': { icon: 'flag' },
+  'overdue': { icon: 'clock' },
+  'renew': { icon: 'replace' },
+  'accept-renewal': { icon: 'check-circle', primaryOnly: true },
+  'reject-renewal': { icon: 'times-circle-solid' },
 };
 
 export default actionMeta;

@@ -4,6 +4,7 @@ import { Accordion, Button, ConfirmationModal, Icon, NoValue } from '@folio/stri
 import { SimpleTable, useIsActionPending, usePerformAction } from '@projectreshare/stripes-reshare';
 
 import actionMeta from '../actionMeta';
+import DueDate from '../../DueDate';
 
 // Items attached to a lending request, whether the LMS supplied them or a lender
 // attached them by hand. Broker embeds them on the request, so nothing is fetched
@@ -52,6 +53,11 @@ const Volumes = ({ request, actions = [] }) => {
       render: item => (item.lmsStatus && item.lmsStatus !== 'UNKNOWN'
         ? <FormattedMessage id={`ui-rs.flow.volumes.lmsStatus.${item.lmsStatus}`} />
         : <NoValue />),
+    },
+    {
+      key: 'lmsDueDate',
+      label: <FormattedMessage id="ui-rs.flow.volumes.lmsDueDate" />,
+      render: item => <DueDate value={item.lmsDueDate} />,
     },
     ...(canRemove ? [{
       key: 'actions',

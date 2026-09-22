@@ -186,7 +186,7 @@ const ViewRoute = ({ location, location: { pathname }, match }) => {
           </Layout>
         )}
       >
-        {request && <ViewMessageBanners request={request} />}
+        {request && <ViewMessageBanners request={request} actions={actions} />}
         <Switch>
           <Route path={`${match.path}/details`} render={() => <ViewPatronRequest record={request} actions={actions} />} />
           <Route path={`${match.path}/flow`} render={() => <FlowRoute request={request} actions={actions} />} />
