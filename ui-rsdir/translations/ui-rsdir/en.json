@@ -12,6 +12,7 @@
   "entry.parent" : "Parent",
   "entry.parent.select" : "Select a parent",
   "entry.phoneNumber" : "Phone Number",
+  "entry.tenant" : "Tenant",
   "entry.name" : "Name",
   "entry.networks" : "Networks",
   "entry.symbols" : "Symbols",

@@ -107,25 +107,33 @@ const ViewEntry = ({ entry }) => {
         </Col>
       </Row>
       <Row>
-        <Col xs={3}>
+        <Col xs={4}>
           <KeyValue
             label={<FormattedMessage id="ui-rsdir.entry.organizationId" />}
             value={entry.organizationId}
           />
         </Col>
-        <Col xs={3}>
+        <Col xs={4}>
+          <KeyValue
+            label={<FormattedMessage id="ui-rsdir.entry.tenant" />}
+            value={entry.tenant}
+          />
+        </Col>
+      </Row>
+      <Row>
+        <Col xs={4}>
           <KeyValue
             label={<FormattedMessage id="ui-rsdir.entry.contactName" />}
             value={entry.contactName}
           />
         </Col>
-        <Col xs={3}>
+        <Col xs={4}>
           <KeyValue
             label={<FormattedMessage id="ui-rsdir.entry.email" />}
             value={entry.email}
           />
         </Col>
-        <Col xs={3}>
+        <Col xs={4}>
           <KeyValue
             label={<FormattedMessage id="ui-rsdir.entry.phoneNumber" />}
             value={entry.phoneNumber}

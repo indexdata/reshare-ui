@@ -150,30 +150,37 @@ const EntryForm = ({ addressPlugin }) => {
           </Col>
         </Row>
         <Row>
-          <Col xs={6}>
+          <Col xs={4}>
             <Field
               name="organizationId"
               component={TextField}
               label={<FormattedMessage id="ui-rsdir.entry.organizationId" />}
             />
           </Col>
-          <Col>
+          <Col xs={4}>
+            <Field
+              name="tenant"
+              component={TextField}
+              label={<FormattedMessage id="ui-rsdir.entry.tenant" />}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <Col xs={4}>
             <Field
               name="contactName"
               component={TextField}
               label={<FormattedMessage id="ui-rsdir.entry.contactName" />}
             />
           </Col>
-        </Row>
-        <Row>
-          <Col xs={6}>
+          <Col xs={4}>
             <Field
               name="email"
               component={TextField}
               label={<FormattedMessage id="ui-rsdir.entry.email" />}
             />
           </Col>
-          <Col>
+          <Col xs={4}>
             <Field
               name="phoneNumber"
               component={TextField}
