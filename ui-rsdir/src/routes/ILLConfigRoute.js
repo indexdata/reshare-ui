@@ -18,6 +18,10 @@ const fieldMap = [
     validChoices: ['Alma', 'ReShare', 'CrossLink', 'ILLiad', 'Unknown'],
   },
   {
+    fieldName: 'defaultLoanPeriod',
+    valueType: 'integer'
+  },
+  {
     fieldName: 'lendersOfLastResort',
     valueType: 'symbolList',
     getSaveErrorMessage: error => (error.response?.status === 400 ? (

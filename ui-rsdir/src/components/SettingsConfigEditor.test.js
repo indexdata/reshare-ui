@@ -3,6 +3,7 @@ import React from 'react';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import SettingsConfigEditor from './SettingsConfigEditor';
+import { fieldMap as catalogFieldMapping } from '../routes/CatalogConfigRoute';
 
 const mockPatch = jest.fn();
 const mockKy = jest.fn();
@@ -35,7 +36,9 @@ jest.mock('@folio/stripes/components', () => ({
   Button: ({ children, disabled, id, onClick }) => (
     <button disabled={disabled} id={id} onClick={onClick} type="button">{children}</button>
   ),
-  Card: ({ children, headerEnd, headerStart }) => <section>{headerStart}{headerEnd}{children}</section>,
+  Card: ({ cardClass, children, headerEnd, headerStart }) => (
+    <section className={cardClass}>{headerStart}{headerEnd}{children}</section>
+  ),
   IconButton: ({ 'aria-label': ariaLabel, disabled, id, onClick }) => (
     <button aria-label={ariaLabel} disabled={disabled} id={id} onClick={onClick} type="button">×</button>
   ),
@@ -63,31 +66,270 @@ jest.mock('@folio/stripes/components', () => ({
 
 const fieldMapping = [{ fieldName: 'selectedSymbols', valueType: 'symbolList' }];
 
-describe('SettingsConfigEditor symbolList', () => {
-  beforeEach(() => {
-    mockPatch.mockReset();
-    mockKy.mockReset();
-    mockPatch.mockResolvedValue({ text: () => Promise.resolve('') });
+const renderEditor = ({
+  configKey = 'config',
+  fieldMapping: editorFieldMapping = fieldMapping,
+  initialResource,
+} = {}) => render(
+  <SettingsConfigEditor
+    configKey={configKey}
+    fieldLabelId={path => path}
+    fieldMapping={editorFieldMapping}
+    initialResource={initialResource || { [configKey]: {} }}
+    resourcePath="directory/entries/by-id/entry-id"
+    successMessage="Saved"
+  />
+);
+
+beforeEach(() => {
+  mockPatch.mockReset();
+  mockKy.mockReset();
+  mockPatch.mockResolvedValue({ text: () => Promise.resolve('') });
+});
+
+describe('SettingsConfigEditor disabled fields', () => {
+  it('greys out a disabled card without rendering its content or edit control', () => {
+    renderEditor({
+      fieldMapping: [
+        { fieldName: 'disabledField', disabled: true },
+        { fieldName: 'enabledField' },
+      ],
+      initialResource: {
+        config: {
+          disabledField: 'Hidden value',
+          enabledField: 'Visible value',
+        },
+      },
+    });
+
+    const disabledCard = screen.getByText('disabledField').closest('section');
+
+    expect(disabledCard).toHaveClass('disabledField');
+    expect(screen.queryByText('Hidden value')).not.toBeInTheDocument();
+    expect(document.getElementById('edit-settings-config-disabledField')).not.toBeInTheDocument();
+
+    const enabledEditButton = document.getElementById('edit-settings-config-enabledField');
+    expect(enabledEditButton.closest('section')).toHaveTextContent('Visible value');
+    expect(enabledEditButton).toBeInTheDocument();
   });
 
-  it('adds manual symbol values and patches a symbol-object array', async () => {
-    render(
-      <SettingsConfigEditor
-        configKey="config"
-        fieldLabelId={path => path}
-        fieldMapping={fieldMapping}
-        initialResource={{
-          config: {
-            selectedSymbols: [
-              { authority: 'TEST', symbol: 'ANINST', unused: 'discard me' },
-              { authority: 'OLD', symbol: 'MISSING' },
+  it('hides and preserves disabled subMap and objectMap values without validating them', async () => {
+    renderEditor({
+      fieldMapping: [{
+        fieldName: 'group',
+        valueType: 'subField',
+        subMap: [
+          { fieldName: 'hiddenScalar', disabled: true, required: true },
+          {
+            fieldName: 'hiddenGroup',
+            disabled: true,
+            valueType: 'subField',
+            subMap: [{ fieldName: 'secret' }],
+          },
+          {
+            fieldName: 'items',
+            valueType: 'objectArray',
+            objectMap: [
+              { fieldName: 'hidden', disabled: true, required: true },
+              { fieldName: 'visible', required: true },
             ],
           },
-        }}
-        resourcePath="directory/entries/by-id/entry-id"
-        successMessage="Saved"
-      />
-    );
+          { fieldName: 'visible' },
+        ],
+      }],
+      initialResource: {
+        config: {
+          group: {
+            hiddenScalar: '',
+            hiddenGroup: { secret: 'Nested secret' },
+            items: [{ hidden: 'Stored secret', visible: 'Existing value' }],
+            visible: 'Visible value',
+          },
+        },
+      },
+    });
+
+    expect(screen.getByText('hiddenScalar').closest('.disabledField')).toBeInTheDocument();
+    expect(screen.getByText('hiddenGroup').closest('.disabledField')).toBeInTheDocument();
+    expect(screen.getByText('hidden:').closest('.disabledField')).toBeInTheDocument();
+    expect(screen.queryByText('Nested secret')).not.toBeInTheDocument();
+    expect(screen.queryByText('Stored secret')).not.toBeInTheDocument();
+
+    fireEvent.click(document.getElementById('edit-settings-config-group'));
+
+    expect(document.getElementById('settings-config-group-hiddenScalar')).not.toBeInTheDocument();
+    expect(document.getElementById('settings-config-group-hiddenGroup-secret')).not.toBeInTheDocument();
+    expect(document.getElementById('settings-config-group-items-new-hidden')).not.toBeInTheDocument();
+    expect(document.getElementById('settings-config-group-visible')).toHaveValue('Visible value');
+
+    fireEvent.click(document.getElementById('save-settings-config-group'));
+
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(
+      'directory/entries/by-id/entry-id',
+      {
+        json: {
+          config: {
+            group: {
+              hiddenScalar: '',
+              hiddenGroup: { secret: 'Nested secret' },
+              items: [{ hidden: 'Stored secret', visible: 'Existing value' }],
+              visible: 'Visible value',
+            },
+          },
+        },
+      },
+    ));
+  });
+});
+
+describe('SettingsConfigEditor onlyOne subFields', () => {
+  it('shows the selected child and serializes an empty marker object by itself', async () => {
+    renderEditor({
+      configKey: 'catalogConfig',
+      fieldMapping: catalogFieldMapping,
+      initialResource: {
+        catalogConfig: {
+          holdingsFormat: {
+            marc: { mainField: '852' },
+          },
+        },
+      },
+    });
+
+    expect(screen.getByText('852')).toBeInTheDocument();
+    expect(screen.queryByText('opac')).not.toBeInTheDocument();
+    expect(screen.queryByText('reservoir')).not.toBeInTheDocument();
+
+    fireEvent.click(document.getElementById('edit-settings-config-holdingsFormat'));
+
+    const selector = screen.getByRole('combobox', { name: 'Selected value for {field}' });
+    expect(selector).toHaveValue('marc');
+    fireEvent.change(selector, { target: { value: 'reservoir' } });
+
+    expect(screen.queryByText('852')).not.toBeInTheDocument();
+    expect(screen.getAllByText('reservoir')).toHaveLength(2);
+
+    fireEvent.click(document.getElementById('cancel-settings-config-holdingsFormat'));
+    expect(screen.getByText('852')).toBeInTheDocument();
+    expect(screen.queryByText('reservoir')).not.toBeInTheDocument();
+
+    fireEvent.click(document.getElementById('edit-settings-config-holdingsFormat'));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Selected value for {field}' }), {
+      target: { value: 'reservoir' },
+    });
+
+    fireEvent.click(document.getElementById('save-settings-config-holdingsFormat'));
+
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(
+      'directory/entries/by-id/entry-id',
+      {
+        json: {
+          catalogConfig: {
+            holdingsFormat: { reservoir: {} },
+          },
+        },
+      },
+    ));
+  });
+
+  it('rejects multiple selected children until the selector resolves them', async () => {
+    const exclusiveMapping = [{
+      fieldName: 'format',
+      valueType: 'subField',
+      onlyOne: true,
+      subMap: [
+        { fieldName: 'first', valueType: 'subField', subMap: [{ fieldName: 'value' }] },
+        { fieldName: 'second', valueType: 'subField', subMap: [{ fieldName: 'value' }] },
+      ],
+    }];
+
+    renderEditor({
+      fieldMapping: exclusiveMapping,
+      initialResource: {
+        config: {
+          format: {
+            first: { value: 'First value' },
+            second: { value: 'Second value' },
+          },
+        },
+      },
+    });
+
+    expect(screen.getByText('First value')).toBeInTheDocument();
+    expect(screen.getByText('Second value')).toBeInTheDocument();
+    fireEvent.click(document.getElementById('edit-settings-config-format'));
+    fireEvent.click(document.getElementById('save-settings-config-format'));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Select no more than one value.');
+    expect(mockPatch).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Selected value for {field}' }), {
+      target: { value: 'second' },
+    });
+    fireEvent.click(document.getElementById('save-settings-config-format'));
+
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(
+      'directory/entries/by-id/entry-id',
+      {
+        json: {
+          config: {
+            format: { second: { value: 'Second value' } },
+          },
+        },
+      },
+    ));
+  });
+
+  it.each([
+    { required: false, expectedError: undefined },
+    { required: true, expectedError: 'Required' },
+  ])('handles an empty selection when required is $required', async ({ required, expectedError }) => {
+    renderEditor({
+      fieldMapping: [{
+        fieldName: 'format',
+        valueType: 'subField',
+        onlyOne: true,
+        required,
+        subMap: [{ fieldName: 'first' }, { fieldName: 'second' }],
+      }],
+      initialResource: { config: { format: { first: 'First value' } } },
+    });
+
+    fireEvent.click(document.getElementById('edit-settings-config-format'));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Selected value for {field}' }), {
+      target: { value: '' },
+    });
+    fireEvent.click(document.getElementById('save-settings-config-format'));
+
+    if (expectedError) {
+      expect(screen.getByRole('alert')).toHaveTextContent(expectedError);
+      expect(mockPatch).not.toHaveBeenCalled();
+      return;
+    }
+
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(
+      'directory/entries/by-id/entry-id',
+      {
+        json: {
+          config: { format: {} },
+        },
+      },
+    ));
+  });
+});
+
+describe('SettingsConfigEditor symbolList', () => {
+  it('adds manual symbol values and patches a symbol-object array', async () => {
+    renderEditor({
+      initialResource: {
+        config: {
+          selectedSymbols: [
+            { authority: 'TEST', symbol: 'ANINST', unused: 'discard me' },
+            { authority: 'OLD', symbol: 'MISSING' },
+          ],
+        },
+      },
+    });
 
     expect(screen.getByText('TEST:ANINST')).toBeInTheDocument();
     expect(screen.getByText('OLD:MISSING')).toBeInTheDocument();
@@ -129,20 +371,13 @@ describe('SettingsConfigEditor symbolList', () => {
   });
 
   it('ignores malformed values and requires both manual fields', () => {
-    render(
-      <SettingsConfigEditor
-        configKey="config"
-        fieldLabelId={path => path}
-        fieldMapping={fieldMapping}
-        initialResource={{
-          config: {
-            selectedSymbols: ['TEST:ANINST', { authority: 'TEST' }, { symbol: 'ANINSTTOO' }],
-          },
-        }}
-        resourcePath="directory/entries/by-id/entry-id"
-        successMessage="Saved"
-      />
-    );
+    renderEditor({
+      initialResource: {
+        config: {
+          selectedSymbols: ['TEST:ANINST', { authority: 'TEST' }, { symbol: 'ANINSTTOO' }],
+        },
+      },
+    });
 
     expect(screen.queryByText('TEST:ANINST')).not.toBeInTheDocument();
     expect(screen.queryByText('TEST:ANINSTTOO')).not.toBeInTheDocument();
@@ -161,16 +396,7 @@ describe('SettingsConfigEditor symbolList', () => {
   });
 
   it('supports Enter, preserves colliding labels, and rejects exact duplicates', async () => {
-    render(
-      <SettingsConfigEditor
-        configKey="config"
-        fieldLabelId={path => path}
-        fieldMapping={fieldMapping}
-        initialResource={{ config: { selectedSymbols: [] } }}
-        resourcePath="directory/entries/by-id/entry-id"
-        successMessage="Saved"
-      />
-    );
+    renderEditor({ initialResource: { config: { selectedSymbols: [] } } });
 
     fireEvent.click(document.getElementById('edit-settings-config-selectedSymbols'));
 
@@ -222,23 +448,17 @@ describe('SettingsConfigEditor symbolList', () => {
     });
     mockPatch.mockRejectedValueOnce(saveError);
 
-    render(
-      <SettingsConfigEditor
-        configKey="config"
-        fieldLabelId={path => path}
-        fieldMapping={[{
-          ...fieldMapping[0],
-          getSaveErrorMessage: error => (error.response?.status === 400 ? 'Check the symbols.' : undefined),
-        }]}
-        initialResource={{
-          config: {
-            selectedSymbols: [{ authority: 'TEST', symbol: 'ANINST' }],
-          },
-        }}
-        resourcePath="directory/entries/by-id/entry-id"
-        successMessage="Saved"
-      />
-    );
+    renderEditor({
+      fieldMapping: [{
+        ...fieldMapping[0],
+        getSaveErrorMessage: error => (error.response?.status === 400 ? 'Check the symbols.' : undefined),
+      }],
+      initialResource: {
+        config: {
+          selectedSymbols: [{ authority: 'TEST', symbol: 'ANINST' }],
+        },
+      },
+    });
 
     fireEvent.click(document.getElementById('edit-settings-config-selectedSymbols'));
     fireEvent.click(document.getElementById('save-settings-config-selectedSymbols'));
@@ -251,19 +471,13 @@ describe('SettingsConfigEditor symbolList', () => {
   it('falls back to the original error message when the field does not override it', async () => {
     mockPatch.mockRejectedValueOnce(new Error('Request failed'));
 
-    render(
-      <SettingsConfigEditor
-        configKey="config"
-        fieldLabelId={path => path}
-        fieldMapping={[{
-          ...fieldMapping[0],
-          getSaveErrorMessage: () => undefined,
-        }]}
-        initialResource={{ config: { selectedSymbols: [] } }}
-        resourcePath="directory/entries/by-id/entry-id"
-        successMessage="Saved"
-      />
-    );
+    renderEditor({
+      fieldMapping: [{
+        ...fieldMapping[0],
+        getSaveErrorMessage: () => undefined,
+      }],
+      initialResource: { config: { selectedSymbols: [] } },
+    });
 
     fireEvent.click(document.getElementById('edit-settings-config-selectedSymbols'));
     fireEvent.click(document.getElementById('save-settings-config-selectedSymbols'));
@@ -278,16 +492,10 @@ describe('SettingsConfigEditor symbolList', () => {
       objectMap: [{ fieldName: 'symbols', valueType: 'symbolList', required: true }],
     }];
 
-    render(
-      <SettingsConfigEditor
-        configKey="config"
-        fieldLabelId={path => path}
-        fieldMapping={objectFieldMapping}
-        initialResource={{ config: { groups: [] } }}
-        resourcePath="directory/entries/by-id/entry-id"
-        successMessage="Saved"
-      />
-    );
+    renderEditor({
+      fieldMapping: objectFieldMapping,
+      initialResource: { config: { groups: [] } },
+    });
 
     fireEvent.click(document.getElementById('edit-settings-config-groups'));
     const authorityInput = screen.getByRole('textbox', { name: 'New authority for {field}' });

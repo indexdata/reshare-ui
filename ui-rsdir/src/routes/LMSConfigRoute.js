@@ -1,8 +1,10 @@
+import { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { FormattedMessage } from 'react-intl';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 import EntryPane, { EntryLoadingPane } from '../components/EntryPane';
 import SettingsConfigEditor from '../components/SettingsConfigEditor';
+import { vendorFieldMappingForVendor } from '../config/vendorFieldMapping';
 
 const STALE_QUERY_TIME = 2 * 60 * 1000;
 const entryPath = id => `directory/entries/by-id/${id}`;
@@ -33,7 +35,12 @@ const fieldMap = [
   {
     fieldName: 'acceptItemEnabled',
     valueType: 'boolean',
-    defaultDesc: 'Is Accept Item Enabled?'
+    defaultDesc: 'Is Accept Item Enabled?',
+  },
+  {
+    fieldName: 'bibIdNormalization',
+    valueType: 'string',
+    validChoices: ['none', 'sierra']
   },
   {
     fieldName: 'checkInItemEnabled',
@@ -46,6 +53,14 @@ const fieldMap = [
   {
     fieldName: 'itemLocation',
     valueType: 'string',
+  },
+  {
+    fieldName: 'ncipNamespaceEnabled',
+    valueType: 'boolean'
+  },
+  {
+    fieldName: 'requestItemEnabled',
+    valueType: 'boolean'
   },
   {
     fieldName: 'requestItemRequestType',
@@ -95,6 +110,11 @@ const fieldMap = [
         required: true
       }
     ]
+  },
+  {
+    fieldName: 'vendor',
+    valueType: 'string',
+    validChoices: ['Alma', 'Sierra', 'Koha', 'WMS', 'Aleph', 'FOLIO', 'Generic']
   }
 ];
 
@@ -104,6 +124,11 @@ const LMSConfigRoute = () => {
   const entryQuery = useOkapiQuery(entryPath(id), {
     staleTime: STALE_QUERY_TIME,
   });
+  const vendor = entryQuery.data?.lmsConfig?.vendor;
+  const mappedFields = useMemo(
+    () => vendorFieldMappingForVendor(fieldMap, vendor, 'lmsConfig'),
+    [vendor],
+  );
 
   if (!entryQuery.isSuccess) return <EntryLoadingPane />;
 
@@ -119,7 +144,7 @@ const LMSConfigRoute = () => {
           />
         }
         fieldLabelId={fieldLabelId}
-        fieldMapping={fieldMap}
+        fieldMapping={mappedFields}
         initialResource={entryQuery.data}
         resourcePath={entryPath(id)}
         successMessage={<FormattedMessage id="ui-rsdir.lmsConfig.edit.success" />}
