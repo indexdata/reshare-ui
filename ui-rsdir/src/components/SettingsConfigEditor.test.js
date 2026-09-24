@@ -44,7 +44,9 @@ jest.mock('@folio/stripes/components', () => ({
   ),
   Select: ({ 'aria-label': ariaLabel, dataOptions, disabled, id, onChange, value }) => (
     <select aria-label={ariaLabel} disabled={disabled} id={id} onChange={onChange} value={value}>
-      {dataOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+      {dataOptions.map(option => (
+        <option disabled={option.disabled} key={option.value} value={option.value}>{option.label}</option>
+      ))}
     </select>
   ),
   TextField: ({ 'aria-label': ariaLabel, disabled, error, id, onChange, onKeyDown, value }) => (
@@ -118,20 +120,24 @@ describe('SettingsConfigEditor disabled fields', () => {
       fieldMapping: [{
         fieldName: 'group',
         valueType: 'subField',
+        required: true,
         subMap: [
           { fieldName: 'hiddenScalar', disabled: true, required: true },
           {
-            fieldName: 'hiddenGroup',
-            disabled: true,
+            fieldName: 'requiredGroup',
             valueType: 'subField',
-            subMap: [{ fieldName: 'secret' }],
+            required: true,
+            subMap: [
+              { fieldName: 'hiddenNested', disabled: true, required: true },
+              { fieldName: 'nestedVisible' },
+            ],
           },
           {
             fieldName: 'items',
             valueType: 'objectArray',
             objectMap: [
               { fieldName: 'hidden', disabled: true, required: true },
-              { fieldName: 'visible', required: true },
+              { fieldName: 'visible' },
             ],
           },
           { fieldName: 'visible' },
@@ -141,8 +147,8 @@ describe('SettingsConfigEditor disabled fields', () => {
         config: {
           group: {
             hiddenScalar: '',
-            hiddenGroup: { secret: 'Nested secret' },
-            items: [{ hidden: 'Stored secret', visible: 'Existing value' }],
+            requiredGroup: { hiddenNested: 'Nested secret', nestedVisible: '' },
+            items: [{ hidden: 'Stored secret', visible: '' }],
             visible: 'Visible value',
           },
         },
@@ -150,7 +156,7 @@ describe('SettingsConfigEditor disabled fields', () => {
     });
 
     expect(screen.getByText('hiddenScalar').closest('.disabledField')).toBeInTheDocument();
-    expect(screen.getByText('hiddenGroup').closest('.disabledField')).toBeInTheDocument();
+    expect(screen.getByText('hiddenNested').closest('.disabledField')).toBeInTheDocument();
     expect(screen.getByText('hidden:').closest('.disabledField')).toBeInTheDocument();
     expect(screen.queryByText('Nested secret')).not.toBeInTheDocument();
     expect(screen.queryByText('Stored secret')).not.toBeInTheDocument();
@@ -158,7 +164,7 @@ describe('SettingsConfigEditor disabled fields', () => {
     fireEvent.click(document.getElementById('edit-settings-config-group'));
 
     expect(document.getElementById('settings-config-group-hiddenScalar')).not.toBeInTheDocument();
-    expect(document.getElementById('settings-config-group-hiddenGroup-secret')).not.toBeInTheDocument();
+    expect(document.getElementById('settings-config-group-requiredGroup-hiddenNested')).not.toBeInTheDocument();
     expect(document.getElementById('settings-config-group-items-new-hidden')).not.toBeInTheDocument();
     expect(document.getElementById('settings-config-group-visible')).toHaveValue('Visible value');
 
@@ -171,8 +177,8 @@ describe('SettingsConfigEditor disabled fields', () => {
           config: {
             group: {
               hiddenScalar: '',
-              hiddenGroup: { secret: 'Nested secret' },
-              items: [{ hidden: 'Stored secret', visible: 'Existing value' }],
+              requiredGroup: { hiddenNested: 'Nested secret', nestedVisible: '' },
+              items: [{ hidden: 'Stored secret', visible: '' }],
               visible: 'Visible value',
             },
           },
@@ -240,6 +246,7 @@ describe('SettingsConfigEditor onlyOne subFields', () => {
       subMap: [
         { fieldName: 'first', valueType: 'subField', subMap: [{ fieldName: 'value' }] },
         { fieldName: 'second', valueType: 'subField', subMap: [{ fieldName: 'value' }] },
+        { fieldName: 'blocked', valueType: 'subField', subMap: [], disabled: true },
       ],
     }];
 
@@ -258,12 +265,17 @@ describe('SettingsConfigEditor onlyOne subFields', () => {
     expect(screen.getByText('First value')).toBeInTheDocument();
     expect(screen.getByText('Second value')).toBeInTheDocument();
     fireEvent.click(document.getElementById('edit-settings-config-format'));
+
+    const selector = screen.getByRole('combobox', { name: 'Selected value for {field}' });
+    expect(screen.getByRole('option', { name: 'blocked' })).toBeDisabled();
+    fireEvent.change(selector, { target: { value: 'blocked' } });
     fireEvent.click(document.getElementById('save-settings-config-format'));
 
     expect(screen.getByRole('alert')).toHaveTextContent('Select no more than one value.');
+    expect(selector).toHaveValue('');
     expect(mockPatch).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Selected value for {field}' }), {
+    fireEvent.change(selector, {
       target: { value: 'second' },
     });
     fireEvent.click(document.getElementById('save-settings-config-format'));

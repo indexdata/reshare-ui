@@ -218,10 +218,6 @@ const valueForPatch = (value, field, onlyPresent = false) => {
 };
 
 const isEmptyFieldValue = (value, field) => {
-  if (field.disabled) {
-    return true;
-  }
-
   const type = normalizedValueType(field.valueType);
 
   if (type === STRING_ARRAY || type === SYMBOL_LIST || type === OBJECT_ARRAY) {
@@ -454,6 +450,12 @@ const SettingsConfigEditor = ({
   const selectOnlyOneChild = (field, parentContext) => event => {
     const selectedFieldName = event.target.value;
     const mappedFieldNames = new Set(field.subMap.map(child => child.fieldName));
+    const selectedField = selectedFieldName ?
+      field.subMap.find(child => child.fieldName === selectedFieldName) : undefined;
+
+    if (selectedFieldName && (!selectedField || selectedField.disabled)) {
+      return;
+    }
 
     setDraftFieldValue(field, parentContext, current => {
       const source = isObject(current) ? current : {};
@@ -465,7 +467,6 @@ const SettingsConfigEditor = ({
         return unrelatedValues;
       }
 
-      const selectedField = field.subMap.find(child => child.fieldName === selectedFieldName);
       const selectedValue = hasOwnValue(source, selectedFieldName) ?
         source[selectedFieldName] : toEditorValue(undefined, selectedField, true);
 
@@ -1864,6 +1865,7 @@ const SettingsConfigEditor = ({
             dataOptions={[
               { label: '', value: '' },
               ...field.subMap.map(child => ({
+                disabled: child.disabled,
                 label: labelForPath(`${path}.${child.fieldName}`),
                 value: child.fieldName,
               })),
