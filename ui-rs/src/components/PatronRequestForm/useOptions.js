@@ -1,26 +1,28 @@
 import { useIntl } from 'react-intl';
 import { CopyrightCompliance, PublicationType } from '@projectreshare/stripes-reshare';
+import { usePickupLocations } from '../../util/useOwnedEntries';
 
 // Lowercased to match the publication types handleSISelect writes.
 const publicationTypes = PublicationType.map(code => ({ label: code, value: code.toLowerCase() }));
 
-// TODO: tiers and pickup locations pending the directory endpoints.
+// TODO: tiers pending the directory endpoints.
 const tiers = [];
-const locations = [];
 
-// Select dataOptions for PatronRequestForm. Static today, but the terms vary by
-// consortium and will come from the backend, so isSuccess is already reported
-// for routes to gate their first render on.
+// Select dataOptions for PatronRequestForm. isSuccess means the backend-sourced
+// options have settled, so routes can gate their first render on it; a failed
+// lookup just leaves them empty.
 const useOptions = () => {
   const intl = useIntl();
+  const { pickupLocations, isSettled } = usePickupLocations();
   const copyrightTypes = CopyrightCompliance.map(code => ({
     label: intl.formatMessage({ id: `stripes-reshare.iso18626.CopyrightCompliance.${code}` }),
     value: code,
   }));
+  const locations = pickupLocations.map(entry => ({ label: entry.name, value: entry.id }));
 
   return {
     options: { copyrightTypes, publicationTypes, tiers, locations },
-    isSuccess: true,
+    isSuccess: isSettled,
   };
 };
 

@@ -25,6 +25,8 @@ import { AppIcon, IfPermission, useStripes } from '@folio/stripes/core';
 import { SearchAndSortQuery, PersistedPaneset } from '@folio/stripes/smart-components';
 import { useIntlCallout } from '@projectreshare/stripes-reshare';
 import { DEFAULT_SEARCH, MAX_RECORDS_PER_PDF } from '../../util/buildPatronRequestsCql';
+import { formatPickupLocationShort } from '../../util/formatPickupLocation';
+import { useOwnedEntries } from '../../util/useOwnedEntries';
 import AppNameContext from '../../AppNameContext';
 import Filters from './Filters';
 import Search from './Search';
@@ -107,6 +109,7 @@ const PatronRequests = ({
   }, [requestsQuery.isRefetchError, requestsQuery.errorUpdatedAt]);
 
   const { title, visibleColumns, createPerm, itemBarcodeField } = appDetails[appName];
+  const owned = useOwnedEntries({ enabled: visibleColumns.includes('pickupLocation') });
 
 
   return (
@@ -315,6 +318,7 @@ const PatronRequests = ({
                           : '';
                       },
                       title: a => a.illRequest?.bibliographicInfo?.title,
+                      pickupLocation: a => formatPickupLocationShort(a, owned) ?? '',
                       state: a => (a.state
                         ? <FormattedMessage id={`stripes-reshare.states.${a.state}`} defaultMessage={a.state} />
                         : ''),

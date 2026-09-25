@@ -49,11 +49,13 @@ const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect }) => {
         </Col>
         <Col xs={4}>
           <Field
-            name="pickupLocation"
+            name="requesterPickupLocationId"
             label={<FormattedMessage id="ui-rs.information.pickupLocation" />}
             placeholder=" "
             component={Select}
             dataOptions={locations}
+            required={!isCopyReq}
+            validate={!isCopyReq && required}
           />
         </Col>
         <Col xs={2}>

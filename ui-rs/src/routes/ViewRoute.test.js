@@ -183,6 +183,54 @@ describe('ViewRoute', () => {
     expect(screen.queryByText('patron-9')).toBeNull();
   });
 
+  describe('pickup location', () => {
+    const withPickup = (request) => mockOkapi.setResponses({
+      ...responses,
+      'broker/patron_requests/pr-1': request,
+      'directory/entries/owned': { items: [{ id: 'branch-e', name: 'East Branch', type: 'Branch' }] },
+    });
+
+    it('names the chosen branch from our owned entries', async () => {
+      withPickup({ ...requestFixture, requesterPickupLocationId: 'branch-e' });
+      renderViewRoute();
+
+      expect(await screen.findByText('East Branch')).toBeInTheDocument();
+    });
+
+    it('falls back to the id of a branch we do not own', async () => {
+      withPickup({ ...requestFixture, requesterPickupLocationId: 'branch-x' });
+      renderViewRoute();
+
+      expect(await screen.findByText('branch-x')).toBeInTheDocument();
+    });
+
+    it('shows the delivery address lines on a supplier record, which has no id', async () => {
+      withPickup({
+        ...requestFixture,
+        side: 'lending',
+        illRequest: {
+          ...requestFixture.illRequest,
+          requestedDeliveryInfo: [{
+            address: {
+              physicalAddress: {
+                line1: '1 Branch Street',
+                locality: 'Chicago',
+                region: { '#text': 'IL' },
+                postalCode: '60616',
+                country: { '#text': 'US' },
+              },
+            },
+          }],
+        },
+      });
+      renderViewRoute();
+
+      // The default normalizer collapses the line breaks to spaces.
+      expect(await screen.findByText('1 Branch Street Chicago, IL 60616 US')).toBeInTheDocument();
+      expect(mockOkapi.calledUrls().some(url => url.startsWith('directory/'))).toBe(false);
+    });
+  });
+
   it('opens the edit internal note modal and PUTs the updated note', async () => {
     mockOkapi.setResponses({
       ...responses,

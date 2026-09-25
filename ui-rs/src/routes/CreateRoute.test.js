@@ -22,12 +22,21 @@ const { CalloutContext } = require('@folio/stripes/core');
 
 const sendCallout = jest.fn();
 
-const renderCreate = (options = {}) => renderWithRs(
-  <CalloutContext.Provider value={{ sendCallout }}>
-    <Route path="/requests/create" component={CreateRoute} />
-  </CalloutContext.Provider>,
-  { initialEntries: ['/requests/create'], ...options }
-);
+// Owned entries include the institution itself, which is not a pickup location.
+const institution = { id: 'inst-1', name: 'Our Library', type: 'Institution' };
+const westBranch = { id: 'branch-w', name: 'West Branch', type: 'Branch', parent: 'inst-1' };
+const eastBranch = { id: 'branch-e', name: 'East Branch', type: 'Branch', parent: 'inst-1' };
+const ownedEntries = { items: [institution, westBranch, eastBranch] };
+
+const renderCreate = ({ owned = ownedEntries, ...options } = {}) => {
+  mockOkapi.setResponses({ 'directory/entries/owned': owned });
+  return renderWithRs(
+    <CalloutContext.Provider value={{ sendCallout }}>
+      <Route path="/requests/create" component={CreateRoute} />
+    </CalloutContext.Provider>,
+    { initialEntries: ['/requests/create'], ...options }
+  );
+};
 
 // Fields are addressed by their Final Form names because the submitted payload
 // shape is what this test protects. A single fireEvent.change drives final-form's
@@ -40,8 +49,19 @@ const setField = (name, value) => fireEvent.change(
   fieldByName(name), { target: { value } }
 );
 
-// Everything the form validates before submit leaves its pristine/invalid state
-// (serviceType defaults to Loan, so it needs no filling).
+// The route renders nothing until its select options have settled.
+const formRendered = () => waitFor(() => expect(fieldByName('bibliographicInfo.title')).toBeTruthy());
+
+const optionLabels = (name) => Array.from(fieldByName(name).querySelectorAll('option'))
+  .map(option => option.textContent)
+  .filter(label => label.trim());
+
+const chooseServiceType = (value) => fireEvent.click(
+  document.querySelector(`input[name="serviceInfo.serviceType"][value="${value}"]`)
+);
+
+// Fills every field validation requires, except the pickup location a loan needs
+// (serviceType defaults to Loan).
 const fillRequiredFields = () => {
   setField('patronInfo.givenName', 'Ada');
   setField('patronInfo.surname', 'Lovelace');
@@ -50,7 +70,7 @@ const fillRequiredFields = () => {
 };
 
 describe('CreateRoute', () => {
-  quietQueryLog(/^Boom$/); // the failure test rejects the POST on purpose
+  quietQueryLog(/^(Boom|Forbidden)$/); // failure tests reject the POST or the owned lookup on purpose
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -59,12 +79,14 @@ describe('CreateRoute', () => {
   it('transforms the filled form into the broker create payload and POSTs it', async () => {
     const history = createMemoryHistory({ initialEntries: ['/requests/create?foo=bar'] });
     renderCreate({ history });
+    await formRendered();
 
     // Submit is disabled while pristine; fill the required fields plus an ISBN
     // to exercise the identifier transform.
     fillRequiredFields();
     setField('identifiers.ISBN', '9781234567890');
     setField('internalNote', 'Staff only note');
+    setField('requesterPickupLocationId', 'branch-e');
 
     fireEvent.click(document.querySelector('button[type="submit"]'));
 
@@ -94,6 +116,10 @@ describe('CreateRoute', () => {
     expect(opts.json.internalNote).toBe('Staff only note');
     expect(illRequest.internalNote).toBeUndefined();
 
+    // So is the pickup location, as the directory entry id.
+    expect(opts.json.requesterPickupLocationId).toBe('branch-e');
+    expect(illRequest.requesterPickupLocationId).toBeUndefined();
+
     // No error callout on the happy path.
     expect(sendCallout).not.toHaveBeenCalled();
   });
@@ -105,8 +131,10 @@ describe('CreateRoute', () => {
     mockOkapi.post.mockRejectedValueOnce(new Error('Boom'));
 
     renderCreate();
+    await formRendered();
 
     fillRequiredFields();
+    setField('requesterPickupLocationId', 'branch-e');
     fireEvent.click(document.querySelector('button[type="submit"]'));
 
     await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
@@ -117,5 +145,45 @@ describe('CreateRoute', () => {
     ));
     // ...and the form stays mounted (close() never ran, boundary not tripped).
     expect(document.querySelector('button[type="submit"]')).not.toBeNull();
+  });
+
+  it('offers owned branches as pickup locations, by name', async () => {
+    renderCreate();
+    await formRendered();
+
+    expect(mockOkapi.calledUrls()).toContain('directory/entries/owned?limit=1000');
+    expect(optionLabels('requesterPickupLocationId')).toEqual(['East Branch', 'West Branch']);
+    expect(fieldByName('requesterPickupLocationId').value).toBe('');
+  });
+
+  it('preselects the only pickup location', async () => {
+    renderCreate({ owned: { items: [institution, westBranch] } });
+    await formRendered();
+    expect(fieldByName('requesterPickupLocationId').value).toBe('branch-w');
+  });
+
+  it('requires a pickup location for a loan but not a copy, and omits an unchosen one', async () => {
+    renderCreate();
+    await formRendered();
+
+    fillRequiredFields();
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+    await waitFor(() => expect(fieldByName('requesterPickupLocationId')).toHaveAttribute('aria-invalid', 'true'));
+
+    chooseServiceType('Copy');
+    setField("serviceInfo.copyrightCompliance['#text']", 'AU-GenBus');
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+
+    await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
+    const { json } = mockOkapi.post.mock.calls[0][1];
+    expect(json.illRequest.serviceInfo.serviceType).toBe('Copy');
+    expect(json).not.toHaveProperty('requesterPickupLocationId');
+  });
+
+  it('still renders the form, without pickup locations, when the owned lookup fails', async () => {
+    renderCreate({ owned: () => { throw new Error('Forbidden'); } });
+    await formRendered();
+
+    expect(optionLabels('requesterPickupLocationId')).toEqual([]);
   });
 });
