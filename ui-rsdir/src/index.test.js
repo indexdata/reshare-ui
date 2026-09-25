@@ -153,6 +153,88 @@ describe('directory entries', () => {
     expect(mockOkapi.calledUrls()).toContain('directory/networks?limit=1000');
   });
 
+  it('lists reciprocal status instead of network priority for a consortium', async () => {
+    mockOkapi.setResponses(responses({
+      'directory/entries/by-id/e1': { ...entry, type: 'Consortium' },
+      'directory/entries/by-id/e1/networks': [
+        { id: 'n1', name: 'Reciprocal network', reciprocal: true },
+        { id: 'n2', name: 'Paid network', reciprocal: false },
+        { id: 'n3', name: 'Legacy network' },
+      ],
+    }));
+    renderDirectory(['/directory/entries/e1/networks']);
+
+    await screen.findByText('Reciprocal network');
+    const table = within(document.getElementById('entry-owned-networks-list'));
+    expect(table.getByRole('columnheader', { name: 'ui-rsdir.network.reciprocal' })).toBeInTheDocument();
+    expect(table.queryByRole('columnheader', { name: 'ui-rsdir.network.priority' })).not.toBeInTheDocument();
+    expect(table.getByText('stripes-components.boolean.true')).toBeInTheDocument();
+    expect(table.getByText('stripes-components.boolean.false')).toBeInTheDocument();
+    expect(table.getByText('ui-rsdir.network.reciprocal.unspecified')).toBeInTheDocument();
+  });
+
+  it('creates networks with an optional reciprocal value and no priority', async () => {
+    mockOkapi.setResponses(responses({
+      'directory/entries/by-id/e1': { ...entry, type: 'Consortium' },
+    }));
+    renderDirectory(['/directory/entries/e1/networks']);
+
+    await waitFor(() => expect(document.getElementById('clickable-add-entry-owned-network')).toBeInTheDocument());
+    fireEvent.click(document.getElementById('clickable-add-entry-owned-network'));
+    expect(screen.queryByLabelText('ui-rsdir.network.priority')).not.toBeInTheDocument();
+    fireEvent.change(await screen.findByLabelText(/ui-rsdir\.network\.name/), { target: { value: 'New reciprocal network' } });
+    fireEvent.change(screen.getByLabelText('ui-rsdir.network.reciprocal'), { target: { value: 'true' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.create' }));
+
+    await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledWith(
+      'directory/networks',
+      { json: { name: 'New reciprocal network', consortium: 'e1', reciprocal: true } }
+    ));
+
+    await waitFor(() => expect(document.getElementById('clickable-add-entry-owned-network')).toBeInTheDocument());
+    fireEvent.click(document.getElementById('clickable-add-entry-owned-network'));
+    fireEvent.change(await screen.findByLabelText(/ui-rsdir\.network\.name/), { target: { value: 'Unspecified network' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.create' }));
+
+    await waitFor(() => expect(mockOkapi.post).toHaveBeenLastCalledWith(
+      'directory/networks',
+      { json: { name: 'Unspecified network', consortium: 'e1' } }
+    ));
+  });
+
+  it('edits only reciprocal, allows clearing it, and keeps the network name read-only', async () => {
+    mockOkapi.setResponses(responses({
+      'directory/entries/by-id/e1': { ...entry, type: 'Consortium' },
+      'directory/entries/by-id/e1/networks': [
+        { id: 'n1', name: 'Existing network', reciprocal: true },
+      ],
+    }));
+    renderDirectory(['/directory/entries/e1/networks']);
+
+    await screen.findByText('Existing network');
+    fireEvent.click(document.getElementById('clickable-edit-network-n1'));
+    expect(await screen.findByLabelText(/ui-rsdir\.network\.name/)).toBeDisabled();
+    const reciprocal = screen.getByLabelText('ui-rsdir.network.reciprocal');
+    expect(reciprocal).toHaveValue('true');
+    fireEvent.change(reciprocal, { target: { value: 'false' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.edit.submit' }));
+
+    await waitFor(() => expect(mockOkapi.patch).toHaveBeenCalledWith(
+      'directory/networks/n1',
+      { json: { reciprocal: false } }
+    ));
+
+    await waitFor(() => expect(document.getElementById('clickable-edit-network-n1')).toBeInTheDocument());
+    fireEvent.click(document.getElementById('clickable-edit-network-n1'));
+    fireEvent.change(await screen.findByLabelText('ui-rsdir.network.reciprocal'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.edit.submit' }));
+
+    await waitFor(() => expect(mockOkapi.patch).toHaveBeenLastCalledWith(
+      'directory/networks/n1',
+      { json: { reciprocal: null } }
+    ));
+  });
+
   it('lists, adds and removes the closures of an entry', async () => {
     renderDirectory(['/directory/entries/e1/closures']);
 

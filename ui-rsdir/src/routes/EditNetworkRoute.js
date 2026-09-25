@@ -17,7 +17,7 @@ const CREATE = 'create';
 const EDIT = 'edit';
 const networksPath = 'directory/networks';
 const networkPath = id => `${networksPath}/${id}`;
-const defaultNetworkValues = { priority: 0.0 };
+const defaultNetworkValues = { reciprocal: null };
 
 const EditNetworkRoute = () => {
   const { id } = useParams();
@@ -126,17 +126,18 @@ const EditNetworkRoute = () => {
 
   const submit = (values, form) => {
     if (op === CREATE) {
-      return creator.mutateAsync(values);
+      return creator.mutateAsync({
+        name: values.name,
+        ...(typeof values.reciprocal === 'boolean' ? { reciprocal: values.reciprocal } : {}),
+      });
     }
 
     const dirtyFields = form.getState().dirtyFields;
     const modifiedFields = {};
 
-    Object.keys(dirtyFields).forEach(key => {
-      if (dirtyFields[key]) {
-        modifiedFields[key] = values[key];
-      }
-    });
+    if (dirtyFields.reciprocal) {
+      modifiedFields.reciprocal = values.reciprocal;
+    }
 
     return updater.mutateAsync(modifiedFields);
   };
@@ -211,7 +212,7 @@ const EditNetworkRoute = () => {
           }
         >
           <form onSubmit={handleSubmit} id="form-network">
-            <NetworkForm />
+            <NetworkForm isEditing={op === EDIT} />
           </form>
           <FormattedMessage id="ui-rsdir.confirmDirtyNavigate">
             {prompt => <Prompt when={!pristine && !(submitting || submitSucceeded)} message={prompt[0]} />}

@@ -20,7 +20,7 @@ const entryPath = id => `directory/entries/by-id/${id}`;
 const entryNetworksPath = id => `directory/entries/by-id/${id}/networks`;
 const networksPath = 'directory/networks';
 const networkPath = id => `${networksPath}/${id}`;
-const defaultNetworkValues = { priority: 0.0 };
+const defaultNetworkValues = { reciprocal: null };
 
 const normalizeList = data => {
   if (Array.isArray(data)) {
@@ -31,6 +31,12 @@ const normalizeList = data => {
 };
 
 const networkLabel = network => network?.name || network?.id || '';
+
+const reciprocalMessageId = value => {
+  if (value === true) return 'stripes-components.boolean.true';
+  if (value === false) return 'stripes-components.boolean.false';
+  return 'ui-rsdir.network.reciprocal.unspecified';
+};
 
 const EntryOwnedNetworksEditor = ({ id }) => {
   const callout = useContext(CalloutContext);
@@ -83,8 +89,8 @@ const EntryOwnedNetworksEditor = ({ id }) => {
     mutationFn: values => ky.post(networksPath, {
       json: {
         name: values.name,
-        priority: values.priority,
         consortium: id,
+        ...(typeof values.reciprocal === 'boolean' ? { reciprocal: values.reciprocal } : {}),
       },
     }),
     onSuccess: async () => {
@@ -142,12 +148,8 @@ const EntryOwnedNetworksEditor = ({ id }) => {
     const dirtyFields = form.getState().dirtyFields;
     const modifiedFields = {};
 
-    if (dirtyFields.name) {
-      modifiedFields.name = values.name;
-    }
-
-    if (dirtyFields.priority) {
-      modifiedFields.priority = values.priority;
+    if (dirtyFields.reciprocal) {
+      modifiedFields.reciprocal = values.reciprocal;
     }
 
     return updater.mutateAsync({
@@ -176,7 +178,14 @@ const EntryOwnedNetworksEditor = ({ id }) => {
 
   const columns = [
     { key: 'name', label: intl.formatMessage({ id: 'ui-rsdir.networks.current' }), render: networkLabel, sort: true },
-    { key: 'priority', label: intl.formatMessage({ id: 'ui-rsdir.network.priority' }), fit: true },
+    {
+      key: 'reciprocal',
+      label: intl.formatMessage({ id: 'ui-rsdir.network.reciprocal' }),
+      fit: true,
+      render: network => intl.formatMessage({
+        id: reciprocalMessageId(network.reciprocal),
+      }),
+    },
     {
       key: 'actions',
       label: '',
@@ -251,7 +260,7 @@ const EntryOwnedNetworksEditor = ({ id }) => {
               open
             >
               <form onSubmit={handleSubmit} id="form-entry-owned-network">
-                <NetworkForm />
+                <NetworkForm isEditing={!!editingNetwork} />
                 <FormattedMessage id="ui-rsdir.confirmDirtyNavigate">
                   {prompt => <Prompt when={dirty && !submitting} message={prompt[0]} />}
                 </FormattedMessage>

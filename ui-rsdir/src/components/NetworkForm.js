@@ -4,25 +4,36 @@ import { Field } from 'react-final-form';
 import {
   Col,
   Row,
+  Select,
   TextField,
 } from '@folio/stripes/components';
-import { required, requiredValue } from '../util/validators';
+import { required } from '../util/validators';
 
-const parseNumber = value => {
-  if (value === '' || value === undefined) {
-    return undefined;
-  }
+const reciprocalOptions = [
+  { label: <FormattedMessage id="ui-rsdir.network.reciprocal.unspecified" />, value: '' },
+  { label: <FormattedMessage id="stripes-components.boolean.true" />, value: 'true' },
+  { label: <FormattedMessage id="stripes-components.boolean.false" />, value: 'false' },
+];
 
-  return Number.parseFloat(value);
+const formatReciprocal = value => {
+  if (value === true) return 'true';
+  if (value === false) return 'false';
+  return '';
 };
 
-const NetworkForm = () => {
+const parseReciprocal = value => {
+  if (value === '') return null;
+  return value === 'true';
+};
+
+const NetworkForm = ({ isEditing = false }) => {
   return (
     <Row>
       <Col xs={8}>
         <Field
           name="name"
           component={TextField}
+          disabled={isEditing}
           label={<FormattedMessage id="ui-rsdir.network.name" />}
           required
           validate={required}
@@ -30,14 +41,12 @@ const NetworkForm = () => {
       </Col>
       <Col xs={4}>
         <Field
-          name="priority"
-          component={TextField}
-          type="number"
-          step="any"
-          parse={parseNumber}
-          label={<FormattedMessage id="ui-rsdir.network.priority" />}
-          required
-          validate={requiredValue}
+          name="reciprocal"
+          component={Select}
+          dataOptions={reciprocalOptions}
+          format={formatReciprocal}
+          label={<FormattedMessage id="ui-rsdir.network.reciprocal" />}
+          parse={parseReciprocal}
         />
       </Col>
     </Row>
