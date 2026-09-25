@@ -18,6 +18,11 @@ const fieldMap = [
     validChoices: ['Alma', 'ReShare', 'CrossLink', 'ILLiad', 'Unknown'],
   },
   {
+    fieldName: 'defaultLoanPeriod',
+    valueType: 'integer',
+    minValue: 1,
+  },
+  {
     fieldName: 'lendersOfLastResort',
     valueType: 'symbolList',
     getSaveErrorMessage: error => (error.response?.status === 400 ? (
@@ -58,6 +63,7 @@ const fieldMap = [
   {
     fieldName: 'duplicateCheckWindowHours',
     valueType: 'integer',
+    minValue: 0,
   },
   {
     fieldName: 'defaultLoanPeriod',

@@ -1,3 +1,7 @@
+.disabledField {
+  opacity: 0.5;
+}
+
 .fieldEditor {
   display: flex;
   align-items: flex-start;

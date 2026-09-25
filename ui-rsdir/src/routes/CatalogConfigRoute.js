@@ -1,13 +1,21 @@
+import { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { FormattedMessage } from 'react-intl';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 import EntryPane, { EntryLoadingPane } from '../components/EntryPane';
 import SettingsConfigEditor from '../components/SettingsConfigEditor';
+import { vendorFieldMappingForVendor } from '../config/vendorFieldMapping';
 
 const STALE_QUERY_TIME = 2 * 60 * 1000;
 const entryPath = id => `directory/entries/by-id/${id}`;
 const fieldLabelId = fieldName => `ui-rsdir.catalogConfig.${fieldName}`;
-const fieldMap = [
+export const fieldMap = [
+  {
+    fieldName: 'profile',
+    valueType: 'string',
+    nullOnEmpty: true,
+    validChoices: ['Alma', 'Sierra', 'Koha', 'WMS', 'Aleph', 'FOLIO', 'Generic']
+  },
   {
     fieldName: 'sru',
     valueType: 'subField',
@@ -68,21 +76,43 @@ const fieldMap = [
   {
     fieldName: 'holdingsFormat',
     valueType: 'subField',
+    onlyOne: true,
     subMap: [
       {
         fieldName: 'marc',
         valueType: 'subField',
         subMap: [
           {
+            fieldName: 'availability',
+            valueType: 'objectArray',
+            objectMap: [
+              {
+                fieldName: 'subField',
+                valueType: 'string',
+                required: true
+              },
+              {
+                fieldName: 'operator',
+                valueType: 'string',
+                validChoices: ['equals', 'absent'],
+                required: true
+              },
+              {
+                fieldName: 'value',
+                valueType: 'string'
+              }
+            ]
+          },
+          {
             fieldName: 'mainField',
             valueType: 'string',
           },
           {
-            fieldName: 'locationsSubField',
+            fieldName: 'locationSubField',
             valueType: 'string',
           },
           {
-            fieldName: 'shelvingLocationsSubField',
+            fieldName: 'shelvingLocationSubField',
             valueType: 'string',
           },
           {
@@ -99,6 +129,56 @@ const fieldMap = [
           },
         ],
       },
+      {
+        fieldName: 'opac',
+        valueType: 'subField',
+        subMap: [
+          {
+            fieldName: 'availabilityRule',
+            valueType: 'string',
+            validChoices: ['availableNow', 'publicNote']
+          },
+          {
+            fieldName: 'availablePublicNotes',
+            valueType: 'stringArray'
+          },
+          {
+            fieldName: 'requireLocalLocation',
+            valueType: 'boolean'
+          },
+          {
+            fieldName: 'shelvingLocationSource',
+            valueType: 'string',
+            validChoices: ['shelvingLocation', 'localLocation']
+          },
+          {
+            fieldName: 'includeItemId',
+            valueType: 'boolean'
+          },
+          {
+            fieldName: 'includeItemLoanPolicy',
+            valueType: 'boolean'
+          },
+          {
+            fieldName: 'includeTemporaryLocation',
+            valueType: 'boolean'
+          },
+          {
+            fieldName: 'allCirculations',
+            valueType: 'boolean'
+          }
+        ]
+      },
+      {
+        fieldName: 'reservoir',
+        valueType: 'subField',
+        subMap: []
+      },
+      {
+        fieldName: 'marc21plus1',
+        valueType: 'subField',
+        subMap: []
+      }
     ],
   },
   {
@@ -116,27 +196,31 @@ const fieldMap = [
         subMap: [
           {
             fieldName: 'identifier',
-            valueType: 'string',
+            valueType: 'string'
           },
           {
             fieldName: 'isbn',
-            valueType: 'string',
+            valueType: 'string'
           },
           {
             fieldName: 'issn',
-            valueType: 'string',
+            valueType: 'string'
           },
           {
             fieldName: 'title',
-            valueType: 'string',
+            valueType: 'string'
+          },
+          {
+            fieldName: 'subtitle',
+            valueType: 'string'
           },
           {
             fieldName: 'author',
-            valueType: 'string',
+            valueType: 'string'
           },
           {
             fieldName: 'edition',
-            valueType: 'string',
+            valueType: 'string'
           },
         ],
       },
@@ -150,6 +234,13 @@ const CatalogConfigRoute = () => {
   const entryQuery = useOkapiQuery(entryPath(id), {
     staleTime: STALE_QUERY_TIME,
   });
+  const vendor = entryQuery.data?.lmsConfig?.vendor;
+  const profile = entryQuery.data?.catalogConfig?.profile;
+  const selectedProfile = profile || vendor;
+  const mappedFields = useMemo(
+    () => vendorFieldMappingForVendor(fieldMap, selectedProfile, 'catalogConfig'),
+    [selectedProfile],
+  );
 
   if (!entryQuery.isSuccess) return <EntryLoadingPane />;
 
@@ -165,7 +256,7 @@ const CatalogConfigRoute = () => {
           />
         }
         fieldLabelId={fieldLabelId}
-        fieldMapping={fieldMap}
+        fieldMapping={mappedFields}
         initialResource={entryQuery.data}
         resourcePath={entryPath(id)}
         successMessage={<FormattedMessage id="ui-rsdir.catalogConfig.edit.success" />}

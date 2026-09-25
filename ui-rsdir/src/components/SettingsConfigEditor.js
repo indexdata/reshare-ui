@@ -24,6 +24,12 @@ const normalizedValueType = valueType => valueType?.toLowerCase?.() || 'string';
 
 const isObject = value => value && typeof value === 'object' && !Array.isArray(value);
 
+const hasOwnValue = (source, fieldName) => isObject(source) &&
+  Object.prototype.hasOwnProperty.call(source, fieldName) &&
+  source[fieldName] !== null && source[fieldName] !== undefined;
+
+const selectedSubFields = (value, field) => field.subMap.filter(child => hasOwnValue(value, child.fieldName));
+
 const isValidSymbol = value => isObject(value) &&
   typeof value.authority === 'string' && !!value.authority &&
   typeof value.symbol === 'string' && !!value.symbol;
@@ -38,6 +44,32 @@ const normalizedSymbols = value => (Array.isArray(value) ? value : [])
 
 const validateFieldDefinition = (field, path = field.fieldName) => {
   const type = normalizedValueType(field.valueType);
+  const hasMinValue = field.minValue !== undefined;
+  const hasMaxValue = field.maxValue !== undefined;
+
+  if ((hasMinValue || hasMaxValue) && type !== 'integer' && type !== 'number') {
+    throw new Error(`SettingsConfigEditor field "${path}" can use minValue and maxValue only with type integer or number.`);
+  }
+
+  if (hasMinValue && (typeof field.minValue !== 'number' || !Number.isFinite(field.minValue))) {
+    throw new Error(`SettingsConfigEditor field "${path}" requires minValue to be a finite number.`);
+  }
+
+  if (hasMaxValue && (typeof field.maxValue !== 'number' || !Number.isFinite(field.maxValue))) {
+    throw new Error(`SettingsConfigEditor field "${path}" requires maxValue to be a finite number.`);
+  }
+
+  if (hasMinValue && hasMaxValue && field.minValue > field.maxValue) {
+    throw new Error(`SettingsConfigEditor field "${path}" requires minValue to be less than or equal to maxValue.`);
+  }
+
+  if (field.nullOnEmpty && type !== 'string') {
+    throw new Error(`SettingsConfigEditor field "${path}" can use nullOnEmpty only with type string.`);
+  }
+
+  if (field.onlyOne && type !== SUB_FIELD) {
+    throw new Error(`SettingsConfigEditor field "${path}" can use onlyOne only with type subField.`);
+  }
 
   if (type === STRING_MAP && field.requiredKeys !== undefined && (
     !Array.isArray(field.requiredKeys) ||
@@ -78,7 +110,7 @@ const validateFieldDefinition = (field, path = field.fieldName) => {
   });
 };
 
-const toEditorValue = (value, field) => {
+const toEditorValue = (value, field, onlyPresent = false) => {
   const type = normalizedValueType(field.valueType);
 
   if (type === STRING_ARRAY) {
@@ -96,19 +128,38 @@ const toEditorValue = (value, field) => {
   if (type === OBJECT_ARRAY) {
     const source = Array.isArray(value) ? value : [];
 
-    return source.map(item => field.objectMap.reduce((acc, child) => ({
-      ...acc,
-      [child.fieldName]: toEditorValue(isObject(item) ? item[child.fieldName] : undefined, child),
-    }), isObject(item) ? { ...item } : {}));
+    return source.map(item => field.objectMap.reduce((acc, child) => {
+      if (onlyPresent && !hasOwnValue(item, child.fieldName)) {
+        delete acc[child.fieldName];
+        return acc;
+      }
+
+      return {
+        ...acc,
+        [child.fieldName]: toEditorValue(
+          isObject(item) ? item[child.fieldName] : undefined,
+          child,
+          onlyPresent,
+        ),
+      };
+    }, isObject(item) ? { ...item } : {}));
   }
 
   if (type === SUB_FIELD) {
     const source = isObject(value) ? value : {};
+    const preserveAbsence = onlyPresent || field.onlyOne;
 
-    return field.subMap.reduce((acc, child) => ({
-      ...acc,
-      [child.fieldName]: toEditorValue(source[child.fieldName], child),
-    }), { ...source });
+    return field.subMap.reduce((acc, child) => {
+      if (preserveAbsence && !hasOwnValue(source, child.fieldName)) {
+        delete acc[child.fieldName];
+        return acc;
+      }
+
+      return {
+        ...acc,
+        [child.fieldName]: toEditorValue(source[child.fieldName], child, preserveAbsence),
+      };
+    }, { ...source });
   }
 
   if (value === null || value === undefined) {
@@ -118,7 +169,7 @@ const toEditorValue = (value, field) => {
   return String(value);
 };
 
-const valueForPatch = (value, field) => {
+const valueForPatch = (value, field, onlyPresent = false) => {
   const type = normalizedValueType(field.valueType);
 
   if (type === STRING_ARRAY) {
@@ -136,19 +187,38 @@ const valueForPatch = (value, field) => {
   if (type === OBJECT_ARRAY) {
     const source = Array.isArray(value) ? value : [];
 
-    return source.map(item => field.objectMap.reduce((acc, child) => ({
-      ...acc,
-      [child.fieldName]: valueForPatch(isObject(item) ? item[child.fieldName] : undefined, child),
-    }), isObject(item) ? { ...item } : {}));
+    return source.map(item => field.objectMap.reduce((acc, child) => {
+      if (onlyPresent && !hasOwnValue(item, child.fieldName)) {
+        delete acc[child.fieldName];
+        return acc;
+      }
+
+      return {
+        ...acc,
+        [child.fieldName]: valueForPatch(
+          isObject(item) ? item[child.fieldName] : undefined,
+          child,
+          onlyPresent,
+        ),
+      };
+    }, isObject(item) ? { ...item } : {}));
   }
 
   if (type === SUB_FIELD) {
     const source = isObject(value) ? value : {};
+    const preserveAbsence = onlyPresent || field.onlyOne;
 
-    return field.subMap.reduce((acc, child) => ({
-      ...acc,
-      [child.fieldName]: valueForPatch(source[child.fieldName], child),
-    }), { ...source });
+    return field.subMap.reduce((acc, child) => {
+      if (preserveAbsence && !hasOwnValue(source, child.fieldName)) {
+        delete acc[child.fieldName];
+        return acc;
+      }
+
+      return {
+        ...acc,
+        [child.fieldName]: valueForPatch(source[child.fieldName], child, preserveAbsence),
+      };
+    }, { ...source });
   }
 
   if (type === 'boolean') {
@@ -164,6 +234,10 @@ const valueForPatch = (value, field) => {
 
   if (type === 'number') {
     return value === '' ? null : Number.parseFloat(value);
+  }
+
+  if (type === 'string' && field.nullOnEmpty && value === '') {
+    return null;
   }
 
   return value;
@@ -182,6 +256,11 @@ const isEmptyFieldValue = (value, field) => {
 
   if (type === SUB_FIELD) {
     const source = isObject(value) ? value : {};
+
+    if (field.onlyOne) {
+      return selectedSubFields(source, field).length === 0;
+    }
+
     return field.subMap.every(child => isEmptyFieldValue(source[child.fieldName], child));
   }
 
@@ -392,6 +471,37 @@ const SettingsConfigEditor = ({
   const setDraftFieldValue = (field, parentContext, nextValue) => {
     const path = contextForField(field, parentContext).path;
     setValues(current => valueWithPathUpdated(current, path, nextValue));
+  };
+
+  const selectOnlyOneChild = (field, parentContext) => event => {
+    const selectedFieldName = event.target.value;
+    const mappedFieldNames = new Set(field.subMap.map(child => child.fieldName));
+    const selectedField = selectedFieldName ?
+      field.subMap.find(child => child.fieldName === selectedFieldName) : undefined;
+
+    if (selectedFieldName && (!selectedField || selectedField.disabled)) {
+      return;
+    }
+
+    setDraftFieldValue(field, parentContext, current => {
+      const source = isObject(current) ? current : {};
+      const unrelatedValues = Object.keys(source).reduce((acc, key) => (
+        mappedFieldNames.has(key) ? acc : { ...acc, [key]: source[key] }
+      ), {});
+
+      if (!selectedFieldName) {
+        return unrelatedValues;
+      }
+
+      const selectedValue = hasOwnValue(source, selectedFieldName) ?
+        source[selectedFieldName] : toEditorValue(undefined, selectedField, true);
+
+      return {
+        ...unrelatedValues,
+        [selectedFieldName]: selectedValue,
+      };
+    });
+    setFieldErrors(current => omitRootPath(current, pathForField(field, parentContext)));
   };
 
   const clearTransientState = rootPath => {
@@ -776,19 +886,52 @@ const SettingsConfigEditor = ({
     defaultMessage: 'Enter a whole number between -9007199254740991 and 9007199254740991.',
   });
 
+  const belowMinValueMessage = minValue => intl.formatMessage({
+    id: 'ui-rsdir.settingsConfig.belowMinValue',
+    defaultMessage: 'Enter a value greater than or equal to {minValue}.',
+  }, { minValue });
+
+  const aboveMaxValueMessage = maxValue => intl.formatMessage({
+    id: 'ui-rsdir.settingsConfig.aboveMaxValue',
+    defaultMessage: 'Enter a value less than or equal to {maxValue}.',
+  }, { maxValue });
+
+  const onlyOneMessage = () => intl.formatMessage({
+    id: 'ui-rsdir.settingsConfig.onlyOne',
+    defaultMessage: 'Select no more than one value.',
+  });
+
   const validationErrorsForValue = (field, value, path) => {
     const errors = {};
+
+    if (field.disabled) {
+      return errors;
+    }
+
     const type = normalizedValueType(field.valueType);
 
     if (field.required && isEmptyFieldValue(value, field)) {
       errors[path] = requiredMessage();
     }
 
-    if (type === 'integer' && !isEmptyFieldValue(value, field)) {
-      if (!INTEGER_PATTERN.test(value)) {
-        errors[path] = invalidIntegerMessage();
-      } else if (!Number.isSafeInteger(Number(value))) {
-        errors[path] = integerOutOfRangeMessage();
+    if ((type === 'integer' || type === 'number') && !isEmptyFieldValue(value, field)) {
+      const numericValue = type === 'integer' ? Number(value) : Number.parseFloat(value);
+      let isValidNumericValue = Number.isFinite(numericValue);
+
+      if (type === 'integer') {
+        if (!INTEGER_PATTERN.test(value)) {
+          errors[path] = invalidIntegerMessage();
+          isValidNumericValue = false;
+        } else if (!Number.isSafeInteger(numericValue)) {
+          errors[path] = integerOutOfRangeMessage();
+          isValidNumericValue = false;
+        }
+      }
+
+      if (isValidNumericValue && field.minValue !== undefined && numericValue < field.minValue) {
+        errors[path] = belowMinValueMessage(field.minValue);
+      } else if (isValidNumericValue && field.maxValue !== undefined && numericValue > field.maxValue) {
+        errors[path] = aboveMaxValueMessage(field.maxValue);
       }
     }
 
@@ -804,10 +947,17 @@ const SettingsConfigEditor = ({
     }
 
     if (type === SUB_FIELD) {
-      field.subMap.forEach(child => {
+      const source = isObject(value) ? value : {};
+      const selectedFields = field.onlyOne ? selectedSubFields(source, field) : field.subMap;
+
+      if (field.onlyOne && selectedFields.length > 1) {
+        errors[path] = onlyOneMessage();
+      }
+
+      selectedFields.forEach(child => {
         Object.assign(errors, validationErrorsForValue(
           child,
-          isObject(value) ? value[child.fieldName] : undefined,
+          source[child.fieldName],
           `${path}.${child.fieldName}`,
         ));
       });
@@ -1561,6 +1711,8 @@ const SettingsConfigEditor = ({
     return (
       <TextField
         {...commonProps}
+        max={child.maxValue}
+        min={child.minValue}
         onKeyDown={handleNewObjectScalarKeyDown(field, parentField)}
         step={type === 'integer' ? 1 : undefined}
         type={type === 'integer' || type === 'number' ? 'number' : 'text'}
@@ -1584,15 +1736,22 @@ const SettingsConfigEditor = ({
                 const childPath = `${path}.${index}.${child.fieldName}`;
 
                 return (
-                  <div className={css.objectArrayComponent} key={child.fieldName}>
+                  <div
+                    className={`${css.objectArrayComponent} ${child.disabled ? css.disabledField : ''}`}
+                    key={child.fieldName}
+                  >
                     <span className={css.objectArrayComponentLabel}>
                       {renderFieldLabel(child, `${path}.${child.fieldName}`, `value-${index}`)}:
                     </span>
-                    <div className={css.objectArrayComponentValue}>
-                      {renderObjectChildValue(child, objectValue[child.fieldName])}
-                    </div>
-                    {fieldErrors[childPath] &&
-                      <div className={css.subFieldError} role="alert">{fieldErrors[childPath]}</div>
+                    {!child.disabled &&
+                      <>
+                        <div className={css.objectArrayComponentValue}>
+                          {renderObjectChildValue(child, objectValue[child.fieldName])}
+                        </div>
+                        {fieldErrors[childPath] &&
+                          <div className={css.subFieldError} role="alert">{fieldErrors[childPath]}</div>
+                        }
+                      </>
                     }
                   </div>
                 );
@@ -1635,11 +1794,14 @@ const SettingsConfigEditor = ({
         {renderObjectArrayValues(field, true, parentField)}
         <div className={css.objectArrayAdd}>
           {field.objectMap.map(child => (
-            <div className={css.objectArrayAddField} key={child.fieldName}>
+            <div
+              className={`${css.objectArrayAddField} ${child.disabled ? css.disabledField : ''}`}
+              key={child.fieldName}
+            >
               <div className={css.subFieldLabel}>
                 {renderFieldLabel(child, `${path}.${child.fieldName}`, 'new')}
               </div>
-              {renderNewObjectChildInput(field, parentField, child)}
+              {!child.disabled && renderNewObjectChildInput(field, parentField, child)}
             </div>
           ))}
           {fieldErrors[objectPath] &&
@@ -1702,6 +1864,8 @@ const SettingsConfigEditor = ({
     return (
       <TextField
         {...commonProps}
+        max={field.maxValue}
+        min={field.minValue}
         step={type === 'integer' ? 1 : undefined}
         type={type === 'integer' || type === 'number' ? 'number' : 'text'}
       />
@@ -1733,6 +1897,10 @@ const SettingsConfigEditor = ({
   const renderSubField = (field, isEditing, parentContext) => {
     const context = contextForField(field, parentContext);
     const path = context.path.join('.');
+    const value = isEditing ? draftFieldValue(field, parentContext) : committedFieldValue(field, parentContext);
+    const selectedFields = field.onlyOne ? selectedSubFields(value, field) : field.subMap;
+    const selectedFieldName = selectedFields.length === 1 ? selectedFields[0].fieldName : '';
+    const fieldsToRender = field.onlyOne ? selectedFields : field.subMap;
 
     return (
       <div className={css.subFields}>
@@ -1741,17 +1909,40 @@ const SettingsConfigEditor = ({
             {fieldErrors[path]}
           </div>
         }
-        {field.subMap.map(child => {
+        {field.onlyOne && isEditing &&
+          <Select
+            aria-label={intl.formatMessage({
+              id: 'ui-rsdir.settingsConfig.onlyOneSelection',
+              defaultMessage: 'Selected value for {field}',
+            }, { field: labelForPath(path) })}
+            dataOptions={[
+              { label: '', value: '' },
+              ...field.subMap.map(child => ({
+                disabled: child.disabled,
+                label: labelForPath(`${path}.${child.fieldName}`),
+                value: child.fieldName,
+              })),
+            ]}
+            disabled={savingFields[topFieldName(field, parentContext)]}
+            id={`${controlIdPrefix}-${path.split('.').join('-')}-selection`}
+            onChange={selectOnlyOneChild(field, parentContext)}
+            value={selectedFieldName}
+          />
+        }
+        {fieldsToRender.map(child => {
           const childPath = pathForField(child, context);
           const isChildSubField = normalizedValueType(child.valueType) === SUB_FIELD;
 
           return (
-            <div className={css.subField} key={child.fieldName}>
+            <div
+              className={`${css.subField} ${child.disabled ? css.disabledField : ''}`}
+              key={child.fieldName}
+            >
               <div className={css.subFieldLabel}>{renderFieldLabel(child, childPath)}</div>
-              {isChildSubField ?
+              {!child.disabled && (isChildSubField ?
                 renderSubField(child, isEditing, context) :
                 isEditing ? renderFieldInput(child, context) : renderFieldDisplay(child, context)
-              }
+              )}
             </div>
           );
         })}
@@ -1769,10 +1960,11 @@ const SettingsConfigEditor = ({
 
         return (
           <Card
+            cardClass={field.disabled ? css.disabledField : undefined}
             roundedBorder
             key={fieldName}
             headerStart={renderFieldLabel(field, fieldName)}
-            headerEnd={
+            headerEnd={!field.disabled &&
               <Button
                 buttonStyle={isEditing ? 'primary' : undefined}
                 disabled={isSaving}
@@ -1786,7 +1978,7 @@ const SettingsConfigEditor = ({
               </Button>
             }
           >
-            {isEditing ?
+            {!field.disabled && (isEditing ?
               <div className={css.fieldEditor}>
                 <div className={css.fieldInput}>
                   {isSubField ? renderSubField(field, true) : renderFieldInput(field)}
@@ -1802,7 +1994,7 @@ const SettingsConfigEditor = ({
                 />
               </div> :
               isSubField ? renderSubField(field, false) : renderFieldDisplay(field)
-            }
+            )}
           </Card>
         );
       })}
