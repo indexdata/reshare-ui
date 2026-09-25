@@ -24,6 +24,7 @@ Each top-level mapping is displayed in its own card and saved independently. Sav
 | `onlyOne` | boolean | No | For a `subField`, allows at most one direct `subMap` child to be selected. The editor renders a child selector and omits unselected children from the saved value. Disabled children remain visible but unavailable in the selector. Combine with `required` to require exactly one selection. |
 | `minValue` | number | No | Inclusive minimum for an `integer` or `number` field. |
 | `maxValue` | number | No | Inclusive maximum for an `integer` or `number` field. |
+| `nullOnEmpty` | boolean | No | For a `string` field, serializes an exact empty string as `null`. |
 | `validChoices` | array | No | Renders a scalar field as a select containing these choices plus an empty choice. Values are converted to strings in the editor. |
 | `defaultDesc` | string | No | Displays a question-mark tooltip beside the field label, using this value when no translated description is available. |
 | `getSaveErrorMessage` | function | No | Receives a failed PATCH error and may return a field-specific React node or string. Returning `undefined` uses the error's default message. |
@@ -34,13 +35,13 @@ Use `valueType`, not `type`, when declaring a field type.
 
 ### `string`
 
-Renders a text field and stores its value as a JSON string.
+Renders a text field and stores its value as a JSON string. When `nullOnEmpty: true`, an exact empty string is stored as `null`; whitespace-only strings are unchanged. Required validation still rejects the empty value before serialization.
 
 ```js
 {
   fieldName: 'address',
   valueType: 'string',
-  required: true,
+  nullOnEmpty: true,
 }
 ```
 
@@ -262,7 +263,7 @@ Control IDs use the same path with dots replaced by hyphens. Field names should 
 - Nested validation errors use the field's full dotted path.
 - `subField` and `objectArray` mappings recursively convert boolean, integer, and number children to their JSON types.
 - Object properties not present in `subMap` or `objectMap` are preserved when a mapped value is edited and saved.
-- A `subField` without `subMap`, an `objectArray` without `objectMap`, a forbidden structural `objectMap` child, malformed `requiredKeys`, or invalid numeric bounds causes `SettingsConfigEditor` to throw a descriptive mapping error.
+- A `subField` without `subMap`, an `objectArray` without `objectMap`, a forbidden structural `objectMap` child, malformed `requiredKeys`, invalid numeric bounds, or `nullOnEmpty` on a non-string field causes `SettingsConfigEditor` to throw a descriptive mapping error.
 
 ## Complete example
 

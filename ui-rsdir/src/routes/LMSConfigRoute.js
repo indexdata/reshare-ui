@@ -11,6 +11,12 @@ const entryPath = id => `directory/entries/by-id/${id}`;
 const fieldLabelId = fieldName => `ui-rsdir.lmsConfig.${fieldName}`;
 const fieldMap = [
   {
+    fieldName: 'vendor',
+    valueType: 'string',
+    nullOnEmpty: true,
+    validChoices: ['Alma', 'Sierra', 'Koha', 'WMS', 'Aleph', 'FOLIO', 'Generic']
+  },
+  {
     fieldName: 'address',
     valueType: 'string',
     required: true
@@ -22,11 +28,13 @@ const fieldMap = [
   },
   {
     fieldName: 'fromAgencyAuthentication',
-    valueType: 'string'
+    valueType: 'string',
+    nullOnEmpty: true,
   },
   {
     fieldName: 'toAgency',
-    valueType: 'string'
+    valueType: 'string',
+    nullOnEmpty: true,
   },
   {
     fieldName: 'lookupUserEnabled',
@@ -40,6 +48,7 @@ const fieldMap = [
   {
     fieldName: 'bibIdNormalization',
     valueType: 'string',
+    nullOnEmpty: true,
     validChoices: ['none', 'sierra']
   },
   {
@@ -53,6 +62,7 @@ const fieldMap = [
   {
     fieldName: 'itemLocation',
     valueType: 'string',
+    nullOnEmpty: true,
   },
   {
     fieldName: 'ncipNamespaceEnabled',
@@ -65,10 +75,12 @@ const fieldMap = [
   {
     fieldName: 'requestItemRequestType',
     valueType: 'string',
+    nullOnEmpty: true,
   },
   {
     fieldName: 'requestItemRequestScopeType',
     valueType: 'string',
+    nullOnEmpty: true,
   },
   {
     fieldName: 'requestItemPickupLocationEnabled',
@@ -77,18 +89,22 @@ const fieldMap = [
   {
     fieldName: 'requestItemBibIdCode',
     valueType: 'string',
+    nullOnEmpty: true,
   },
   {
     fieldName: 'requesterPickupLocation',
     valueType: 'string',
+    nullOnEmpty: true,
   },
   {
     fieldName: 'supplierPickupLocation',
     valueType: 'string',
+    nullOnEmpty: true,
   },
   {
     fieldName: 'requesterPatronPattern',
-    valueType: 'string'
+    valueType: 'string',
+    nullOnEmpty: true,
   },
   {
     fieldName: 'patronProfiles',
@@ -110,11 +126,6 @@ const fieldMap = [
         required: true
       }
     ]
-  },
-  {
-    fieldName: 'vendor',
-    valueType: 'string',
-    validChoices: ['Alma', 'Sierra', 'Koha', 'WMS', 'Aleph', 'FOLIO', 'Generic']
   }
 ];
 

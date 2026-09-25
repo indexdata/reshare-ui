@@ -13,6 +13,7 @@ export const fieldMap = [
   {
     fieldName: 'profile',
     valueType: 'string',
+    nullOnEmpty: true,
     validChoices: ['Alma', 'Sierra', 'Koha', 'WMS', 'Aleph', 'FOLIO', 'Generic']
   },
   {

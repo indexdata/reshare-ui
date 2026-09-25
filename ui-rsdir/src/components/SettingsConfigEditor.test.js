@@ -185,6 +185,109 @@ describe('SettingsConfigEditor numeric bounds', () => {
   });
 });
 
+describe('SettingsConfigEditor nullOnEmpty strings', () => {
+  it('serializes an empty string selection as null', async () => {
+    renderEditor({
+      fieldMapping: [{
+        fieldName: 'profile',
+        nullOnEmpty: true,
+        validChoices: ['Alma', 'FOLIO'],
+      }],
+      initialResource: { config: { profile: 'Alma' } },
+    });
+
+    fireEvent.click(document.getElementById('edit-settings-config-profile'));
+    fireEvent.change(screen.getByRole('combobox', { name: 'profile' }), {
+      target: { value: '' },
+    });
+    fireEvent.click(document.getElementById('save-settings-config-profile'));
+
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(
+      'directory/entries/by-id/entry-id',
+      { json: { config: { profile: null } } },
+    ));
+  });
+
+  it('applies recursively while preserving ordinary empty and whitespace strings', async () => {
+    renderEditor({
+      fieldMapping: [{
+        fieldName: 'group',
+        valueType: 'subField',
+        subMap: [
+          { fieldName: 'nullable', nullOnEmpty: true },
+          { fieldName: 'ordinary' },
+          { fieldName: 'whitespace', nullOnEmpty: true },
+          {
+            fieldName: 'items',
+            valueType: 'objectArray',
+            objectMap: [
+              { fieldName: 'nullable', nullOnEmpty: true },
+              { fieldName: 'ordinary' },
+              { fieldName: 'marker' },
+            ],
+          },
+        ],
+      }],
+      initialResource: {
+        config: {
+          group: {
+            nullable: '',
+            ordinary: '',
+            whitespace: '   ',
+            items: [{ nullable: '', ordinary: '', marker: 'present' }],
+          },
+        },
+      },
+    });
+
+    fireEvent.click(document.getElementById('edit-settings-config-group'));
+    fireEvent.click(document.getElementById('save-settings-config-group'));
+
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(
+      'directory/entries/by-id/entry-id',
+      {
+        json: {
+          config: {
+            group: {
+              nullable: null,
+              ordinary: '',
+              whitespace: '   ',
+              items: [{ nullable: null, ordinary: '', marker: 'present' }],
+            },
+          },
+        },
+      },
+    ));
+  });
+
+  it('still rejects required empty strings before serialization', () => {
+    renderEditor({
+      fieldMapping: [{
+        fieldName: 'requiredValue',
+        nullOnEmpty: true,
+        required: true,
+      }],
+      initialResource: { config: { requiredValue: '' } },
+    });
+
+    fireEvent.click(document.getElementById('edit-settings-config-requiredValue'));
+    fireEvent.click(document.getElementById('save-settings-config-requiredValue'));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Required');
+    expect(mockPatch).not.toHaveBeenCalled();
+  });
+
+  it('rejects nullOnEmpty on a non-string mapping', () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(() => renderEditor({
+      fieldMapping: [{ fieldName: 'enabled', valueType: 'boolean', nullOnEmpty: true }],
+    })).toThrow('can use nullOnEmpty only with type string');
+
+    consoleError.mockRestore();
+  });
+});
+
 describe('SettingsConfigEditor disabled fields', () => {
   it('greys out a disabled card without rendering its content or edit control', () => {
     renderEditor({

@@ -63,6 +63,10 @@ const validateFieldDefinition = (field, path = field.fieldName) => {
     throw new Error(`SettingsConfigEditor field "${path}" requires minValue to be less than or equal to maxValue.`);
   }
 
+  if (field.nullOnEmpty && type !== 'string') {
+    throw new Error(`SettingsConfigEditor field "${path}" can use nullOnEmpty only with type string.`);
+  }
+
   if (field.onlyOne && type !== SUB_FIELD) {
     throw new Error(`SettingsConfigEditor field "${path}" can use onlyOne only with type subField.`);
   }
@@ -230,6 +234,10 @@ const valueForPatch = (value, field, onlyPresent = false) => {
 
   if (type === 'number') {
     return value === '' ? null : Number.parseFloat(value);
+  }
+
+  if (type === 'string' && field.nullOnEmpty && value === '') {
+    return null;
   }
 
   return value;
