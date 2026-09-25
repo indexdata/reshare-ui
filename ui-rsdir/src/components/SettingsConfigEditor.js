@@ -44,6 +44,24 @@ const normalizedSymbols = value => (Array.isArray(value) ? value : [])
 
 const validateFieldDefinition = (field, path = field.fieldName) => {
   const type = normalizedValueType(field.valueType);
+  const hasMinValue = field.minValue !== undefined;
+  const hasMaxValue = field.maxValue !== undefined;
+
+  if ((hasMinValue || hasMaxValue) && type !== 'integer' && type !== 'number') {
+    throw new Error(`SettingsConfigEditor field "${path}" can use minValue and maxValue only with type integer or number.`);
+  }
+
+  if (hasMinValue && (typeof field.minValue !== 'number' || !Number.isFinite(field.minValue))) {
+    throw new Error(`SettingsConfigEditor field "${path}" requires minValue to be a finite number.`);
+  }
+
+  if (hasMaxValue && (typeof field.maxValue !== 'number' || !Number.isFinite(field.maxValue))) {
+    throw new Error(`SettingsConfigEditor field "${path}" requires maxValue to be a finite number.`);
+  }
+
+  if (hasMinValue && hasMaxValue && field.minValue > field.maxValue) {
+    throw new Error(`SettingsConfigEditor field "${path}" requires minValue to be less than or equal to maxValue.`);
+  }
 
   if (field.onlyOne && type !== SUB_FIELD) {
     throw new Error(`SettingsConfigEditor field "${path}" can use onlyOne only with type subField.`);
@@ -860,6 +878,16 @@ const SettingsConfigEditor = ({
     defaultMessage: 'Enter a whole number between -9007199254740991 and 9007199254740991.',
   });
 
+  const belowMinValueMessage = minValue => intl.formatMessage({
+    id: 'ui-rsdir.settingsConfig.belowMinValue',
+    defaultMessage: 'Enter a value greater than or equal to {minValue}.',
+  }, { minValue });
+
+  const aboveMaxValueMessage = maxValue => intl.formatMessage({
+    id: 'ui-rsdir.settingsConfig.aboveMaxValue',
+    defaultMessage: 'Enter a value less than or equal to {maxValue}.',
+  }, { maxValue });
+
   const onlyOneMessage = () => intl.formatMessage({
     id: 'ui-rsdir.settingsConfig.onlyOne',
     defaultMessage: 'Select no more than one value.',
@@ -878,11 +906,24 @@ const SettingsConfigEditor = ({
       errors[path] = requiredMessage();
     }
 
-    if (type === 'integer' && !isEmptyFieldValue(value, field)) {
-      if (!INTEGER_PATTERN.test(value)) {
-        errors[path] = invalidIntegerMessage();
-      } else if (!Number.isSafeInteger(Number(value))) {
-        errors[path] = integerOutOfRangeMessage();
+    if ((type === 'integer' || type === 'number') && !isEmptyFieldValue(value, field)) {
+      const numericValue = type === 'integer' ? Number(value) : Number.parseFloat(value);
+      let isValidNumericValue = Number.isFinite(numericValue);
+
+      if (type === 'integer') {
+        if (!INTEGER_PATTERN.test(value)) {
+          errors[path] = invalidIntegerMessage();
+          isValidNumericValue = false;
+        } else if (!Number.isSafeInteger(numericValue)) {
+          errors[path] = integerOutOfRangeMessage();
+          isValidNumericValue = false;
+        }
+      }
+
+      if (isValidNumericValue && field.minValue !== undefined && numericValue < field.minValue) {
+        errors[path] = belowMinValueMessage(field.minValue);
+      } else if (isValidNumericValue && field.maxValue !== undefined && numericValue > field.maxValue) {
+        errors[path] = aboveMaxValueMessage(field.maxValue);
       }
     }
 
@@ -1662,6 +1703,8 @@ const SettingsConfigEditor = ({
     return (
       <TextField
         {...commonProps}
+        max={child.maxValue}
+        min={child.minValue}
         onKeyDown={handleNewObjectScalarKeyDown(field, parentField)}
         step={type === 'integer' ? 1 : undefined}
         type={type === 'integer' || type === 'number' ? 'number' : 'text'}
@@ -1813,6 +1856,8 @@ const SettingsConfigEditor = ({
     return (
       <TextField
         {...commonProps}
+        max={field.maxValue}
+        min={field.minValue}
         step={type === 'integer' ? 1 : undefined}
         type={type === 'integer' || type === 'number' ? 'number' : 'text'}
       />

@@ -249,6 +249,8 @@
   "resource.edit" : "Edit {name}",
   "settingsConfig.duplicateSymbol" : "The symbol {symbol} already exists.",
   "settingsConfig.duplicateStringMapKey" : "The key {key} already exists.",
+  "settingsConfig.aboveMaxValue" : "Enter a value less than or equal to {maxValue}.",
+  "settingsConfig.belowMinValue" : "Enter a value greater than or equal to {minValue}.",
   "settingsConfig.integerOutOfRange" : "Enter a whole number between -9007199254740991 and 9007199254740991.",
   "settingsConfig.invalidInteger" : "Enter a whole number using digits only.",
   "settingsConfig.onlyOne" : "Select no more than one value.",

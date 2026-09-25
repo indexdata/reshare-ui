@@ -49,15 +49,18 @@ jest.mock('@folio/stripes/components', () => ({
       ))}
     </select>
   ),
-  TextField: ({ 'aria-label': ariaLabel, disabled, error, id, onChange, onKeyDown, value }) => (
+  TextField: ({ 'aria-label': ariaLabel, disabled, error, id, max, min, onChange, onKeyDown, type, value }) => (
     <>
       <input
         aria-label={ariaLabel}
         aria-invalid={!!error}
         disabled={disabled}
         id={id}
+        max={max}
+        min={min}
         onChange={onChange}
         onKeyDown={onKeyDown}
+        type={type}
         value={value}
       />
       {error && <span role="alert">{error}</span>}
@@ -87,6 +90,99 @@ beforeEach(() => {
   mockPatch.mockReset();
   mockKy.mockReset();
   mockPatch.mockResolvedValue({ text: () => Promise.resolve('') });
+});
+
+describe('SettingsConfigEditor numeric bounds', () => {
+  it('enforces inclusive integer bounds and exposes them on the input', async () => {
+    renderEditor({
+      fieldMapping: [{
+        fieldName: 'days',
+        valueType: 'integer',
+        minValue: 1,
+        maxValue: 30,
+      }],
+      initialResource: { config: { days: 10 } },
+    });
+
+    fireEvent.click(document.getElementById('edit-settings-config-days'));
+    const input = screen.getByRole('spinbutton', { name: 'days' });
+
+    expect(input).toHaveAttribute('min', '1');
+    expect(input).toHaveAttribute('max', '30');
+
+    fireEvent.change(input, { target: { value: '0' } });
+    fireEvent.click(document.getElementById('save-settings-config-days'));
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a value greater than or equal to {minValue}.');
+    expect(mockPatch).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: '30' } });
+    fireEvent.click(document.getElementById('save-settings-config-days'));
+
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(
+      'directory/entries/by-id/entry-id',
+      { json: { config: { days: 30 } } },
+    ));
+  });
+
+  it('enforces number bounds while adding an object-array value', async () => {
+    renderEditor({
+      fieldMapping: [{
+        fieldName: 'items',
+        valueType: 'objectArray',
+        objectMap: [{
+          fieldName: 'ratio',
+          valueType: 'number',
+          minValue: 0.5,
+          maxValue: 1.5,
+        }],
+      }],
+      initialResource: { config: { items: [] } },
+    });
+
+    fireEvent.click(document.getElementById('edit-settings-config-items'));
+    const input = screen.getByRole('spinbutton', { name: 'ratio' });
+
+    expect(input).toHaveAttribute('min', '0.5');
+    expect(input).toHaveAttribute('max', '1.5');
+
+    fireEvent.change(input, { target: { value: '2' } });
+    fireEvent.click(document.getElementById('add-settings-config-items'));
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a value less than or equal to {maxValue}.');
+
+    fireEvent.change(input, { target: { value: '0.5' } });
+    fireEvent.click(document.getElementById('add-settings-config-items'));
+    fireEvent.click(document.getElementById('save-settings-config-items'));
+
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(
+      'directory/entries/by-id/entry-id',
+      { json: { config: { items: [{ ratio: 0.5 }] } } },
+    ));
+  });
+
+  it.each([
+    {
+      field: { fieldName: 'name', minValue: 0 },
+      message: 'can use minValue and maxValue only with type integer or number',
+    },
+    {
+      field: { fieldName: 'count', valueType: 'integer', minValue: '0' },
+      message: 'requires minValue to be a finite number',
+    },
+    {
+      field: { fieldName: 'count', valueType: 'number', maxValue: Infinity },
+      message: 'requires maxValue to be a finite number',
+    },
+    {
+      field: { fieldName: 'count', valueType: 'integer', minValue: 2, maxValue: 1 },
+      message: 'requires minValue to be less than or equal to maxValue',
+    },
+  ])('rejects an invalid numeric bound mapping: $message', ({ field, message }) => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(() => renderEditor({ fieldMapping: [field] })).toThrow(message);
+
+    consoleError.mockRestore();
+  });
 });
 
 describe('SettingsConfigEditor disabled fields', () => {

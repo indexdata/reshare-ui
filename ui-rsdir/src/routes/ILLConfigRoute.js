@@ -19,7 +19,8 @@ const fieldMap = [
   },
   {
     fieldName: 'defaultLoanPeriod',
-    valueType: 'integer'
+    valueType: 'integer',
+    minValue: 1,
   },
   {
     fieldName: 'lendersOfLastResort',
@@ -62,6 +63,7 @@ const fieldMap = [
   {
     fieldName: 'duplicateCheckWindowHours',
     valueType: 'integer',
+    minValue: 0,
   },
 ];
 
