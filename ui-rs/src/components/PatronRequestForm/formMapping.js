@@ -25,12 +25,14 @@ const brokerToForm = (request) => {
     identifiers,
     ...(supplierUniqueRecordId && { systemInstanceIdentifier: supplierUniqueRecordId }),
     ...(request?.internalNote && { internalNote: request.internalNote }),
+    ...(request?.requesterPickupLocationId && { requesterPickupLocationId: request.requesterPickupLocationId }),
   };
 };
 
 const formToBroker = (submittedRecord, { operation = CREATE } = {}) => {
   const {
     internalNote,
+    requesterPickupLocationId,
     identifiers = {},
     systemInstanceIdentifier,
     ...illRequestFields
@@ -51,10 +53,15 @@ const formToBroker = (submittedRecord, { operation = CREATE } = {}) => {
   const brokerInternalNote = operation === EDIT
     ? { internalNote: internalNote ?? '' }
     : (internalNote ? { internalNote } : {});
+  // PUT leaves an omitted pickup location as it was, so clearing one needs null.
+  const brokerPickupLocation = operation === EDIT
+    ? { requesterPickupLocationId: requesterPickupLocationId || null }
+    : (requesterPickupLocationId ? { requesterPickupLocationId } : {});
 
   return {
     patron: illRequestFields?.patronInfo?.patronId,
     ...brokerInternalNote,
+    ...brokerPickupLocation,
     illRequest: {
       ...illRequestFields,
       bibliographicInfo,

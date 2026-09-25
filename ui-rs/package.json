@@ -62,6 +62,7 @@
     ],
     "okapiInterfaces": {
       "crosslink-broker": "1.0",
+      "entries": "1.0",
       "tags": "1.0"
     },
     "permissionSets": [

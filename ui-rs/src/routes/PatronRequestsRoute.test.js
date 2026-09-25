@@ -26,6 +26,7 @@ const requestRow = {
   requesterRequestId: 'REQ-101',
   state: 'REQ_VALIDATED',
   supplierSymbol: 'ISIL:SUP',
+  requesterPickupLocationId: 'branch-e',
   createdAt: '2026-01-05T12:00:00Z',
   updatedAt: '2026-01-06T12:00:00Z',
   items: [
@@ -44,6 +45,7 @@ const responses = {
   'broker/state_model/models/default': {
     states: [{ name: 'REQ_VALIDATED', display: 'Validated', side: 'REQUESTER' }],
   },
+  'directory/entries/owned': { items: [{ id: 'branch-e', name: 'East Branch', type: 'Branch' }] },
 };
 
 // An explicit history, so tests can assert where the route navigates and whether it
@@ -118,6 +120,7 @@ describe('PatronRequestsRoute', () => {
     const r = within(row);
     expect(r.getByText('fixture-title')).toBeInTheDocument();
     expect(r.getByText('ISIL:SUP')).toBeInTheDocument();
+    expect(await r.findByText('East Branch')).toBeInTheDocument();
     expect(r.getByText('ui-rs.patronrequests.itemBarcode.multiVolume')).toBeInTheDocument();
     expect(screen.getByText('ui-rs.patronrequests.found')).toBeInTheDocument();
   });
@@ -150,6 +153,8 @@ describe('PatronRequestsRoute', () => {
     const hrid = await screen.findByText('REQ-101');
     const r = within(hrid.closest('[role="row"], tr'));
     expect(r.getByText('30001000123456')).toBeInTheDocument();
+    // Supply has no pickup location column, so nothing looks up our branches.
+    expect(mockOkapi.calledUrls().some(url => url.startsWith('directory/'))).toBe(false);
   });
 
   it('keeps the selected qindex in the URL and search dropdown after submit', async () => {
@@ -198,6 +203,7 @@ const facetBody = (url, facetValues) => ({
 const peerResponses = (facetValues) => ({
   'broker/patron_requests': (url) => facetBody(url, facetValues),
   'broker/state_model/models/default': { states: [] },
+  'directory/entries/owned': { items: [] },
 });
 
 // Open the supplier peer accordion and return its combobox filter input. The input only
@@ -287,6 +293,7 @@ describe('PatronRequestsRoute peer facet', () => {
         url.includes('supplier_name') ? hundred.slice(0, 3) : hundred,
       ),
       'broker/state_model/models/default': { states: [] },
+      'directory/entries/owned': { items: [] },
     });
     renderList(['/requests?sort=-dateCreated']);
     const input = await openPeerFilter();
@@ -322,6 +329,7 @@ describe('PatronRequestsRoute peer facet', () => {
         url.includes('supplier_name') ? peers.slice(0, 1) : peers,
       ),
       'broker/state_model/models/default': { states: [] },
+      'directory/entries/owned': { items: [] },
     });
     renderList(['/requests?sort=-dateCreated']);
     const input = await openPeerFilter();

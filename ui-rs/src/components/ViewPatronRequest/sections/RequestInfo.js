@@ -9,13 +9,15 @@ import {
   FormattedUTCDate,
 } from '@folio/stripes/components';
 import formattedDateTime from '../../../util/formattedDateTime';
+import { formatPickupLocationFull } from '../../../util/formatPickupLocation';
+import { useOwnedEntries } from '../../../util/useOwnedEntries';
 
 const RequestInfo = ({ record = {} }) => {
   const illRequest = record.illRequest || {};
   const bibliographicInfo = illRequest.bibliographicInfo || {};
   const serviceInfo = illRequest.serviceInfo || {};
-  const deliveryInfo = illRequest.deliveryInfo || {};
-  const pickupLocation = deliveryInfo.pickupLocation || deliveryInfo?.address?.physicalAddress?.line1;
+  const owned = useOwnedEntries({ enabled: !!record.requesterPickupLocationId });
+  const pickupLocation = formatPickupLocationFull(record, owned);
 
   return (
     <Accordion label={<FormattedMessage id="ui-rs.information.heading.request" />}>
@@ -73,21 +75,19 @@ const RequestInfo = ({ record = {} }) => {
           </Col>
         </Row>
         <Row>
-          <Col xs={6}>
+          <Col xs={3}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.flow.info.supplier" />}
               value={record.supplierSymbol}
             />
           </Col>
-          <Col xs={6}>
+          <Col xs={3}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.dateNeeded" />}
               value={serviceInfo.needBeforeDate ? <FormattedUTCDate value={serviceInfo.needBeforeDate} /> : ''}
             />
           </Col>
-        </Row>
-        <Row>
-          <Col xs={12}>
+          <Col xs={6}>
             <KeyValue
               label={<FormattedMessage id="ui-rs.information.pickupLocation" />}
               value={pickupLocation}

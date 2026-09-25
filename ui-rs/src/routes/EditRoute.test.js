@@ -25,6 +25,7 @@ const editableRequest = (overrides = {}) => ({
   state: 'NEEDS_REVIEW',
   stateModel: 'default',
   internalNote: 'Staff only note',
+  requesterPickupLocationId: 'branch-e',
   illRequest: {
     patronInfo: { patronId: 'p1', givenName: 'Ada', surname: 'Lovelace' },
     serviceInfo: { serviceType: 'Loan' },
@@ -61,6 +62,12 @@ const renderEdit = ({ request = editableRequest(), history } = {}) => {
   mockOkapi.setResponses({
     'broker/patron_requests/req-1': request,
     'broker/state_model/models/default': defaultModel,
+    'directory/entries/owned': {
+      items: [
+        { id: 'branch-e', name: 'East Branch', type: 'Branch' },
+        { id: 'branch-w', name: 'West Branch', type: 'Branch' },
+      ],
+    },
   });
   return renderWithRs(
     <CalloutContext.Provider value={{ sendCallout }}>
@@ -89,6 +96,7 @@ describe('EditRoute', () => {
     await waitFor(() => expect(fieldByName('bibliographicInfo.title')?.value).toBe('Original Title'));
     expect(fieldByName('identifiers.ISBN').value).toBe('9781234567890');
     expect(fieldByName('systemInstanceIdentifier').value).toBe('sys-42');
+    expect(fieldByName('requesterPickupLocationId').value).toBe('branch-e');
 
     setField('bibliographicInfo.title', 'Edited Title');
     fireEvent.click(document.querySelector('button[type="submit"]'));
@@ -103,6 +111,8 @@ describe('EditRoute', () => {
     expect(recordIdFor(opts.json, 'OCLC')).toBe('oclc-1');
     expect(recordIdFor(opts.json, 'LCCN')).toBe('lccn-9');
     expect(opts.json.internalNote).toBe('Staff only note');
+    expect(opts.json.requesterPickupLocationId).toBe('branch-e');
+    expect(opts.json.illRequest).not.toHaveProperty('requesterPickupLocationId');
 
     await waitFor(() => expect(history.location).toMatchObject({
       pathname: '/requests/req-1',
@@ -133,6 +143,24 @@ describe('EditRoute', () => {
 
     await waitFor(() => expect(mockOkapi.put).toHaveBeenCalledTimes(1));
     expect(mockOkapi.put.mock.calls[0][1].json.internalNote).toBe('');
+  });
+
+  it('sends null to clear a copy request\'s pickup location', async () => {
+    renderEdit({
+      request: editableRequest({
+        illRequest: {
+          ...editableRequest().illRequest,
+          serviceInfo: { serviceType: 'Copy', copyrightCompliance: { '#text': 'AU-GenBus' } },
+        },
+      }),
+    });
+    await waitFor(() => expect(fieldByName('requesterPickupLocationId')?.value).toBe('branch-e'));
+
+    setField('requesterPickupLocationId', '');
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+
+    await waitFor(() => expect(mockOkapi.put).toHaveBeenCalledTimes(1));
+    expect(mockOkapi.put.mock.calls[0][1].json.requesterPickupLocationId).toBeNull();
   });
 
   it('redirects away without a PUT when the request is not editable', async () => {

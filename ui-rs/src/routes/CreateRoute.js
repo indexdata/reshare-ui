@@ -49,7 +49,7 @@ const CreateRoute = () => {
     // copyrightType: defaultCopyrightSetting,
     serviceInfo: { serviceType: 'Loan' },
     ...(options.locations?.length === 1 && {
-      pickupLocation: options.locations[0].value,
+      requesterPickupLocationId: options.locations[0].value,
     }),
   };
 
