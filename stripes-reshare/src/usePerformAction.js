@@ -6,6 +6,7 @@
 import { useMutation, useQueryClient } from 'react-query';
 import useOkapiKy from './useOkapiKy';
 import useIntlCallout from './useIntlCallout';
+import { LIST_KEY, requestKeys, transactionEventsKeys } from './requestQueries';
 
 export default (hookReqId) => {
   const ky = useOkapiKy();
@@ -26,34 +27,44 @@ export default (hookReqId) => {
   };
 
   const performAction = async (id, action, payload = {}, opts = {}) => {
-    let result;
-
+    // A failed or timed-out action can still have changed the request or
+    // logged an event, so invalidate whatever the outcome.
     try {
-      const res = await mutateAsync({ id, action, actionParams: payload });
-      result = await res.json();
-    } catch (err) {
-      // okapiKy populates err.message (broker message for HTTP errors, ky's own
-      // for timeout/network), so just surface it.
-      if (opts.display !== 'none') showError(action, opts, err.message);
-      throw err;
-    }
+      let result;
 
-    if (result.outcome !== 'success') {
-      if (opts.display !== 'none') showError(action, opts, result.message || result.result);
-      const actionError = new Error(result.message || result.result || `Action ${action} failed`);
-      actionError.action = action;
-      actionError.result = result;
-      throw actionError;
-    }
+      try {
+        const res = await mutateAsync({ id, action, actionParams: payload });
+        result = await res.json();
+      } catch (err) {
+        // okapiKy populates err.message (broker message for HTTP errors, ky's own
+        // for timeout/network), so just surface it.
+        if (opts.display !== 'none') showError(action, opts, err.message);
+        throw err;
+      }
 
-    if (opts.display !== 'none') {
-      if (opts.success) sendCallout(opts.success, 'success');
-      else sendCallout('stripes-reshare.actions.generic.success', 'success', { action: `stripes-reshare.actions.${action}` }, ['action']);
+      if (result.outcome !== 'success') {
+        if (opts.display !== 'none') showError(action, opts, result.message || result.result);
+        const actionError = new Error(result.message || result.result || `Action ${action} failed`);
+        actionError.action = action;
+        actionError.result = result;
+        throw actionError;
+      }
+
+      if (opts.display !== 'none') {
+        if (opts.success) sendCallout(opts.success, 'success');
+        else sendCallout('stripes-reshare.actions.generic.success', 'success', { action: `stripes-reshare.actions.${action}` }, ['action']);
+      }
+      return result;
+    } finally {
+      const { record, actions, events, transaction } = requestKeys(id);
+      // A fetch already running would be reused by the refetch, and its
+      // pre-action response would clear the invalidation, so cancel it first.
+      [record, actions, events, transaction, ...transactionEventsKeys(id, queryClient), LIST_KEY]
+        .forEach((key) => {
+          queryClient.cancelQueries(key);
+          queryClient.invalidateQueries(key);
+        });
     }
-    queryClient.invalidateQueries(`broker/patron_requests/${id}`);
-    queryClient.invalidateQueries(`broker/patron_requests/${id}/actions`);
-    queryClient.invalidateQueries('broker/patron_requests');
-    return result;
   };
 
   return hookReqId

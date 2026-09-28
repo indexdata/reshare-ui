@@ -1,5 +1,5 @@
 import { QueryClient } from 'react-query';
-import { requestIdsForEvent, requestKeys } from './requestQueries';
+import { requestIdsForEvent, requestKeys, transactionEventsKeys } from './requestQueries';
 
 let queryClient;
 
@@ -80,5 +80,28 @@ describe('requestIdsForEvent', () => {
     seed({ id: 'pr-1', requesterRequestId: 'pr-1' });
 
     expect(idsFor({ event: 'message-requester', data: {} })).toEqual([]);
+  });
+});
+
+describe('transactionEventsKeys', () => {
+  beforeEach(() => {
+    queryClient = new QueryClient();
+  });
+
+  // Shaped as useOkapiQuery keys it, options trailing the search params.
+  const lookupKey = (id) => ['broker/ill_transactions', { requester_req_id: id }, { notifyOnChangeProps: 'tracked' }];
+
+  it('names the events of the transaction a cached lookup holds', () => {
+    queryClient.setQueryData(lookupKey('pr-1'), { items: [{ id: 'txn-1' }] });
+    queryClient.setQueryData(lookupKey('pr-2'), { items: [{ id: 'txn-2' }] });
+
+    expect(transactionEventsKeys('pr-1', queryClient)).toEqual(['broker/ill_transactions/txn-1/events']);
+  });
+
+  it('names nothing without a lookup that found a transaction', () => {
+    expect(transactionEventsKeys('pr-1', queryClient)).toEqual([]);
+
+    queryClient.setQueryData(lookupKey('pr-1'), { items: [] });
+    expect(transactionEventsKeys('pr-1', queryClient)).toEqual([]);
   });
 });

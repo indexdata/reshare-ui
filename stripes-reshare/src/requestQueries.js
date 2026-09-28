@@ -8,6 +8,7 @@
 const LIST_KEY = 'broker/patron_requests';
 const RECORD_PREFIX = `${LIST_KEY}/`;
 const SUPPLIERS_KEY = 'broker/located_suppliers';
+const TRANSACTIONS_KEY = 'broker/ill_transactions';
 
 const requestKeys = (id) => ({
   record: `${RECORD_PREFIX}${id}`,
@@ -16,7 +17,18 @@ const requestKeys = (id) => ({
   notifications: `${RECORD_PREFIX}${id}/notifications`,
   // Not a sub-resource but a search, so a key with params rather than a path.
   suppliers: [SUPPLIERS_KEY, { requester_req_id: id }],
+  // Likewise the broker's transaction, which carries its own event log.
+  transaction: [TRANSACTIONS_KEY, { requester_req_id: id }],
 });
+
+// The transaction's events are keyed by its id, which only a cached lookup
+// holds. With no lookup cached there is no transaction log to refresh.
+const transactionEventsKeys = (id, queryClient) => {
+  const txnIds = queryClient.getQueryCache().findAll(requestKeys(id).transaction)
+    .map(query => query.state.data?.items?.[0]?.id)
+    .filter(Boolean);
+  return [...new Set(txnIds)].map(txnId => `${TRANSACTIONS_KEY}/${txnId}/events`);
+};
 
 // Extra elements carry search params and options (see useOkapiQuery); the path
 // is always first.
@@ -25,6 +37,11 @@ const keyPath = (queryKey) => (Array.isArray(queryKey) ? queryKey[0] : queryKey)
 const isRequestKey = (queryKey) => {
   const path = keyPath(queryKey);
   return typeof path === 'string' && path.startsWith(RECORD_PREFIX);
+};
+
+const isTransactionKey = (queryKey) => {
+  const path = keyPath(queryKey);
+  return typeof path === 'string' && path.startsWith(TRANSACTIONS_KEY);
 };
 
 const isNotificationsKey = (queryKey) => isRequestKey(queryKey) &&
@@ -69,7 +86,9 @@ export {
   SUPPLIERS_KEY,
   isNotificationsKey,
   isRequestKey,
+  isTransactionKey,
   keyPath,
   requestIdsForEvent,
   requestKeys,
+  transactionEventsKeys,
 };

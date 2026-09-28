@@ -10,9 +10,9 @@
  * activity. The stream does not report arrivals or same-side changes, so focus
  * and remount refetches remain necessary for complete list freshness.
  *
- * The rota is marked alongside the request. The stream carries peer messages,
- * not every change to the supplier sequence, so a rota that moves without one
- * is invisible here.
+ * The rota and the transaction log are marked alongside the request. The
+ * stream carries peer messages, not every change to the supplier sequence, so a
+ * rota that moves without one is invisible here.
  *
  * Mount once inside BrokerEventsProvider, above the routes.
  */
@@ -26,9 +26,11 @@ import {
   SUPPLIERS_KEY,
   isNotificationsKey,
   isRequestKey,
+  isTransactionKey,
   keyPath,
   requestIdsForEvent,
   requestKeys,
+  transactionEventsKeys,
 } from './requestQueries';
 
 // Request transitions often emit several events. Debounce until quiet, with
@@ -48,7 +50,9 @@ const CHAT_SETTLE_MAX_MS = 1000;
 const LIST_SETTLE_MS = 10 * 1000;
 const LIST_SETTLE_MAX_MS = 60 * 1000;
 
-const isMarkable = (queryKey) => isRequestKey(queryKey) || keyPath(queryKey) === SUPPLIERS_KEY;
+const isMarkable = (queryKey) => isRequestKey(queryKey) ||
+  keyPath(queryKey) === SUPPLIERS_KEY ||
+  isTransactionKey(queryKey);
 const isWatchable = (query) => isMarkable(query.queryKey) && query.state.isInvalidated;
 const isWatchableChat = (query) => isNotificationsKey(query.queryKey) && query.state.isInvalidated;
 
@@ -105,16 +109,13 @@ const RequestCacheSync = () => {
 
   const changed = (ids) => {
     ids.forEach((id) => {
-      const { record, actions, events, notifications, suppliers } = requestKeys(id);
-      [record, actions, events].forEach((key) => {
-        queryClient.cancelQueries(key);
-        markStale(key);
-      });
+      const { record, actions, events, notifications, suppliers, transaction } = requestKeys(id);
       // Cancel first so a pre-event response cannot clear the invalidation.
-      queryClient.cancelQueries(notifications);
-      markStale(notifications);
-      queryClient.cancelQueries(suppliers);
-      markStale(suppliers);
+      [record, actions, events, notifications, suppliers, transaction, ...transactionEventsKeys(id, queryClient)]
+        .forEach((key) => {
+          queryClient.cancelQueries(key);
+          markStale(key);
+        });
     });
     settleChat();
     settleIfWatched(belongsTo(ids));

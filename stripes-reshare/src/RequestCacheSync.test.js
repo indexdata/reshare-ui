@@ -20,6 +20,9 @@ const LIST_QUERY = ['broker/patron_requests', { cql: 'x' }];
 const request = { id: 'pr-1', requesterRequestId: 'pr-1' };
 const other = { id: 'pr-2', requesterRequestId: 'pr-2' };
 const rotaKey = (requesterRequestId) => [SUPPLIERS_KEY, { requester_req_id: requesterRequestId }];
+const txnLookupKey = (requesterRequestId) => ['broker/ill_transactions', { requester_req_id: requesterRequestId }];
+const txnEventsKey = (txnId) => `broker/ill_transactions/${txnId}/events`;
+
 
 const event = (requestingAgencyRequestId) => ({
   event: 'message-requester',
@@ -40,6 +43,11 @@ const seedRequest = (record) => {
   queryClient.setQueryData(keys.record, record);
   queryClient.setQueryData(keys.actions, { actions: [] });
   queryClient.setQueryData(keys.events, []);
+};
+
+const seedTransaction = (requesterRequestId, txnId) => {
+  queryClient.setQueryData(txnLookupKey(requesterRequestId), { items: [{ id: txnId }] });
+  queryClient.setQueryData(txnEventsKey(txnId), { items: [] });
 };
 
 const isStale = (key) => Boolean((queryClient.getQueryState(key) ?? {}).isInvalidated);
@@ -259,6 +267,51 @@ describe('RequestCacheSync', () => {
     expect(isStale(requestKeys('pr-1').record)).toBe(true);
     expect(isStale(requestKeys('gone').actions)).toBe(true);
     expect(isStale(rotaKey('pr-1'))).toBe(true);
+  });
+
+  it('treats a cached transaction log as suspect after a gap in the stream', () => {
+    seedTransaction('pr-1', 'txn-1');
+    renderSync();
+
+    handlers.onGap();
+
+    expect(isStale(txnLookupKey('pr-1'))).toBe(true);
+    expect(isStale(txnEventsKey('txn-1'))).toBe(true);
+  });
+
+  it('marks the transaction log of the request an event names, and no other', () => {
+    seedRequest(request);
+    seedTransaction('pr-1', 'txn-1');
+    seedTransaction('pr-2', 'txn-2');
+    renderSync();
+
+    handlers.onEvent(event('pr-1'));
+
+    expect(isStale(txnLookupKey('pr-1'))).toBe(true);
+    expect(isStale(txnEventsKey('txn-1'))).toBe(true);
+    expect(isStale(txnLookupKey('pr-2'))).toBe(false);
+    expect(isStale(txnEventsKey('txn-2'))).toBe(false);
+  });
+
+  it('refetches a transaction log on screen once the request stops moving', async () => {
+    seedRequest(request);
+    seedTransaction('pr-1', 'txn-1');
+    const lookup = jest.fn().mockResolvedValue({ items: [{ id: 'txn-1' }] });
+    const txnEvents = jest.fn().mockResolvedValue({ items: [] });
+    renderSync(
+      <>
+        <Watcher queryKey={requestKeys('pr-1').record} queryFn={jest.fn().mockResolvedValue(request)} />
+        <Watcher queryKey={txnLookupKey('pr-1')} queryFn={lookup} />
+        <Watcher queryKey={txnEventsKey('txn-1')} queryFn={txnEvents} />
+      </>
+    );
+
+    handlers.onEvent(event('pr-1'));
+    expect(txnEvents).not.toHaveBeenCalled();
+
+    await act(async () => { jest.advanceTimersByTime(SETTLE_MS); });
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(txnEvents).toHaveBeenCalledTimes(1);
   });
 
   it('marks the rota of the request an event names, and no other', () => {

@@ -48,7 +48,7 @@ describe('usePerformAction', () => {
     invalidateQueriesSpy = undefined;
   });
 
-  it('posts the action, resolves the broker success result, shows success, and invalidates request queries', async () => {
+  it('posts the action, resolves the broker success result, shows success, and invalidates request queries including events', async () => {
     const result = { outcome: 'success', result: 'OK', toState: 'SHIPPED' };
     const payload = { note: 'Packed' };
     mockPost.mockResolvedValue({
@@ -71,7 +71,28 @@ describe('usePerformAction', () => {
     expect(mockSendCallout).toHaveBeenCalledWith('ship.success', 'success');
     expect(invalidateQueriesSpy).toHaveBeenCalledWith('broker/patron_requests/request-123');
     expect(invalidateQueriesSpy).toHaveBeenCalledWith('broker/patron_requests/request-123/actions');
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith('broker/patron_requests/request-123/events');
     expect(invalidateQueriesSpy).toHaveBeenCalledWith('broker/patron_requests');
+  });
+
+  it('invalidates the transaction lookup and the events of the transaction it holds', async () => {
+    mockPost.mockResolvedValue({
+      json: jest.fn().mockResolvedValue({ outcome: 'success' }),
+    });
+
+    const { result: hookResult } = renderUsePerformAction('request-123');
+    // Shaped as useOkapiQuery keys it, options trailing the search params.
+    queryClient.setQueryData(
+      ['broker/ill_transactions', { requester_req_id: 'request-123' }, { notifyOnChangeProps: 'tracked' }],
+      { items: [{ id: 'txn-1' }] }
+    );
+
+    await act(async () => {
+      await hookResult.current('received');
+    });
+
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith(['broker/ill_transactions', { requester_req_id: 'request-123' }]);
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith('broker/ill_transactions/txn-1/events');
   });
 
   it('rejects broker action failures after showing the action error callout', async () => {
@@ -96,7 +117,7 @@ describe('usePerformAction', () => {
     expect(thrown.action).toBe('add-condition');
     expect(thrown.result).toBe(result);
     expect(mockSendCallout).toHaveBeenCalledWith('add-condition.error', 'error', { errMsg: 'PROBLEM' });
-    expect(invalidateQueriesSpy).not.toHaveBeenCalled();
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith('broker/patron_requests/request-123/events');
   });
 
   it('rethrows transport errors after surfacing the normalized message in the callout', async () => {
@@ -119,7 +140,7 @@ describe('usePerformAction', () => {
 
     expect(thrown).toBe(error);
     expect(mockSendCallout).toHaveBeenCalledWith('ship.error', 'error', { errMsg: 'Backend message' });
-    expect(invalidateQueriesSpy).not.toHaveBeenCalled();
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith('broker/patron_requests/request-123/events');
   });
 
   it('keeps rejection semantics but suppresses callouts when display is none', async () => {
@@ -141,6 +162,6 @@ describe('usePerformAction', () => {
     expect(thrown).toBeInstanceOf(Error);
     expect(thrown.message).toBe('Hidden failure');
     expect(mockSendCallout).not.toHaveBeenCalled();
-    expect(invalidateQueriesSpy).not.toHaveBeenCalled();
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith('broker/patron_requests/request-123/events');
   });
 });
