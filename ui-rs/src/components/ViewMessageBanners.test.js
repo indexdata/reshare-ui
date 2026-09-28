@@ -4,6 +4,8 @@ import { screen } from '@folio/jest-config-stripes/testing-library/react';
 import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import ViewMessageBanners from './ViewMessageBanners';
 
+jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
+
 jest.mock('./chat/useNotifications', () => ({
   useNotificationList: () => ({ data: { items: [] } }),
 }));
