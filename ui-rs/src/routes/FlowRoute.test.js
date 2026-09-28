@@ -6,11 +6,13 @@ import {
   within,
 } from '@folio/jest-config-stripes/testing-library/react';
 
+import { createMemoryHistory } from 'history';
 import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { useNotificationList } from '../components/chat/useNotifications';
 import FlowRoute from './FlowRoute';
 
 const mockPerformAction = jest.fn(() => Promise.resolve());
+const mockIsActionPending = jest.fn(() => false);
 
 jest.mock('../components/chat/useNotifications', () => ({
   useNotificationList: jest.fn(),
@@ -22,7 +24,7 @@ jest.mock('@folio/stripes-components/lib/TextArea', () => require('../test/textA
 jest.mock('@projectreshare/stripes-reshare', () => ({
   ...jest.requireActual('@projectreshare/stripes-reshare'),
   usePerformAction: () => mockPerformAction,
-  useIsActionPending: () => false,
+  useIsActionPending: (...args) => mockIsActionPending(...args),
 }));
 
 // FlowRoute receives request/actions as props, so it never queries; only
@@ -162,6 +164,7 @@ const rowContaining = (text) => {
 describe('FlowRoute', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsActionPending.mockReturnValue(false);
     useNotificationList.mockReturnValue({ data: { items: conditionNotifications } });
   });
 
@@ -340,6 +343,35 @@ describe('FlowRoute', () => {
         error: 'stripes-reshare.actions.someAction.error',
       }
     );
+  });
+
+  describe('rerequest', () => {
+    const rerequestActions = [{ name: 'rerequest', parameters: ['noop'] }];
+    const renderWithHistory = () => {
+      const history = createMemoryHistory({ initialEntries: [`/requests/${requestFixture.id}/flow?foo=bar`] });
+      renderWithRs(<FlowRoute request={requestFixture} actions={rerequestActions} />, { history });
+      return history;
+    };
+    const rerequestButton = () => screen.getByText('stripes-reshare.actions.rerequest').closest('button');
+
+    it('opens the revision form instead of performing the action', () => {
+      const history = renderWithHistory();
+
+      fireEvent.click(rerequestButton());
+
+      expect(history.location).toMatchObject({
+        pathname: `/requests/${requestFixture.id}/rerequest`,
+        search: '?foo=bar',
+      });
+      expect(mockPerformAction).not.toHaveBeenCalled();
+    });
+
+    it('is disabled while an action on the request is pending', () => {
+      mockIsActionPending.mockReturnValue(true);
+      renderWithHistory();
+
+      expect(rerequestButton()).toBeDisabled();
+    });
   });
 
   describe('due dates', () => {
