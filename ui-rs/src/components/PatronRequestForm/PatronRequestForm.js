@@ -20,6 +20,7 @@ const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect }) => {
   const { copyrightTypes, publicationTypes, locations } = selectOptions;
   const { values } = useFormState();
   const isCopyReq = values?.serviceInfo?.serviceType === 'Copy';
+  const pickupLocationRequired = !isCopyReq && locations.length > 0;
   const stripes = useStripes();
 
   // TODO: Broker API; stubbed until it can supply hostLMSIntegration's borrower_check
@@ -54,8 +55,8 @@ const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect }) => {
             placeholder=" "
             component={Select}
             dataOptions={locations}
-            required={!isCopyReq}
-            validate={!isCopyReq && required}
+            required={pickupLocationRequired}
+            validate={pickupLocationRequired && required}
           />
         </Col>
         <Col xs={2}>
