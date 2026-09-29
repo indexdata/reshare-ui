@@ -143,6 +143,7 @@
   "illConfig.includeReturnInfo" : "Include return info",
   "illConfig.includeVendorNote" : "Include vendor note",
   "illConfig.useOfferedCosts" : "Use offered costs",
+  "illConfig.minimumCost" : "Minimum cost",
   "illConfig.noteFieldSeparator" : "Note field separator",
   "illConfig.supplierPatronPattern" : "Supplier patron pattern",
   "illConfig.duplicateCheckWindowHours" : "Duplicate check window (hours)",
