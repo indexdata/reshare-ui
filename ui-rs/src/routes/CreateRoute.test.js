@@ -180,10 +180,24 @@ describe('CreateRoute', () => {
     expect(json).not.toHaveProperty('requesterPickupLocationId');
   });
 
-  it('still renders the form, without pickup locations, when the owned lookup fails', async () => {
-    renderCreate({ owned: () => { throw new Error('Forbidden'); } });
+  it.each([
+    ['the owned lookup fails', () => { throw new Error('Forbidden'); }],
+    ['the owned list is empty', { items: [] }],
+    ['only the institution is returned', { items: [institution] }],
+  ])('submits a loan without a pickup location when %s', async (_description, owned) => {
+    renderCreate({ owned });
     await formRendered();
 
     expect(optionLabels('requesterPickupLocationId')).toEqual([]);
+    expect(fieldByName('requesterPickupLocationId')).not.toBeRequired();
+
+    fillRequiredFields();
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+
+    await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(document.querySelector('button[type="submit"]')).toBeNull());
+    const { json } = mockOkapi.post.mock.calls[0][1];
+    expect(json.illRequest.serviceInfo.serviceType).toBe('Loan');
+    expect(json).not.toHaveProperty('requesterPickupLocationId');
   });
 });
