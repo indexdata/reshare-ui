@@ -9,6 +9,7 @@ import EditRoute from './routes/EditRoute';
 import PatronRequestsRoute from './routes/PatronRequestsRoute';
 import PullSlipRoute from './routes/PullSlipRoute';
 import PullSlipsRoute from './routes/PullSlipsRoute';
+import RerequestRoute from './routes/RerequestRoute';
 import ViewRoute from './routes/ViewRoute';
 
 const ResourceSharing = (props) => {
@@ -63,6 +64,9 @@ const ResourceSharing = (props) => {
           }
           {appName === 'request' &&
             <Route path={`${path}/requests/:id/edit`} component={EditRoute} />
+          }
+          {appName === 'request' &&
+            <Route path={`${path}/requests/:id/rerequest`} component={RerequestRoute} />
           }
           <Route path={`${path}/requests/pullslips`} component={PullSlipsRoute} />
           <Route path={`${path}/requests/:id/pullslip`} component={PullSlipRoute} />
