@@ -70,8 +70,8 @@ const renderRerequest = ({ history } = {}) => {
     'broker/patron_requests/req-1/actions': () => broker.actions,
     'directory/entries/owned': {
       items: [
-        { id: 'branch-e', name: 'East Branch', type: 'Branch' },
-        { id: 'branch-w', name: 'West Branch', type: 'Branch' },
+        { id: 'branch-e', name: 'East Branch', type: 'Branch', illConfig: { isPickupLocation: true } },
+        { id: 'branch-w', name: 'West Branch', type: 'Branch', illConfig: { isPickupLocation: true } },
       ],
     },
   });

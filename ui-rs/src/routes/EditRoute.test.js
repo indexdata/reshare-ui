@@ -64,8 +64,8 @@ const renderEdit = ({ request = editableRequest(), history } = {}) => {
     'broker/state_model/models/default': defaultModel,
     'directory/entries/owned': {
       items: [
-        { id: 'branch-e', name: 'East Branch', type: 'Branch' },
-        { id: 'branch-w', name: 'West Branch', type: 'Branch' },
+        { id: 'branch-e', name: 'East Branch', type: 'Branch', illConfig: { isPickupLocation: true } },
+        { id: 'branch-w', name: 'West Branch', type: 'Branch', illConfig: { isPickupLocation: true } },
       ],
     },
   });

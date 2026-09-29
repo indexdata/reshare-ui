@@ -22,10 +22,10 @@ const { CalloutContext } = require('@folio/stripes/core');
 
 const sendCallout = jest.fn();
 
-// Owned entries include the institution itself, which is not a pickup location.
+// The institution is not offered unless explicitly flagged as a pickup location.
 const institution = { id: 'inst-1', name: 'Our Library', type: 'Institution' };
-const westBranch = { id: 'branch-w', name: 'West Branch', type: 'Branch', parent: 'inst-1' };
-const eastBranch = { id: 'branch-e', name: 'East Branch', type: 'Branch', parent: 'inst-1' };
+const westBranch = { id: 'branch-w', name: 'West Branch', type: 'Branch', parent: 'inst-1', illConfig: { isPickupLocation: true } };
+const eastBranch = { id: 'branch-e', name: 'East Branch', type: 'Branch', parent: 'inst-1', illConfig: { isPickupLocation: true } };
 const ownedEntries = { items: [institution, westBranch, eastBranch] };
 
 const renderCreate = ({ owned = ownedEntries, ...options } = {}) => {
@@ -147,13 +147,31 @@ describe('CreateRoute', () => {
     expect(document.querySelector('button[type="submit"]')).not.toBeNull();
   });
 
-  it('offers owned branches as pickup locations, by name', async () => {
+  it('offers flagged owned entries as pickup locations, by name', async () => {
     renderCreate();
     await formRendered();
 
     expect(mockOkapi.calledUrls()).toContain('directory/entries/owned?limit=1000');
     expect(optionLabels('requesterPickupLocationId')).toEqual(['East Branch', 'West Branch']);
     expect(fieldByName('requesterPickupLocationId').value).toBe('');
+  });
+
+  it('offers flagged institutions and branches without LMS codes, excluding unflagged entries', async () => {
+    renderCreate({ owned: { items: [
+      { ...institution, illConfig: { isPickupLocation: true } },
+      eastBranch,
+      { ...westBranch, illConfig: { isPickupLocation: false } },
+      { id: 'unflagged', name: 'Unflagged Branch', type: 'Branch', lmsConfig: { requesterPickupLocation: 'code' } },
+    ] } });
+    await formRendered();
+
+    expect(optionLabels('requesterPickupLocationId')).toEqual(['East Branch', 'Our Library']);
+    fillRequiredFields();
+    setField('requesterPickupLocationId', institution.id);
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+    await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(document.querySelector('button[type="submit"]')).toBeNull());
+    expect(mockOkapi.post.mock.calls[0][1].json.requesterPickupLocationId).toBe(institution.id);
   });
 
   it('preselects the only pickup location', async () => {
