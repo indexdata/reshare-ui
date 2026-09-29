@@ -9,6 +9,10 @@ const entryPath = id => `directory/entries/by-id/${id}`;
 const fieldLabelId = fieldName => `ui-rsdir.illConfig.${fieldName}`;
 const fieldMap = [
   {
+    fieldName: 'isPickupLocation',
+    valueType: 'boolean',
+  },
+  {
     fieldName: 'iso18626Url',
     valueType: 'string',
   },

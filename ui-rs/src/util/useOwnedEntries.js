@@ -18,11 +18,11 @@ const useOwnedEntries = ({ enabled = true } = {}) => {
 };
 
 // Candidates for a request's requesterPickupLocationId, which the broker accepts
-// only as a branch of the requesting institution.
+// as the requesting institution itself or one of its descendants.
 const usePickupLocations = () => {
   const { entries, isSettled } = useOwnedEntries();
   const pickupLocations = useMemo(() => entries
-    .filter(entry => entry.type?.toLowerCase() === 'branch')
+    .filter(entry => entry.illConfig?.isPickupLocation === true)
     .sort((a, b) => a.name.localeCompare(b.name)), [entries]);
 
   return { pickupLocations, isSettled };
