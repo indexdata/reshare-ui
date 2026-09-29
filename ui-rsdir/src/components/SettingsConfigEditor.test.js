@@ -75,12 +75,14 @@ const renderEditor = ({
   configKey = 'config',
   fieldMapping: editorFieldMapping = fieldMapping,
   initialResource,
+  onSave,
 } = {}) => render(
   <SettingsConfigEditor
     configKey={configKey}
     fieldLabelId={path => path}
     fieldMapping={editorFieldMapping}
     initialResource={initialResource || { [configKey]: {} }}
+    onSave={onSave}
     resourcePath="directory/entries/by-id/entry-id"
     successMessage="Saved"
   />
@@ -90,6 +92,40 @@ beforeEach(() => {
   mockPatch.mockReset();
   mockKy.mockReset();
   mockPatch.mockResolvedValue({ text: () => Promise.resolve('') });
+});
+
+describe('SettingsConfigEditor save callback', () => {
+  it('notifies the caller after a successful save', async () => {
+    let resolveSave;
+    mockPatch.mockReturnValue(new Promise(resolve => { resolveSave = resolve; }));
+    const onSave = jest.fn();
+    renderEditor({
+      fieldMapping: [{ fieldName: 'isPickupLocation', valueType: 'boolean' }],
+      onSave,
+    });
+    fireEvent.click(document.getElementById('edit-settings-config-isPickupLocation'));
+    fireEvent.change(screen.getByRole('combobox', { name: 'isPickupLocation' }), { target: { value: 'true' } });
+    fireEvent.click(document.getElementById('save-settings-config-isPickupLocation'));
+    expect(onSave).not.toHaveBeenCalled();
+
+    resolveSave({ text: () => Promise.resolve('') });
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+  });
+
+  it('does not notify the caller when saving fails', async () => {
+    mockPatch.mockRejectedValue(new Error('Save failed'));
+    const onSave = jest.fn();
+    renderEditor({
+      fieldMapping: [{ fieldName: 'isPickupLocation', valueType: 'boolean' }],
+      onSave,
+    });
+    fireEvent.click(document.getElementById('edit-settings-config-isPickupLocation'));
+    fireEvent.change(screen.getByRole('combobox', { name: 'isPickupLocation' }), { target: { value: 'true' } });
+    fireEvent.click(document.getElementById('save-settings-config-isPickupLocation'));
+    expect(document.getElementById('save-settings-config-isPickupLocation')).toBeDisabled();
+    await waitFor(() => expect(document.getElementById('save-settings-config-isPickupLocation')).toBeEnabled());
+    expect(onSave).not.toHaveBeenCalled();
+  });
 });
 
 describe('SettingsConfigEditor numeric bounds', () => {

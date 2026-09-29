@@ -303,6 +303,7 @@ const SettingsConfigEditor = ({
   fieldLabelId,
   fieldMapping = [],
   initialResource,
+  onSave,
   resourcePath,
   successMessage,
 }) => {
@@ -1026,6 +1027,7 @@ const SettingsConfigEditor = ({
 
         queryClient.setQueryData(savedResourcePath, nextResource);
         queryClient.invalidateQueries(savedResourcePath);
+        onSave?.();
 
         if (activeResourcePathRef.current !== savedResourcePath) {
           return;

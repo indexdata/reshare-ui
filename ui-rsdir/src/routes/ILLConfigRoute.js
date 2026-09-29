@@ -1,5 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { FormattedMessage } from 'react-intl';
+import { useQueryClient } from 'react-query';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 import EntryPane, { EntryLoadingPane } from '../components/EntryPane';
 import SettingsConfigEditor from '../components/SettingsConfigEditor';
@@ -77,6 +78,7 @@ const fieldMap = [
 
 const ILLConfigRoute = () => {
   const { id } = useParams();
+  const queryClient = useQueryClient();
 
   const entryQuery = useOkapiQuery(entryPath(id), {
     staleTime: STALE_QUERY_TIME,
@@ -98,6 +100,7 @@ const ILLConfigRoute = () => {
         fieldLabelId={fieldLabelId}
         fieldMapping={fieldMap}
         initialResource={entryQuery.data}
+        onSave={() => queryClient.invalidateQueries('directory/entries/owned')}
         resourcePath={entryPath(id)}
         successMessage={<FormattedMessage id="ui-rsdir.illConfig.edit.success" />}
       />
