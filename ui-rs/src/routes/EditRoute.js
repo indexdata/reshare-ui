@@ -1,12 +1,12 @@
 import React, { useContext } from 'react';
-import { FormattedMessage } from 'react-intl';
 import { Form } from 'react-final-form';
 import { useMutation, useQueryClient } from 'react-query';
-import { Prompt, Redirect, useHistory, useLocation } from 'react-router-dom';
-import { Button, Pane, Paneset, PaneFooter, KeyValue } from '@folio/stripes/components';
+import { Redirect, useHistory, useLocation } from 'react-router-dom';
 import { CalloutContext } from '@folio/stripes/core';
 import { useCloseDirect, useOkapiKy, useOkapiQuery, upNLevels } from '@projectreshare/stripes-reshare';
 import PatronRequestForm from '../components/PatronRequestForm';
+import PatronRequestFormPane from '../components/PatronRequestForm/PatronRequestFormPane';
+import submissionError from '../components/PatronRequestForm/submissionError';
 import useOptions from '../components/PatronRequestForm/useOptions';
 import { brokerToForm, formToBroker } from '../components/PatronRequestForm/formMapping';
 import { EDIT } from '../components/PatronRequestForm/operations';
@@ -57,68 +57,25 @@ const EditRoute = ({ match }) => {
     const updatedRecord = formToBroker(submittedRecord, { operation: EDIT });
     try {
       await editor.mutateAsync(updatedRecord);
+      return undefined;
     } catch (err) {
-      callout.sendCallout({
-        type: 'error',
-        message: (
-          <KeyValue
-            label={<FormattedMessage id="ui-rs.edit.error" />}
-            value={err?.message || ''}
-          />
-        ),
-      });
+      return submissionError(callout, 'ui-rs.edit.error', err);
     }
   };
 
   return (
-    <Paneset>
-      <Form onSubmit={submit} initialValues={initialValues} mutators={{ handleSISelect }} keepDirtyOnReinitialize>
-        {({ form, handleSubmit, pristine, submitting, submitSucceeded }) => (
-          <Pane
-            defaultWidth="100%"
-            centerContent
-            onClose={close}
-            dismissible
-            footer={
-              <PaneFooter
-                renderStart={
-                  <Button
-                    id="clickable-cancel-edit-request"
-                    buttonStyle="default mega"
-                    marginBottom0
-                    onClick={close}
-                  >
-                    <FormattedMessage id="stripes-core.button.cancel" />
-                  </Button>
-                }
-                renderEnd={
-                  <Button
-                    type="submit"
-                    disabled={pristine || submitting}
-                    onClick={handleSubmit}
-                    buttonStyle="primary mega"
-                    marginBottom0
-                  >
-                    <FormattedMessage id="ui-rs.save" />
-                  </Button>
-                }
-              />
-            }
-            paneTitle={<FormattedMessage id="ui-rs.editPatronRequest" />}
-          >
-            <form onSubmit={handleSubmit}>
-              <PatronRequestForm
-                selectOptions={options}
-                onSISelect={form.mutators.handleSISelect}
-              />
-            </form>
-            <FormattedMessage id="ui-rs.confirmDirtyNavigate">
-              {prompt => <Prompt when={!pristine && !(submitting || submitSucceeded)} message={prompt[0]} />}
-            </FormattedMessage>
-          </Pane>
-        )}
-      </Form>
-    </Paneset>
+    <Form onSubmit={submit} initialValues={initialValues} mutators={{ handleSISelect }} keepDirtyOnReinitialize>
+      {({ form, pristine }) => (
+        <PatronRequestFormPane
+          titleId="ui-rs.editPatronRequest"
+          submitLabelId="ui-rs.save"
+          submitDisabled={pristine}
+          onClose={close}
+        >
+          <PatronRequestForm selectOptions={options} onSISelect={form.mutators.handleSISelect} />
+        </PatronRequestFormPane>
+      )}
+    </Form>
   );
 };
 
