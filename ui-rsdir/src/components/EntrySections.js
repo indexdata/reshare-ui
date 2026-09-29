@@ -25,7 +25,7 @@ const EntrySections = ({ className, entryUrl, entryType, active }) => {
   const activeRef = useRef();
   const sections = SECTIONS.filter(section => (
     (entryType !== 'Branch' || section.key !== 'catalogconfig')
-    && (entryType === 'Institution' || section.key !== 'lmsconfig')
+    && (entryType === 'Institution' || entryType === 'Branch' || section.key !== 'lmsconfig')
   ));
 
   // Section navigation unmounts the focused link. Focus the active section
