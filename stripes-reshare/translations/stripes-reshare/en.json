@@ -29,6 +29,7 @@
   "actions.accept-cancel": "Accept cancellation",
   "actions.accept-retry": "Accept retry",
   "actions.reject-retry": "Reject retry",
+  "actions.rerequest": "Create revised request",
   "actions.recall": "Recall item",
   "actions.recall.success": "Item recalled",
   "actions.recall.error": "Error recalling item. {errMsg}",

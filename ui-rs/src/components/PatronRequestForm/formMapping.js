@@ -1,3 +1,4 @@
+import omit from 'lodash/omit';
 import { CREATE, EDIT } from './operations';
 import { ID_ARRAYS, extractIdentifiers } from '../../util/bibIdentifiers';
 
@@ -69,4 +70,25 @@ const formToBroker = (submittedRecord, { operation = CREATE } = {}) => {
   };
 };
 
-export { brokerToForm, formToBroker };
+// A new transaction linked to the original only by prevReqId, so the original's
+// protocol header and any Retry linkage go.
+const formToRevision = (submittedRecord, prevReqId) => {
+  const record = formToBroker(submittedRecord);
+  const illRequest = omit(record.illRequest, 'header');
+  const serviceInfo = omit(illRequest.serviceInfo, 'requestingAgencyPreviousRequestId');
+
+  return {
+    ...record,
+    prevReqId,
+    illRequest: {
+      ...illRequest,
+      serviceInfo: {
+        ...serviceInfo,
+        requestType: 'New',
+        serviceLevel: serviceInfo.serviceLevel ?? { '#text': 'Standard' },
+      },
+    },
+  };
+};
+
+export { brokerToForm, formToBroker, formToRevision };

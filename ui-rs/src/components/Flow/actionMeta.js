@@ -19,6 +19,7 @@ const actionMeta = {
   'pullslip-printed': { icon: 'print' },
   'ask-retry': { icon: 'edit' },
   'recall': { icon: 'flag' },
+  'rerequest': { icon: 'duplicate' },
   'overdue': { icon: 'clock' },
   'renew': { icon: 'replace' },
   'accept-renewal': { icon: 'check-circle', primaryOnly: true },
