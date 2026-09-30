@@ -22,6 +22,7 @@ const entry = {
   name: 'fixture-entry',
   type: 'Institution',
   symbols: [{ authority: 'ISIL', symbol: 'FIX-1' }],
+  illConfig: { minimumCost: 1.5 },
   lmsConfig: { address: 'fixture-lms-address' },
   closures: [
     { id: 'c1', entry: 'e1', startDate: '2026-03-02', endDate: '2026-06-01', reason: 'fixture-closure' },
@@ -151,6 +152,45 @@ describe('directory entries', () => {
 
     expect(await screen.findByRole('button', { name: 'ui-rsdir.networks.add' })).toBeInTheDocument();
     expect(mockOkapi.calledUrls()).toContain('directory/networks?limit=1000');
+  });
+
+  it('edits an optional non-negative minimum cost in the ILL configuration', async () => {
+    renderDirectory(['/directory/entries/e1/illconfig']);
+
+    expect(await screen.findByText('1.5')).toBeInTheDocument();
+    expect(sectionLink('illConfig')).toHaveAttribute('aria-current', 'page');
+
+    fireEvent.click(document.getElementById('edit-ill-config-minimumCost'));
+    const input = screen.getByRole('spinbutton', { name: 'minimumCost' });
+    expect(input).toHaveAttribute('min', '0');
+
+    fireEvent.change(input, { target: { value: '-1' } });
+    fireEvent.click(document.getElementById('save-ill-config-minimumCost'));
+    expect(screen.getByText('Enter a value greater than or equal to 0.')).toBeInTheDocument();
+    expect(mockOkapi.patch).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: '2.75' } });
+    fireEvent.click(document.getElementById('save-ill-config-minimumCost'));
+    await waitFor(() => expect(mockOkapi.patch).toHaveBeenCalledWith(
+      'directory/entries/by-id/e1',
+      { json: { illConfig: { minimumCost: 2.75 } } }
+    ));
+  });
+
+  it.each([
+    { label: 'accepts zero', value: '0', expected: 0 },
+    { label: 'clears the value', value: '', expected: null },
+  ])('$label for the ILL minimum cost', async ({ value, expected }) => {
+    renderDirectory(['/directory/entries/e1/illconfig']);
+
+    await screen.findByText('1.5');
+    fireEvent.click(document.getElementById('edit-ill-config-minimumCost'));
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'minimumCost' }), { target: { value } });
+    fireEvent.click(document.getElementById('save-ill-config-minimumCost'));
+    await waitFor(() => expect(mockOkapi.patch).toHaveBeenCalledWith(
+      'directory/entries/by-id/e1',
+      { json: { illConfig: { minimumCost: expected } } }
+    ));
   });
 
   it('lists reciprocal status instead of network priority for a consortium', async () => {

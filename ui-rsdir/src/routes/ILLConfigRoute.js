@@ -58,6 +58,11 @@ const fieldMap = [
     valueType: 'boolean',
   },
   {
+    fieldName: 'minimumCost',
+    valueType: 'number',
+    minValue: 0,
+  },
+  {
     fieldName: 'noteFieldSeparator',
     valueType: 'string',
   },
