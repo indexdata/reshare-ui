@@ -11,6 +11,7 @@
   "entry.organizationId" : "Organization ID",
   "entry.parent" : "Parent",
   "entry.parent.select" : "Select a parent",
+  "entry.branches" : "Branches",
   "entry.phoneNumber" : "Phone number",
   "entry.tenant" : "Tenant",
   "entry.name" : "Name",
