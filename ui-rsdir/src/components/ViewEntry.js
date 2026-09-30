@@ -8,9 +8,11 @@ import {
   Row,
 } from '@folio/stripes/components';
 import { useStripes } from '@folio/stripes/core';
-import { useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { DirectLink, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import { apiAddressToDisplayComponents } from '../util/addressAdapter';
 import { getAddressPlugin } from '../util/addressPlugin';
+
+const normalizeList = data => (Array.isArray(data) ? data : data?.items || []);
 
 const ViewEntry = ({ entry }) => {
   const stripes = useStripes();
@@ -19,7 +21,27 @@ const ViewEntry = ({ entry }) => {
     staleTime: 2 * 60 * 1000,
     enabled: !!entry.parent,
   });
+  const branchesQuery = useOkapiQuery('directory/entries', {
+    enabled: entry.type === 'Institution' && !!entry.id,
+    staleTime: 2 * 60 * 1000,
+    searchParams: {
+      cql: `type=Branch and parent=${entry.id}`,
+      limit: '1000',
+    },
+  });
   const parentValue = parentQuery.data?.name || parentQuery.data?.id || entry.parent;
+  const parentDisplay = ['Branch', 'Institution'].includes(entry.type)
+    ? (
+      <DirectLink
+        to={`/directory/entries/${entry.parent}`}
+        preserveSearch
+      >
+        {parentValue}
+      </DirectLink>
+    )
+    : parentValue;
+  const branches = normalizeList(branchesQuery.data)
+    .filter(branch => branch.type === 'Branch' && branch.id);
 
   const formatSymbols = (symbols) => {
     if (!symbols || symbols.length === 0) return '';
@@ -93,7 +115,7 @@ const ViewEntry = ({ entry }) => {
           <Col xs={4}>
             <KeyValue
               label={<FormattedMessage id="ui-rsdir.entry.parent" />}
-              value={parentValue}
+              value={parentDisplay}
             />
           </Col>
         }
@@ -160,6 +182,25 @@ const ViewEntry = ({ entry }) => {
           />
         </Col>
       </Row>
+      { branches.length > 0 &&
+        <Row>
+          <Col xs={12}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.entry.branches" />}
+              value={branches.map(branch => (
+                <div key={branch.id}>
+                  <DirectLink
+                    to={`/directory/entries/${branch.id}`}
+                    preserveSearch
+                  >
+                    {branch.name || branch.id}
+                  </DirectLink>
+                </div>
+              ))}
+            />
+          </Col>
+        </Row>
+      }
       { entry.addresses &&
         <Row>
           { entry.addresses.map((address) => {
