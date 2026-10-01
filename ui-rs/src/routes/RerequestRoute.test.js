@@ -5,15 +5,15 @@ import { act, fireEvent, screen, waitFor } from '@folio/jest-config-stripes/test
 
 import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
-import { quietQueryLog } from '../test/quietQueryLog';
+import { quietQueryLog } from '#/test/quietQueryLog';
 import RerequestRoute from './RerequestRoute';
 
 const mockOkapi = makeOkapiKyMock();
 
 jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
-jest.mock('@folio/stripes-components/lib/TextArea', () => require('../test/textAreaMock').default);
+jest.mock('@folio/stripes-components/lib/TextArea', () => require('#/test/textAreaMock').default);
 
-jest.mock('@folio/stripes/core', () => require('../test/stripesCore').makeStripesCoreMock(() => mockOkapi));
+jest.mock('@folio/stripes/core', () => require('#/test/stripesCore').makeStripesCoreMock(() => mockOkapi));
 
 const { CalloutContext } = require('@folio/stripes/core');
 

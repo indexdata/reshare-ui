@@ -5,7 +5,7 @@ import { Button, ConfirmationModal, Icon } from '@folio/stripes/components';
 import { CalloutContext, IfPermission } from '@folio/stripes/core';
 import { useOkapiKy } from '@projectreshare/stripes-reshare';
 
-import AppNameContext from '../AppNameContext';
+import AppNameContext from '#/AppNameContext';
 
 const ManualClose = ({ request }) => {
   const [isOpen, setIsOpen] = useState(false);

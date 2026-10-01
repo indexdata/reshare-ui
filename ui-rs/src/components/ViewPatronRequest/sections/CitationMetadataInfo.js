@@ -8,7 +8,7 @@ import {
   Row,
 } from '@folio/stripes/components';
 
-import { extractIdentifiers } from '../../../util/bibIdentifiers';
+import { extractIdentifiers } from '#/util/bibIdentifiers';
 import css from './CitationMetadata.css';
 
 // "Author (1998): Some Title", degrading to whichever parts are present.

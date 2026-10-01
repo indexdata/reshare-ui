@@ -5,7 +5,7 @@ import { Accordion, Button, Col, ConfirmationModal, KeyValue, Loading, Pane, Row
 import { CalloutContext } from '@folio/stripes/core';
 import { DirectLink, useOkapiKy, useOkapiQuery, useCloseDirect } from '@projectreshare/stripes-reshare';
 
-import EventLog from '../../components/EventLog';
+import EventLog from '#/components/EventLog';
 import { describeSchedule } from './schedule/scheduleExpression';
 import actionRegistry from './actions/actionRegistry';
 

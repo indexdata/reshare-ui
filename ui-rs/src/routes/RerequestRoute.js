@@ -6,12 +6,12 @@ import { Redirect, useHistory, useLocation } from 'react-router-dom';
 import { MessageBanner } from '@folio/stripes/components';
 import { CalloutContext } from '@folio/stripes/core';
 import { DirectLink, useCloseDirect, useIsActionPending, useOkapiKy, useOkapiQuery, upNLevels } from '@projectreshare/stripes-reshare';
-import PatronRequestForm from '../components/PatronRequestForm';
-import PatronRequestFormPane from '../components/PatronRequestForm/PatronRequestFormPane';
-import submissionError from '../components/PatronRequestForm/submissionError';
-import useOptions from '../components/PatronRequestForm/useOptions';
-import { brokerToForm, formToRevision } from '../components/PatronRequestForm/formMapping';
-import handleSISelect from '../components/PatronRequestForm/handleSISelect';
+import PatronRequestForm from '#/components/PatronRequestForm';
+import PatronRequestFormPane from '#/components/PatronRequestForm/PatronRequestFormPane';
+import submissionError from '#/components/PatronRequestForm/submissionError';
+import useOptions from '#/components/PatronRequestForm/useOptions';
+import { brokerToForm, formToRevision } from '#/components/PatronRequestForm/formMapping';
+import handleSISelect from '#/components/PatronRequestForm/handleSISelect';
 
 const RerequestRoute = ({ match }) => {
   const id = match.params?.id;

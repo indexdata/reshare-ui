@@ -4,14 +4,14 @@ import { useMutation, useQueryClient } from 'react-query';
 import { Redirect, useHistory, useLocation } from 'react-router-dom';
 import { CalloutContext } from '@folio/stripes/core';
 import { useCloseDirect, useOkapiKy, useOkapiQuery, upNLevels } from '@projectreshare/stripes-reshare';
-import PatronRequestForm from '../components/PatronRequestForm';
-import PatronRequestFormPane from '../components/PatronRequestForm/PatronRequestFormPane';
-import submissionError from '../components/PatronRequestForm/submissionError';
-import useOptions from '../components/PatronRequestForm/useOptions';
-import { brokerToForm, formToBroker } from '../components/PatronRequestForm/formMapping';
-import { EDIT } from '../components/PatronRequestForm/operations';
-import isRequestEditable from '../util/isRequestEditable';
-import handleSISelect from '../components/PatronRequestForm/handleSISelect';
+import PatronRequestForm from '#/components/PatronRequestForm';
+import PatronRequestFormPane from '#/components/PatronRequestForm/PatronRequestFormPane';
+import submissionError from '#/components/PatronRequestForm/submissionError';
+import useOptions from '#/components/PatronRequestForm/useOptions';
+import { brokerToForm, formToBroker } from '#/components/PatronRequestForm/formMapping';
+import { EDIT } from '#/components/PatronRequestForm/operations';
+import isRequestEditable from '#/util/isRequestEditable';
+import handleSISelect from '#/components/PatronRequestForm/handleSISelect';
 
 const EditRoute = ({ match }) => {
   const id = match.params?.id;

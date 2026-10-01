@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { Badge, Icon } from '@folio/stripes/components';
-import formattedDateTime from '../../util/formattedDateTime';
+import formattedDateTime from '#/util/formattedDateTime';
 import formatError from './formatError';
 import EventLogDetails from './EventLogDetails';
 import css from './EventLog.css';

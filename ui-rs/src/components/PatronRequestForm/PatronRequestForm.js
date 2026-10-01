@@ -15,7 +15,7 @@ import {
 } from '@folio/stripes/components';
 import { required } from '@folio/stripes/util';
 import { Pluggable, useStripes } from '@folio/stripes/core';
-import { formatTierOption, tiersOfType } from '../../util/tiers';
+import { formatTierOption, tiersOfType } from '#/util/tiers';
 
 const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect, requireTier = false }) => {
   const { copyrightTypes, publicationTypes, locations, tiers = [] } = selectOptions;

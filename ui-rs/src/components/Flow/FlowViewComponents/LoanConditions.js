@@ -1,8 +1,8 @@
 import React from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { Accordion, MultiColumnList } from '@folio/stripes/components';
+import { formatConditionCode, formatConditionCost, formatConditionNote } from '#/util/formatCondition';
 import { useNotificationList } from '../../chat/useNotifications';
-import { formatConditionCode, formatConditionCost, formatConditionNote } from '../../../util/formatCondition';
 
 const conditionStatusId = (receipt) => {
   if (receipt === 'ACCEPTED') return 'ui-rs.flow.loanConditions.status.accepted';

@@ -5,14 +5,14 @@ import { BrokerEventsProvider, RequestCacheSync } from '@projectreshare/stripes-
 
 import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
+import AppNameContext from '#/AppNameContext';
 import ViewRoute from './ViewRoute';
-import AppNameContext from '../AppNameContext';
 
 // `mock` prefix lets the hoisted jest.mock factory below reference this.
 const mockOkapi = makeOkapiKyMock();
 
 jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
-jest.mock('@folio/stripes-components/lib/TextArea', () => require('../test/textAreaMock').default);
+jest.mock('@folio/stripes-components/lib/TextArea', () => require('#/test/textAreaMock').default);
 
 // react-syntax-highlighter ships ESM jest can't parse and only renders event
 // payloads (EventLogDetails), which an empty-history fixture never reaches.
@@ -28,7 +28,7 @@ let mockReshareOverrides = {};
 
 // Pass getters, not the values themselves: this factory is hoisted above the
 // `const mockOkapi = ...` line, so both are only available at render time.
-jest.mock('@folio/stripes/core', () => require('../test/stripesCore')
+jest.mock('@folio/stripes/core', () => require('#/test/stripesCore')
   .makeStripesCoreMock(() => mockOkapi, () => mockReshareOverrides));
 
 const { CalloutContext } = require('@folio/stripes/core');

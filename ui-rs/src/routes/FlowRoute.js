@@ -1,6 +1,6 @@
 import React from 'react';
 import { AccordionSet } from '@folio/stripes/components';
-import SECTIONS from '../components/Flow/FlowViewComponents';
+import SECTIONS from '#/components/Flow/FlowViewComponents';
 
 const FlowRoute = ({ request, actions = [] }) => {
   if (!request) return null;

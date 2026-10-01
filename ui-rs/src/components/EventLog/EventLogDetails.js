@@ -3,7 +3,7 @@ import { LightAsync as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { github } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import XmlBeautify from 'xml-beautify';
 import { Accordion, AccordionSet, KeyValue, Layout } from '@folio/stripes/components';
-import formattedDateTime from '../../util/formattedDateTime';
+import formattedDateTime from '#/util/formattedDateTime';
 import formatError from './formatError';
 import css from './EventLog.css';
 

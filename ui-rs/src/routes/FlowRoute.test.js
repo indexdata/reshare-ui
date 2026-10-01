@@ -8,24 +8,24 @@ import {
 
 import { createMemoryHistory } from 'history';
 import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
-import { useNotificationList } from '../components/chat/useNotifications';
-import { useTiers } from '../util/useOwnedEntries';
+import { useNotificationList } from '#/components/chat/useNotifications';
+import { useTiers } from '#/util/useOwnedEntries';
 import FlowRoute from './FlowRoute';
 
 const mockPerformAction = jest.fn(() => Promise.resolve());
 const mockIsActionPending = jest.fn(() => false);
 
-jest.mock('../components/chat/useNotifications', () => ({
+jest.mock('#/components/chat/useNotifications', () => ({
   useNotificationList: jest.fn(),
 }));
 
 // The stripes core mock below has no okapi client.
-jest.mock('../util/useOwnedEntries', () => ({
+jest.mock('#/util/useOwnedEntries', () => ({
   useTiers: jest.fn(),
 }));
 
 jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
-jest.mock('@folio/stripes-components/lib/TextArea', () => require('../test/textAreaMock').default);
+jest.mock('@folio/stripes-components/lib/TextArea', () => require('#/test/textAreaMock').default);
 
 jest.mock('@projectreshare/stripes-reshare', () => ({
   ...jest.requireActual('@projectreshare/stripes-reshare'),
@@ -35,7 +35,7 @@ jest.mock('@projectreshare/stripes-reshare', () => ({
 
 // FlowRoute receives request/actions as props, so it never queries; only
 // useStripes (reshare flags) and CalloutContext are touched here.
-jest.mock('@folio/stripes/core', () => require('../test/stripesCore').makeStripesCoreMock(() => ({})));
+jest.mock('@folio/stripes/core', () => require('#/test/stripesCore').makeStripesCoreMock(() => ({})));
 
 const { CalloutContext } = require('@folio/stripes/core');
 
