@@ -40,13 +40,9 @@ const appDetails = {
       'supplierSymbol', 'pickupLocation',
       'title',
     ],
-    extraFilter: 'r.true',
     // The requester's copy of an item has a placeholder barcode, unique per request;
     // the supplier's real barcode arrives alongside it as itemId.
     itemBarcodeField: 'itemId',
-    intlId: 'supplier',
-    institutionFilterId: 'supplier',
-    statePrefix: 'REQ',
     createPerm: 'ui-request.create',
   },
   supply: {
@@ -57,11 +53,7 @@ const appDetails = {
       'requesterSymbol', 'itemBarcode', 'pickLocation',
       'pickShelvingLocation', 'title'
     ],
-    extraFilter: 'r.false',
     itemBarcodeField: 'barcode',
-    intlId: 'requester',
-    institutionFilterId: 'requester',
-    statePrefix: 'RES',
     createPerm: 'ui-supply.create',
   },
 };

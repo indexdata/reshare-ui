@@ -25,7 +25,6 @@
     ],
     "stripesDeps": [
       "@projectreshare/rs",
-      "@folio/stripes-erm-components",
       "@projectreshare/stripes-reshare"
     ],
     "permissionSets": [

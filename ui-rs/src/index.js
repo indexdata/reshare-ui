@@ -20,7 +20,7 @@ const ResourceSharing = (props) => {
   } = props;
 
   const appName = path.substring(1).replace(/\/.*/, '');
-  props.stripes.logger.log('appName', `us-rs: path='${path}', appName='${appName}'`);
+  props.stripes.logger.log('appName', `ui-rs: path='${path}', appName='${appName}'`);
 
   if (actAs === 'settings') {
     return <Settings {...props} appName={appName} />;
@@ -40,23 +40,6 @@ const ResourceSharing = (props) => {
             exact
             from={path}
             to={`${path}/requests`}
-          />
-
-          {/* Backwards compatibility for previous client-side URLs */}
-          <Redirect
-            exact
-            from={`${path}/requests/view/:id`}
-            to={`${path}/requests/:id${search}`}
-          />
-          <Redirect
-            exact
-            from={`${path}/requests/view/:id/flow`}
-            to={`${path}/requests/:id/flow${search}`}
-          />
-          <Redirect
-            exact
-            from={`${path}/requests/view/:id/details`}
-            to={`${path}/requests/:id/details${search}`}
           />
 
           {appName === 'request' &&

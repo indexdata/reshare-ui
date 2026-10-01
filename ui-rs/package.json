@@ -19,13 +19,11 @@
     "test": "jest"
   },
   "dependencies": {
-    "@folio/stripes-erm-components": "~9.0.0",
     "@projectreshare/stripes-reshare": "~3.0.0",
     "classnames": "^2.2.6",
     "final-form": "^4.2.0",
     "final-form-arrays": "^3.0.2",
     "json-stable-stringify": "^1.0.1",
-    "ky": "^0.23.0",
     "lodash": "^4.17.4",
     "query-string": "^8.1.0",
     "react-final-form": "^6.3.0",
@@ -42,10 +40,6 @@
     "react-router": "^5.2.0",
     "react-router-dom": "^5.0.0"
   },
-  "resolutions": {
-        "@rehooks/local-storage": "2.4.4",
-        "postcss-nesting" : "^10.0.0"
-  },
   "stripes": {
     "actsAs": [
       "settings"
@@ -53,7 +47,6 @@
     "displayName": "ui-rs.meta.title",
     "route": "/rs",
     "stripesDeps": [
-      "@folio/stripes-erm-components",
       "@projectreshare/stripes-reshare"
     ],
     "icons": [

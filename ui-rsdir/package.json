@@ -40,7 +40,6 @@
     "displayName": "ui-rsdir.meta.title",
     "route": "/directory",
     "stripesDeps": [
-      "@folio/stripes-erm-components",
       "@k-int/address-plugin-british-isles",
       "@k-int/address-plugin-generic",
       "@k-int/address-plugin-north-america",
