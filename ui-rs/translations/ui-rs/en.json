@@ -159,7 +159,7 @@
   "information.itemId": "Item ID",
   "information.state": "State",
   "information.availability": "Availability",
-  "information.cost" : "Agreed cost",
+  "information.cost" : "Cost",
   "information.maximumCost" : "Original max cost",
   "information.maximumCostsCurrencyCode" : "Currency code",
   "information.maximumCostsMonetaryValue" : "Monetary value",
@@ -176,6 +176,7 @@
   "information.tags": "Tags",
   "information.tags.none": "No tags",
   "information.tier": "Tier",
+  "information.tierOption": "{name} ({cost})",
   "information.publicationType" : "Publication Type",
 
   "requestform.populateById": "Use to fill form",

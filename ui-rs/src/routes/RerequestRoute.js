@@ -51,7 +51,7 @@ const RerequestRoute = ({ match }) => {
 
   if (!initialValues.current) {
     if (!canRerequest) return <Redirect to={requestView} />;
-    initialValues.current = brokerToForm(request);
+    initialValues.current = brokerToForm(request, { tiers: options.tiers });
   }
 
   // Cancel first: a fetch already running would be reused, and its response
@@ -85,7 +85,7 @@ const RerequestRoute = ({ match }) => {
     let created;
     try {
       const res = await okapiKy.post('broker/patron_requests', {
-        json: formToRevision(submittedRecord, id),
+        json: formToRevision(submittedRecord, id, { tiers: options.tiers }),
       });
       created = await res.json();
     } catch (err) {
@@ -119,7 +119,7 @@ const RerequestRoute = ({ match }) => {
               }
             </MessageBanner>
           }
-          <PatronRequestForm selectOptions={options} onSISelect={form.mutators.handleSISelect} />
+          <PatronRequestForm selectOptions={options} onSISelect={form.mutators.handleSISelect} requireTier />
         </PatronRequestFormPane>
       )}
     </Form>

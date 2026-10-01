@@ -9,6 +9,7 @@ import {
 import { createMemoryHistory } from 'history';
 import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { useNotificationList } from '../components/chat/useNotifications';
+import { useTiers } from '../util/useOwnedEntries';
 import FlowRoute from './FlowRoute';
 
 const mockPerformAction = jest.fn(() => Promise.resolve());
@@ -16,6 +17,11 @@ const mockIsActionPending = jest.fn(() => false);
 
 jest.mock('../components/chat/useNotifications', () => ({
   useNotificationList: jest.fn(),
+}));
+
+// The stripes core mock below has no okapi client.
+jest.mock('../util/useOwnedEntries', () => ({
+  useTiers: jest.fn(),
 }));
 
 jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
@@ -166,6 +172,7 @@ describe('FlowRoute', () => {
     jest.clearAllMocks();
     mockIsActionPending.mockReturnValue(false);
     useNotificationList.mockReturnValue({ data: { items: conditionNotifications } });
+    useTiers.mockReturnValue({ tiers: [], isSettled: true });
   });
 
   it('renders flow sections with title, shared-index link, and condition data', () => {
@@ -198,12 +205,15 @@ describe('FlowRoute', () => {
     expect(screen.queryByText('other-supplier-row-note')).toBeNull();
 
     expect(screen.getByText('Loan')).toBeInTheDocument();
+    // No tier of ours matches, so the level stands in for it.
     expect(screen.getByText('Express')).toBeInTheDocument();
-    expect(screen.getByText('25.00 USD')).toBeInTheDocument();
+    expect(screen.queryByText('ui-rs.information.tier')).toBeNull();
 
-    // Agreed cost is the accepted priced condition; the table also holds a
-    // rejected 12.5 USD and a pending 4 EUR, so this proves the receipt filter.
+    // Cost is the accepted priced condition, which supersedes the 25.00 USD
+    // maximum; the table also holds a rejected 12.5 USD and a pending 4 EUR,
+    // so this proves the receipt filter.
     expect(screen.getByText('ui-rs.information.cost').parentElement.textContent).toContain('9 USD');
+    expect(screen.queryByText('25.00 USD')).toBeNull();
 
     // Requesting user, with the id linked through patronURL.
     expect(screen.getByText('flow-surname')).toBeInTheDocument();
@@ -214,6 +224,58 @@ describe('FlowRoute', () => {
       .toHaveAttribute('href', expect.stringContaining('qindex=patron'));
 
     expect(screen.getByText(/^3\/1\/2026, 11:59 PM UTC$/)).toBeInTheDocument();
+  });
+
+  describe('tier and cost', () => {
+    const expressLoan = (cost) => ({ id: 't-exp', name: 'Express loan', type: 'loan', level: 'express', cost, currency: 'USD' });
+    const costShown = () => screen.getByText('ui-rs.information.cost').parentElement.textContent;
+    const withTiers = (...tiers) => useTiers.mockReturnValue({ tiers, isSettled: true });
+
+    it('names the tier the request was made under in place of its level', () => {
+      withTiers(expressLoan(25));
+      renderFlowRoute();
+
+      expect(screen.getByText('Express loan')).toBeInTheDocument();
+      expect(screen.queryByText('ui-rs.information.serviceLevel')).toBeNull();
+      expect(screen.queryByText('Express')).toBeNull();
+      expect(costShown()).toContain('9 USD');
+    });
+
+    it('shows the maximum cost until a priced condition is accepted', () => {
+      withTiers(expressLoan(25));
+      useNotificationList.mockReturnValue({ data: { items: [] } });
+      renderFlowRoute();
+
+      expect(costShown()).toContain('25.00 USD');
+    });
+
+    it('spells out the zero of a free tier', () => {
+      withTiers(expressLoan(0));
+      useNotificationList.mockReturnValue({ data: { items: [] } });
+      renderFlowRoute({ ...requestFixture, illRequest: { ...requestFixture.illRequest, billingInfo: undefined } });
+
+      expect(screen.getByText('Express loan')).toBeInTheDocument();
+      expect(costShown()).toContain('0.00 USD');
+    });
+
+    it('falls back to the level when no tier projects onto the request', () => {
+      withTiers(expressLoan(10));
+      useNotificationList.mockReturnValue({ data: { items: [] } });
+      renderFlowRoute();
+
+      expect(screen.getByText('Express')).toBeInTheDocument();
+      expect(screen.queryByText('Express loan')).toBeNull();
+      expect(costShown()).toContain('25.00 USD');
+    });
+
+    it('shows neither until our tiers are known', () => {
+      useTiers.mockReturnValue({ tiers: [], isSettled: false });
+      renderFlowRoute();
+
+      expect(screen.queryByText('ui-rs.information.tier')).toBeNull();
+      expect(screen.queryByText('ui-rs.information.serviceLevel')).toBeNull();
+      expect(screen.queryByText('ui-rs.information.cost')).toBeNull();
+    });
   });
 
   it('hides the requesting user on the lending side', () => {

@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import uniqBy from 'lodash/uniqBy';
+import { useStripes } from '@folio/stripes/core';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 
 // Directory entries whose tenant is ours. A failed lookup (e.g. a user without
@@ -28,4 +30,19 @@ const usePickupLocations = () => {
   return { pickupLocations, isSettled };
 };
 
-export { useOwnedEntries, usePickupLocations };
+// Tiers carry no currency yet, so they take the tenant's. Cheapest first, so
+// free tiers lead the dropdown, then by name.
+const useTiers = () => {
+  const { currency } = useStripes();
+  const { entries, isSettled } = useOwnedEntries();
+  const tiers = useMemo(
+    () => uniqBy(entries.flatMap(entry => entry.tiers ?? []), 'id')
+      .sort((a, b) => a.cost - b.cost || a.name.localeCompare(b.name))
+      .map(tier => ({ ...tier, currency })),
+    [entries, currency]
+  );
+
+  return { tiers, isSettled };
+};
+
+export { useOwnedEntries, usePickupLocations, useTiers };

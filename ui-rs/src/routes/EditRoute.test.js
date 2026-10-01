@@ -58,16 +58,30 @@ const defaultModel = {
   ],
 };
 
-const renderEdit = ({ request = editableRequest(), history } = {}) => {
+const branches = [
+  { id: 'branch-e', name: 'East Branch', type: 'Branch', illConfig: { isPickupLocation: true } },
+  { id: 'branch-w', name: 'West Branch', type: 'Branch', illConfig: { isPickupLocation: true } },
+];
+const tiers = [
+  { id: 't-std-loan', name: 'Standard loan', type: 'loan', level: 'standard', cost: 0 },
+  { id: 't-exp-loan', name: 'Express loan', type: 'loan', level: 'express', cost: 15 },
+];
+const tieredEntries = { items: [{ id: 'inst-1', name: 'Our Library', type: 'Institution', tiers }, ...branches] };
+
+const paidCosts = { monetaryValue: '15.00', currencyCode: { '#text': 'USD' } };
+const madeUnder = (serviceLevel, maximumCosts) => editableRequest({
+  illRequest: {
+    ...editableRequest().illRequest,
+    serviceInfo: { serviceType: 'Loan', serviceLevel: { '#text': serviceLevel } },
+    ...(maximumCosts && { billingInfo: { maximumCosts } }),
+  },
+});
+
+const renderEdit = ({ request = editableRequest(), owned = { items: branches }, history } = {}) => {
   mockOkapi.setResponses({
     'broker/patron_requests/req-1': request,
     'broker/state_model/models/default': defaultModel,
-    'directory/entries/owned': {
-      items: [
-        { id: 'branch-e', name: 'East Branch', type: 'Branch', illConfig: { isPickupLocation: true } },
-        { id: 'branch-w', name: 'West Branch', type: 'Branch', illConfig: { isPickupLocation: true } },
-      ],
-    },
+    'directory/entries/owned': owned,
   });
   return renderWithRs(
     <CalloutContext.Provider value={{ sendCallout }}>
@@ -161,6 +175,50 @@ describe('EditRoute', () => {
 
     await waitFor(() => expect(mockOkapi.put).toHaveBeenCalledTimes(1));
     expect(mockOkapi.put.mock.calls[0][1].json.requesterPickupLocationId).toBeNull();
+  });
+
+  it('preselects the tier the request was made under and re-projects a new choice', async () => {
+    renderEdit({ request: madeUnder('Express', paidCosts), owned: tieredEntries });
+    await waitFor(() => expect(fieldByName('tier')?.value).toBe('t-exp-loan'));
+    expect(fieldByName('tier')).not.toBeRequired();
+
+    setField('tier', 't-std-loan');
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+
+    await waitFor(() => expect(mockOkapi.put).toHaveBeenCalledTimes(1));
+    const { illRequest } = mockOkapi.put.mock.calls[0][1].json;
+    expect(illRequest.serviceInfo.serviceLevel).toEqual({ '#text': 'Standard' });
+    expect(illRequest).not.toHaveProperty('billingInfo');
+    expect(illRequest).not.toHaveProperty('tier');
+  });
+
+  it('clears the level and maximum cost along with the tier when the service type changes', async () => {
+    renderEdit({ request: madeUnder('Express', paidCosts), owned: tieredEntries });
+    await waitFor(() => expect(fieldByName('tier')?.value).toBe('t-exp-loan'));
+
+    fireEvent.click(document.querySelector('input[name="serviceInfo.serviceType"][value="Copy"]'));
+    await waitFor(() => expect(fieldByName('tier')).toBeUndefined());
+    setField("serviceInfo.copyrightCompliance['#text']", 'AU-GenBus');
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+
+    await waitFor(() => expect(mockOkapi.put).toHaveBeenCalledTimes(1));
+    const { illRequest } = mockOkapi.put.mock.calls[0][1].json;
+    expect(illRequest.serviceInfo).toEqual({ serviceType: 'Copy', copyrightCompliance: { '#text': 'AU-GenBus' } });
+    expect(illRequest).not.toHaveProperty('billingInfo');
+  });
+
+  it('leaves a level and cost no tier matches as they are', async () => {
+    const rushCosts = { monetaryValue: '7', currencyCode: { '#text': 'USD' } };
+    renderEdit({ request: madeUnder('Rush', rushCosts), owned: tieredEntries });
+    await waitFor(() => expect(fieldByName('tier')?.value).toBe(''));
+
+    setField('bibliographicInfo.title', 'Edited Title');
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+
+    await waitFor(() => expect(mockOkapi.put).toHaveBeenCalledTimes(1));
+    const { illRequest } = mockOkapi.put.mock.calls[0][1].json;
+    expect(illRequest.serviceInfo.serviceLevel).toEqual({ '#text': 'Rush' });
+    expect(illRequest.billingInfo.maximumCosts).toEqual(rushCosts);
   });
 
   it('redirects away without a PUT when the request is not editable', async () => {

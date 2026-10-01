@@ -62,13 +62,7 @@ const CreateRoute = () => {
   }
 
   const submit = async submittedRecord => {
-    const newRecord = formToBroker(submittedRecord);
-    // TODO: pending tiers, which will supply the level for the chosen tier.
-    // Create only: an edit leaves whatever level the request already carries.
-    newRecord.illRequest.serviceInfo = {
-      ...newRecord.illRequest.serviceInfo,
-      serviceLevel: { '#text': 'Standard' },
-    };
+    const newRecord = formToBroker(submittedRecord, { tiers: options.tiers });
     try {
       await creator.mutateAsync(newRecord);
       return undefined;
@@ -85,6 +79,7 @@ const CreateRoute = () => {
             selectOptions={options}
             onSISelect={form.mutators.handleSISelect}
             autopopulate={autopopulate}
+            requireTier
           />
         </PatronRequestFormPane>
       )}

@@ -28,6 +28,15 @@ const westBranch = { id: 'branch-w', name: 'West Branch', type: 'Branch', parent
 const eastBranch = { id: 'branch-e', name: 'East Branch', type: 'Branch', parent: 'inst-1', illConfig: { isPickupLocation: true } };
 const ownedEntries = { items: [institution, westBranch, eastBranch] };
 
+// Not in cost order, so we can assert that behaviour.
+const tiers = [
+  { id: 't-exp-loan', name: 'Express loan', type: 'loan', level: 'express', cost: 15 },
+  { id: 't-std-loan', name: 'Standard loan', type: 'loan', level: 'standard', cost: 0 },
+  { id: 't-std-copy', name: 'Standard copy', type: 'copy', level: 'standard', cost: 5 },
+];
+const tieredEntries = { items: [{ ...institution, tiers }, westBranch, eastBranch] };
+const tierMessages = { 'ui-rs.information.tierOption': '{name} ({cost})' };
+
 const renderCreate = ({ owned = ownedEntries, ...options } = {}) => {
   mockOkapi.setResponses({ 'directory/entries/owned': owned });
   return renderWithRs(
@@ -106,6 +115,10 @@ describe('CreateRoute', () => {
     // Typed title flows through verbatim; serviceType keeps its Loan default.
     expect(illRequest.bibliographicInfo.title).toBe('Test Title');
     expect(illRequest.serviceInfo.serviceType).toBe('Loan');
+    // Without tiers there is no field for a level or cost, and none is invented.
+    expect(fieldByName('tier')).toBeUndefined();
+    expect(illRequest.serviceInfo).not.toHaveProperty('serviceLevel');
+    expect(illRequest).not.toHaveProperty('billingInfo');
     // The flat ISBN field maps into the ISO-18626 identifier array (our transform).
     expect(illRequest.bibliographicInfo.bibliographicItemId[0].bibliographicItemIdentifier)
       .toBe('9781234567890');
@@ -217,5 +230,77 @@ describe('CreateRoute', () => {
     const { json } = mockOkapi.post.mock.calls[0][1];
     expect(json.illRequest.serviceInfo.serviceType).toBe('Loan');
     expect(json).not.toHaveProperty('requesterPickupLocationId');
+  });
+
+  describe('tiers', () => {
+    it('offers the tiers of the chosen service type and drops a choice the other type made', async () => {
+      renderCreate({ owned: tieredEntries, messages: tierMessages });
+      await formRendered();
+
+      expect(optionLabels('tier')).toEqual(['Standard loan ($0.00)', 'Express loan ($15.00)']);
+      setField('tier', 't-exp-loan');
+      expect(fieldByName('tier').value).toBe('t-exp-loan');
+
+      chooseServiceType('Copy');
+      expect(optionLabels('tier')).toEqual(['Standard copy ($5.00)']);
+      await waitFor(() => expect(fieldByName('tier').value).toBe(''));
+    });
+
+    it('requires a tier and sends it as the level and maximum cost, never as itself', async () => {
+      renderCreate({ owned: tieredEntries });
+      await formRendered();
+
+      fillRequiredFields();
+      setField('requesterPickupLocationId', 'branch-e');
+      fireEvent.click(document.querySelector('button[type="submit"]'));
+      await waitFor(() => expect(fieldByName('tier')).toHaveAttribute('aria-invalid', 'true'));
+      expect(mockOkapi.post).not.toHaveBeenCalled();
+
+      setField('tier', 't-exp-loan');
+      fireEvent.click(document.querySelector('button[type="submit"]'));
+      await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(document.querySelector('button[type="submit"]')).toBeNull());
+
+      const { json } = mockOkapi.post.mock.calls[0][1];
+      expect(json).not.toHaveProperty('tier');
+      expect(json.illRequest).not.toHaveProperty('tier');
+      expect(json.illRequest.serviceInfo.serviceLevel).toEqual({ '#text': 'Express' });
+      expect(json.illRequest.billingInfo.maximumCosts).toEqual({
+        monetaryValue: '15.00',
+        currencyCode: { '#text': 'USD' },
+      });
+    });
+
+    it('sends no billing info for a free tier', async () => {
+      renderCreate({ owned: tieredEntries });
+      await formRendered();
+
+      fillRequiredFields();
+      setField('requesterPickupLocationId', 'branch-e');
+      setField('tier', 't-std-loan');
+      fireEvent.click(document.querySelector('button[type="submit"]'));
+      await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
+
+      const { json } = mockOkapi.post.mock.calls[0][1];
+      expect(json.illRequest.serviceInfo.serviceLevel).toEqual({ '#text': 'Standard' });
+      expect(json.illRequest).not.toHaveProperty('billingInfo');
+    });
+
+    it('hides the field when no tier fits the service type, and sends no level', async () => {
+      const loanOnly = { items: [{ ...institution, tiers: tiers.filter(t => t.type === 'loan') }] };
+      renderCreate({ owned: loanOnly });
+      await formRendered();
+      expect(fieldByName('tier')).toBeTruthy();
+
+      chooseServiceType('Copy');
+      await waitFor(() => expect(fieldByName('tier')).toBeUndefined());
+      fillRequiredFields();
+      setField("serviceInfo.copyrightCompliance['#text']", 'AU-GenBus');
+      fireEvent.click(document.querySelector('button[type="submit"]'));
+      await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
+
+      const { json } = mockOkapi.post.mock.calls[0][1];
+      expect(json.illRequest.serviceInfo).toEqual({ serviceType: 'Copy', copyrightCompliance: { '#text': 'AU-GenBus' } });
+    });
   });
 });
