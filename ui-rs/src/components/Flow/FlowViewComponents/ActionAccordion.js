@@ -2,7 +2,7 @@ import React from 'react';
 import { FormattedMessage } from 'react-intl';
 import { Layout, Accordion } from '@folio/stripes/components';
 import { usePerformAction } from '@projectreshare/stripes-reshare';
-import kebabToPascal from '../../../util/kebabToPascal';
+import kebabToPascal from '#/util/kebabToPascal';
 import * as primaryActions from '../primaryActions';
 import * as moreActions from '../moreActions';
 import actionMeta from '../actionMeta';

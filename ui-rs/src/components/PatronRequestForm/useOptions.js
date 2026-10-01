@@ -1,6 +1,6 @@
 import { useIntl } from 'react-intl';
 import { CopyrightCompliance, PublicationType } from '@projectreshare/stripes-reshare';
-import { usePickupLocations, useTiers } from '../../util/useOwnedEntries';
+import { usePickupLocations, useTiers } from '#/util/useOwnedEntries';
 
 // Lowercased to match the publication types handleSISelect writes.
 const publicationTypes = PublicationType.map(code => ({ label: code, value: code.toLowerCase() }));

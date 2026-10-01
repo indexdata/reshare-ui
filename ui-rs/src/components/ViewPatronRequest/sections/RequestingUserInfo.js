@@ -10,7 +10,7 @@ import {
   Row,
 } from '@folio/stripes/components';
 
-import patronEmail from '../../../util/patronEmail';
+import patronEmail from '#/util/patronEmail';
 import css from './RequestingUserInfo.css';
 
 const RequestingUserInfo = ({ record }) => {

@@ -4,16 +4,16 @@ import { Route, Switch } from 'react-router-dom';
 import { Button, ButtonGroup, IconButton, Icon, Layout, Pane, PaneMenu, Paneset, Tooltip } from '@folio/stripes/components';
 import { DirectLink, upNLevels, useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
 
+import ViewMessageBanners from '#/components/ViewMessageBanners';
+import ViewPatronRequest from '#/components/ViewPatronRequest';
+import { ChatPane } from '#/components/chat';
+import { useNotificationCounts } from '#/components/chat/useNotifications';
+import useRequestAside from '#/util/useRequestAside';
+import isRequestEditable from '#/util/isRequestEditable';
+import AppNameContext from '#/AppNameContext';
+import EditInternalNote from '#/components/EditInternalNote';
+import ManualClose from '#/components/ManualClose';
 import FlowRoute from './FlowRoute';
-import ViewMessageBanners from '../components/ViewMessageBanners';
-import ViewPatronRequest from '../components/ViewPatronRequest';
-import { ChatPane } from '../components/chat';
-import { useNotificationCounts } from '../components/chat/useNotifications';
-import useRequestAside from '../util/useRequestAside';
-import isRequestEditable from '../util/isRequestEditable';
-import AppNameContext from '../AppNameContext';
-import EditInternalNote from '../components/EditInternalNote';
-import ManualClose from '../components/ManualClose';
 import css from './ViewRoute.css';
 
 const ASIDE_SLOTS = { chat: ChatPane };

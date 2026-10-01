@@ -4,12 +4,12 @@ import { useMutation, useQueryClient } from 'react-query';
 import { useHistory, useLocation } from 'react-router-dom';
 import { CalloutContext } from '@folio/stripes/core';
 import { useCloseDirect, useOkapiKy } from '@projectreshare/stripes-reshare';
-import PatronRequestForm from '../components/PatronRequestForm';
-import PatronRequestFormPane from '../components/PatronRequestForm/PatronRequestFormPane';
-import submissionError from '../components/PatronRequestForm/submissionError';
-import useOptions from '../components/PatronRequestForm/useOptions';
-import { formToBroker } from '../components/PatronRequestForm/formMapping';
-import handleSISelect from '../components/PatronRequestForm/handleSISelect';
+import PatronRequestForm from '#/components/PatronRequestForm';
+import PatronRequestFormPane from '#/components/PatronRequestForm/PatronRequestFormPane';
+import submissionError from '#/components/PatronRequestForm/submissionError';
+import useOptions from '#/components/PatronRequestForm/useOptions';
+import { formToBroker } from '#/components/PatronRequestForm/formMapping';
+import handleSISelect from '#/components/PatronRequestForm/handleSISelect';
 
 const CreateRoute = () => {
   const history = useHistory();

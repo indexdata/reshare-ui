@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 import { Accordion, Col, KeyValue, Loading, Row } from '@folio/stripes/components';
+import formattedDateTime from '#/util/formattedDateTime';
 import EventLog from '../../../EventLog';
-import formattedDateTime from '../../../../util/formattedDateTime';
 
 // The transaction and its events are fetched lazily when the accordion opens.
 // The broker exposes transactions only to the requesting tenant, so this

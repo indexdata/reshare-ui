@@ -3,10 +3,10 @@ import { Link, useLocation } from 'react-router-dom';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { Accordion, Col, Headline, KeyValue, Layout, NoValue, Row } from '@folio/stripes/components';
 
-import formatCosts from '../../../util/formatCosts';
-import { findAgreedCost, formatConditionCost } from '../../../util/formatCondition';
-import { findMatchingTier } from '../../../util/tiers';
-import { useTiers } from '../../../util/useOwnedEntries';
+import formatCosts from '#/util/formatCosts';
+import { findAgreedCost, formatConditionCost } from '#/util/formatCondition';
+import { findMatchingTier } from '#/util/tiers';
+import { useTiers } from '#/util/useOwnedEntries';
 import { useNotificationList } from '../../chat/useNotifications';
 import DueDate from '../../DueDate';
 

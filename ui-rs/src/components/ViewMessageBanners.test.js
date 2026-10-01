@@ -10,7 +10,7 @@ jest.mock('./chat/useNotifications', () => ({
   useNotificationList: () => ({ data: { items: [] } }),
 }));
 
-jest.mock('@folio/stripes/core', () => require('../test/stripesCore').makeStripesCoreMock(() => ({})));
+jest.mock('@folio/stripes/core', () => require('#/test/stripesCore').makeStripesCoreMock(() => ({})));
 
 const soon = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
 const later = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();

@@ -1,7 +1,7 @@
 import omit from 'lodash/omit';
+import { ID_ARRAYS, extractIdentifiers } from '#/util/bibIdentifiers';
+import { findMatchingTier, tierMaximumCosts, tierToServiceLevel } from '#/util/tiers';
 import { CREATE, EDIT } from './operations';
-import { ID_ARRAYS, extractIdentifiers } from '../../util/bibIdentifiers';
-import { findMatchingTier, tierMaximumCosts, tierToServiceLevel } from '../../util/tiers';
 
 // Entries for the codes the form exposes, with any other code left as it was, so
 // identifiers we do not display survive a PUT.

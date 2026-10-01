@@ -5,7 +5,7 @@ import { Accordion, Col, KeyValue, Row } from '@folio/stripes/components';
 import { useStripes } from '@folio/stripes/core';
 import { upNLevels } from '@projectreshare/stripes-reshare';
 
-import patronEmail from '../../../util/patronEmail';
+import patronEmail from '#/util/patronEmail';
 
 const RequestingUser = ({ request }) => {
   const stripes = useStripes();

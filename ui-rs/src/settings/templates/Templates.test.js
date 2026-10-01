@@ -9,9 +9,9 @@ import Templates from './Templates';
 const mockOkapi = makeOkapiKyMock();
 
 jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
-jest.mock('@folio/stripes-components/lib/TextArea', () => require('../../test/textAreaMock').default);
-jest.mock('@folio/stripes-components/lib/Editor', () => require('../../test/editorMock').default);
-jest.mock('@folio/stripes/core', () => require('../../test/stripesCore').makeStripesCoreMock(() => mockOkapi));
+jest.mock('@folio/stripes-components/lib/TextArea', () => require('#/test/textAreaMock').default);
+jest.mock('@folio/stripes-components/lib/Editor', () => require('#/test/editorMock').default);
+jest.mock('@folio/stripes/core', () => require('#/test/stripesCore').makeStripesCoreMock(() => mockOkapi));
 
 const PATH = '/settings/rs/templates';
 

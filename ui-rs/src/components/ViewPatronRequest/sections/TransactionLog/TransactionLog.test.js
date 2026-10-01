@@ -16,7 +16,7 @@ jest.mock('react-syntax-highlighter', () => ({
 }));
 jest.mock('react-syntax-highlighter/dist/esm/styles/hljs', () => ({ github: { hljs: {} } }));
 
-jest.mock('@folio/stripes/core', () => require('../../../../test/stripesCore').makeStripesCoreMock(() => mockOkapi));
+jest.mock('@folio/stripes/core', () => require('#/test/stripesCore').makeStripesCoreMock(() => mockOkapi));
 
 const transactionFixture = {
   id: 'txn-1',

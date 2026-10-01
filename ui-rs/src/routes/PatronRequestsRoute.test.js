@@ -5,16 +5,16 @@ import { act, fireEvent, screen, within, waitFor } from '@folio/jest-config-stri
 
 import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
-import AppNameContext from '../AppNameContext';
+import AppNameContext from '#/AppNameContext';
+import { buildPatronRequestsCql } from '#/util/buildPatronRequestsCql';
 import PatronRequestsRoute from './PatronRequestsRoute';
-import { buildPatronRequestsCql } from '../util/buildPatronRequestsCql';
 
 const mockOkapi = makeOkapiKyMock();
 
 jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
-jest.mock('@folio/stripes/core', () => require('../test/stripesCore').makeStripesCoreMock(() => mockOkapi));
-jest.mock('../util/buildPatronRequestsCql', () => {
-  const actual = jest.requireActual('../util/buildPatronRequestsCql');
+jest.mock('@folio/stripes/core', () => require('#/test/stripesCore').makeStripesCoreMock(() => mockOkapi));
+jest.mock('#/util/buildPatronRequestsCql', () => {
+  const actual = jest.requireActual('#/util/buildPatronRequestsCql');
   return {
     ...actual,
     buildPatronRequestsCql: jest.fn(actual.buildPatronRequestsCql),

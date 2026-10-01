@@ -4,8 +4,8 @@ import { useIntl } from 'react-intl';
 import { Redirect, useLocation } from 'react-router-dom';
 import queryString from 'query-string';
 import { ServiceLevel, ServiceType, useOkapiKy, useOkapiQuery } from '@projectreshare/stripes-reshare';
-import PatronRequests from '../components/PatronRequests';
-import { buildPatronRequestsCql, buildFacetOptionsCql, DEFAULT_SEARCH } from '../util/buildPatronRequestsCql';
+import PatronRequests from '#/components/PatronRequests';
+import { buildPatronRequestsCql, buildFacetOptionsCql, DEFAULT_SEARCH } from '#/util/buildPatronRequestsCql';
 
 const PER_PAGE = 100;
 

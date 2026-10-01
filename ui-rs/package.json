@@ -8,6 +8,9 @@
     "directory": "ui-rs"
   },
   "main": "src/index.js",
+  "imports": {
+    "#/*": "./src/*"
+  },
   "license": "Apache-2.0",
   "scripts": {
     "start": "stripes serve",
