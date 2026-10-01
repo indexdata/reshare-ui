@@ -64,16 +64,21 @@ const noActions = { actions: [] };
 // Reassigned mid-test to model a refresh or another session's change.
 let broker;
 
-const renderRerequest = ({ history } = {}) => {
+const branches = [
+  { id: 'branch-e', name: 'East Branch', type: 'Branch', illConfig: { isPickupLocation: true } },
+  { id: 'branch-w', name: 'West Branch', type: 'Branch', illConfig: { isPickupLocation: true } },
+];
+const tiers = [
+  { id: 't-exp-loan', name: 'Express loan', type: 'loan', level: 'express', cost: 0 },
+  { id: 't-std-loan', name: 'Standard loan', type: 'loan', level: 'standard', cost: 15 },
+];
+const tieredEntries = { items: [{ id: 'inst-1', name: 'Our Library', type: 'Institution', tiers }, ...branches] };
+
+const renderRerequest = ({ history, owned = { items: branches } } = {}) => {
   mockOkapi.setResponses({
     'broker/patron_requests/req-1': () => broker.request,
     'broker/patron_requests/req-1/actions': () => broker.actions,
-    'directory/entries/owned': {
-      items: [
-        { id: 'branch-e', name: 'East Branch', type: 'Branch', illConfig: { isPickupLocation: true } },
-        { id: 'branch-w', name: 'West Branch', type: 'Branch', illConfig: { isPickupLocation: true } },
-      ],
-    },
+    'directory/entries/owned': owned,
   });
   const memoryHistory = history ?? createMemoryHistory({ initialEntries: ['/requests/req-1/rerequest?foo=bar'] });
   const rendered = renderWithRs(
@@ -174,7 +179,7 @@ describe('RerequestRoute', () => {
     expect(sendCallout).not.toHaveBeenCalled();
   });
 
-  it('sends edits, omits a cleared internal note and defaults a missing service level', async () => {
+  it('sends edits and omits a cleared internal note, without inventing a service level', async () => {
     broker.request = cancelledRequest();
     delete broker.request.illRequest.serviceInfo.serviceLevel;
     const { history } = renderRerequest();
@@ -191,7 +196,45 @@ describe('RerequestRoute', () => {
     expect(itemIdFor(json, 'ISBN')).toBeUndefined();
     expect(itemIdFor(json, 'ISMN')).toBe('M-2306-7118-7');
     expect(json).not.toHaveProperty('internalNote');
-    expect(json.illRequest.serviceInfo.serviceLevel).toEqual({ '#text': 'Standard' });
+    expect(json.illRequest.serviceInfo).not.toHaveProperty('serviceLevel');
+  });
+
+  it('preselects the tier the original was made under', async () => {
+    const { history } = renderRerequest({ owned: tieredEntries });
+    await loaded();
+    expect(fieldByName('tier').value).toBe('t-exp-loan');
+
+    fireEvent.click(submitButton());
+
+    await waitFor(() => expect(history.location.pathname).toBe('/requests/req-2'));
+    const json = createdPayload();
+    expect(json.illRequest.serviceInfo.serviceLevel).toEqual({ '#text': 'Express' });
+    expect(json.illRequest).not.toHaveProperty('billingInfo');
+  });
+
+  it('requires a tier when the original was made without one', async () => {
+    broker.request = cancelledRequest();
+    delete broker.request.illRequest.serviceInfo.serviceLevel;
+    const { history } = renderRerequest({ owned: tieredEntries });
+    await loaded();
+    expect(fieldByName('tier').value).toBe('');
+
+    fireEvent.click(submitButton());
+    await waitFor(() => expect(fieldByName('tier')).toHaveAttribute('aria-invalid', 'true'));
+    expect(mockOkapi.post).not.toHaveBeenCalled();
+
+    setField('tier', 't-std-loan');
+    fireEvent.click(submitButton());
+
+    await waitFor(() => expect(history.location.pathname).toBe('/requests/req-2'));
+    expect(postPaths()).toEqual(['broker/patron_requests/req-1/action', 'broker/patron_requests']);
+    const json = createdPayload();
+    expect(json.illRequest.serviceInfo).toEqual({
+      serviceType: 'Loan',
+      serviceLevel: { '#text': 'Standard' },
+      requestType: 'New',
+    });
+    expect(json.illRequest.billingInfo.maximumCosts.monetaryValue).toBe('15.00');
   });
 
   it('returns to the original without any mutation when rerequest is not offered', async () => {

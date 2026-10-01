@@ -51,10 +51,10 @@ const EditRoute = ({ match }) => {
     return <Redirect to={requestView} />;
   }
 
-  const initialValues = brokerToForm(request);
+  const initialValues = brokerToForm(request, { tiers: options.tiers });
 
   const submit = async submittedRecord => {
-    const updatedRecord = formToBroker(submittedRecord, { operation: EDIT });
+    const updatedRecord = formToBroker(submittedRecord, { operation: EDIT, tiers: options.tiers });
     try {
       await editor.mutateAsync(updatedRecord);
       return undefined;

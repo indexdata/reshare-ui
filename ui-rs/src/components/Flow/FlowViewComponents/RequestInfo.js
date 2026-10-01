@@ -5,6 +5,8 @@ import { Accordion, Col, Headline, KeyValue, Layout, NoValue, Row } from '@folio
 
 import formatCosts from '../../../util/formatCosts';
 import { findAgreedCost, formatConditionCost } from '../../../util/formatCondition';
+import { findMatchingTier } from '../../../util/tiers';
+import { useTiers } from '../../../util/useOwnedEntries';
 import { useNotificationList } from '../../chat/useNotifications';
 import DueDate from '../../DueDate';
 
@@ -14,9 +16,9 @@ const RequestInfo = ({ request }) => {
   const serviceInfo = illRequest?.serviceInfo || {};
   const bibliographicInfo = illRequest?.bibliographicInfo || {};
 
-  const colKeyVal = (labelId, value) => {
+  const colKeyVal = (labelId, value, xs = 3) => {
     return (
-      <Col xs={3}>
+      <Col xs={xs}>
         <KeyValue
           label={<FormattedMessage id={labelId} />}
           value={value}
@@ -32,6 +34,17 @@ const RequestInfo = ({ request }) => {
   // Shares its query key with the chat badge ViewRoute already fetches.
   const { data: notifications } = useNotificationList(request?.id);
   const agreedCost = findAgreedCost(notifications?.items, request?.supplierSymbol);
+
+  // Without a matching tier the level is shown instead. Cost is the maximum,
+  // superseded by an accepted condition; a free tier sends none, so shows its zero.
+  const { tiers, isSettled: tiersSettled } = useTiers();
+  const tier = findMatchingTier(illRequest, tiers);
+  const freeTier = tier?.cost === 0
+    ? formatCosts({ monetaryValue: '0.00', currencyCode: { '#text': tier.currency } })
+    : undefined;
+  const cost = (agreedCost !== undefined ? formatConditionCost(agreedCost) : undefined)
+    ?? maximumCost
+    ?? freeTier;
 
   const onLoan = ['Loaned', 'Overdue', 'Recalled'].includes(request?.illResponse?.statusInfo?.status);
 
@@ -72,14 +85,17 @@ const RequestInfo = ({ request }) => {
               : <NoValue />
           )}
         </Row>
-        <Row>
-          {serviceLevel !== undefined && colKeyVal(
-            'ui-rs.information.serviceLevel',
-            <FormattedMessage id={`stripes-reshare.iso18626.ServiceLevel.${serviceLevel}`} defaultMessage={serviceLevel} />
-          )}
-          {maximumCost !== undefined && colKeyVal('ui-rs.information.maximumCost', maximumCost)}
-          {agreedCost !== undefined && colKeyVal('ui-rs.information.cost', formatConditionCost(agreedCost))}
-        </Row>
+        {tiersSettled &&
+          <Row>
+            {tier
+              ? colKeyVal('ui-rs.information.tier', tier.name, 6)
+              : serviceLevel !== undefined && colKeyVal(
+                'ui-rs.information.serviceLevel',
+                <FormattedMessage id={`stripes-reshare.iso18626.ServiceLevel.${serviceLevel}`} defaultMessage={serviceLevel} />
+              )}
+            {cost !== undefined && colKeyVal('ui-rs.information.cost', cost)}
+          </Row>
+        }
         <Row>
           {colKeyVal(
             'ui-rs.flow.info.dueDate',

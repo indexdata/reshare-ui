@@ -1,6 +1,6 @@
-import React from 'react';
-import { FormattedMessage } from 'react-intl';
-import { Field, useFormState } from 'react-final-form';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { FormattedMessage, useIntl } from 'react-intl';
+import { Field, useForm, useFormState } from 'react-final-form';
 import {
   AccordionSet,
   Accordion,
@@ -15,13 +15,38 @@ import {
 } from '@folio/stripes/components';
 import { required } from '@folio/stripes/util';
 import { Pluggable, useStripes } from '@folio/stripes/core';
+import { formatTierOption, tiersOfType } from '../../util/tiers';
 
-const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect }) => {
-  const { copyrightTypes, publicationTypes, locations } = selectOptions;
+const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect, requireTier = false }) => {
+  const { copyrightTypes, publicationTypes, locations, tiers = [] } = selectOptions;
   const { values } = useFormState();
-  const isCopyReq = values?.serviceInfo?.serviceType === 'Copy';
+  const form = useForm();
+  const intl = useIntl();
+  const serviceType = values?.serviceInfo?.serviceType;
+  const isCopyReq = serviceType === 'Copy';
   const pickupLocationRequired = !isCopyReq && locations.length > 0;
   const stripes = useStripes();
+
+  // With no tiers for the service type, the request goes out with no level or cost.
+  const tierOptions = useMemo(
+    () => tiersOfType(tiers, serviceType).map(tier => formatTierOption(tier, intl)),
+    [tiers, serviceType, intl]
+  );
+  const showTier = tierOptions.length > 0;
+  const tierRequired = requireTier && showTier;
+
+  // Tier, level and cost belong to one service type, so a change of type clears
+  // them. The ref skips the initial render, which would wipe an edit's tier.
+  const previousServiceType = useRef(serviceType);
+  useEffect(() => {
+    if (previousServiceType.current === serviceType) return;
+    previousServiceType.current = serviceType;
+    form.batch(() => {
+      form.change('tier', undefined);
+      form.change('serviceInfo.serviceLevel', undefined);
+      form.change('billingInfo.maximumCosts', undefined);
+    });
+  }, [serviceType, form]);
 
   // TODO: Broker API; stubbed until it can supply hostLMSIntegration's borrower_check
   const ncipBorrowerCheck = { value: 'none', isSuccess: true };
@@ -130,18 +155,19 @@ const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect }) => {
             rows={5}
           />
         </Col>
-        {/* TODO: tiers pending directory endpoint to fetch entry corresponding to tenant */}
-        {/* <Col xs={3}>
+        {showTier &&
+        <Col xs={3}>
           <Field
             name="tier"
-            placeholder=" "
             label={<FormattedMessage id="ui-rs.information.tier" />}
+            placeholder=" "
             component={Select}
-            dataOptions={tiers}
-            required
-            validate={required}
+            dataOptions={tierOptions}
+            required={tierRequired}
+            validate={tierRequired && required}
           />
-        </Col> */}
+        </Col>
+        }
         {isCopyReq &&
         <Col xs={3}>
           <Field
