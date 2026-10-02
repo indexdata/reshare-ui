@@ -1,0 +1,27 @@
+@import '@folio/stripes-components/lib/variables';
+
+.scanned {
+  display: block;
+  margin-bottom: var(--gutter);
+  text-align: left;
+  width: 100%;
+}
+
+.selected {
+  border: 3px solid var(--primary);
+}
+
+.selected, .selected > div {
+  background: var(--color-fill-hover);
+}
+
+.emptyPlaceholder {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: var(--color-text-p2);
+  background: var(--color-fill);
+  font-size: var(--font-size-large);
+}
