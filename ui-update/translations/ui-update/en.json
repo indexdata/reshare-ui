@@ -1,0 +1,16 @@
+{
+  "meta.title": "Update",
+  "scanItems": "Scan items...",
+  "scanButton": "Scan",
+  "placeholder": "Scan a request barcode to get started",
+  "checkInPrompt": "Scan item barcode to check in to ReShare",
+  "requestLink": "Go to request record",
+  "column.hrid": "Request ID",
+  "column.requester": "Requester",
+  "column.supplier": "Supplier",
+  "column.title": "Item Title",
+  "error.dismissed": "Dialog dismissed before completing action",
+  "error.noRequest": "No request found matching scanned id",
+
+  "permission.module.update.enabled": "UI: update module is enabled"
+}

@@ -1,0 +1,57 @@
+{
+  "name": "@projectreshare/update",
+  "version": "1.10.2",
+  "description": "Quickly change the status of items. Part of the ReShare project.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openlibraryenvironment/ui-update"
+  },
+  "main": "src/index.js",
+  "repository": "",
+  "license": "Apache-2.0",
+  "scripts": {
+    "start": "stripes serve",
+    "build": "stripes build --output ./output",
+    "lint": "eslint src"
+  },
+  "devDependencies": {
+    "@folio/eslint-config-stripes": "~7.1.0",
+    "@folio/stripes-cli": "~4.0.0",
+    "eslint": "^7.0.0"
+  },
+  "dependencies": {
+    "@projectreshare/stripes-reshare": "^2.0.0",
+    "classnames": "^2.2.6",
+    "lodash": "^4.17.15",
+    "prop-types": "^15.6.0",
+    "react-final-form": "^6.3.0"
+  },
+  "peerDependencies": {
+    "@folio/stripes": "^9.0.0 || ^10.0.0",
+    "react": "*",
+    "react-intl": "^6.0.0 || ^7.0.0",
+    "react-router-dom": "^5.2.0"
+  },
+  "stripes": {
+    "actsAs": [
+      "app"
+    ],
+    "displayName": "ui-update.meta.title",
+    "route": "/update",
+    "icons": [
+      {
+        "name": "app",
+        "alt": "Update patron requests",
+        "title": "Update"
+      }
+    ],
+    "okapiInterfaces": {},
+    "permissionSets": [
+      {
+        "permissionName": "module.update.enabled",
+        "displayName": "UI: update module is enabled",
+        "visible": true
+      }
+    ]
+  }
+}
