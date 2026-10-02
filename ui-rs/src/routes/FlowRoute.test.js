@@ -407,6 +407,22 @@ describe('FlowRoute', () => {
     );
   });
 
+  it('links a primary pull slip action to the slip, still offering to mark it directly', () => {
+    const actions = [{ name: 'pullslip-printed', primary: true, parameters: [] }];
+    const history = createMemoryHistory({ initialEntries: [`/requests/${requestFixture.id}/flow?foo=bar`] });
+    renderWithRs(<FlowRoute request={requestFixture} actions={actions} />, { history });
+
+    expect(screen.getByText('stripes-reshare.actions.pullslip-printed').closest('button')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('ui-rs.printPullslip'));
+
+    expect(history.location).toMatchObject({
+      pathname: `/requests/${requestFixture.id}/pullslip`,
+      search: '?foo=bar',
+    });
+    expect(mockPerformAction).not.toHaveBeenCalled();
+  });
+
   describe('rerequest', () => {
     const rerequestActions = [{ name: 'rerequest', parameters: ['noop'] }];
     const renderWithHistory = () => {
