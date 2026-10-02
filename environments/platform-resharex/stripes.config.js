@@ -10,6 +10,7 @@ module.exports = {
     reshare: {
       showRefresh: true,
       liveUpdates: true,
+      showCost: true,
     },
     staleBundleWarning: { path: '/index.html', header: 'last-modified', interval: 5 },
   },
