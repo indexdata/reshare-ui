@@ -17,6 +17,7 @@
   "entry.name" : "Name",
   "entry.networks" : "Networks",
   "entry.symbols" : "Symbols",
+  "entry.symbolNotFound" : "No directory entry has the symbol {symbol}.",
   "entry.tiers" : "Tiers",
   "entry.type" : "Type",
   "entry.sections" : "Sections",

@@ -3,6 +3,7 @@ import { Redirect, Route, Switch } from '@folio/stripes/core';
 
 import EntriesRoute from './routes/EntriesRoute';
 import ViewEntryRoute from './routes/ViewEntryRoute';
+import SymbolEntryRoute from './routes/SymbolEntryRoute';
 import EditEntryRoute from './routes/EditEntryRoute';
 import CatalogConfigRoute from './routes/CatalogConfigRoute';
 import ClosuresRoute from './routes/ClosuresRoute';
@@ -33,6 +34,7 @@ const RSDir = (props) => {
       <Route path={`${path}/entries`} component={EntriesRoute}>
         <Switch>
           <Route path={`${path}/entries/create`} component={EditEntryRoute} />
+          <Route path={`${path}/entries/by-symbol/:symbol`} component={SymbolEntryRoute} />
           <Route path={`${path}/entries/:id/edit`} component={EditEntryRoute} />
           <Route path={`${path}/entries/:id/lmsconfig`} component={LMSConfigRoute} />
           <Route path={`${path}/entries/:id/catalogconfig`} component={CatalogConfigRoute} />

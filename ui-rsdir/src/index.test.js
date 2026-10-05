@@ -114,6 +114,28 @@ describe('directory entries', () => {
     expect(entryRow()).not.toHaveClass('mclSelected');
   });
 
+  it('opens an entry linked by symbol at its id, keeping the search', async () => {
+    mockOkapi.setResponses(responses({ 'directory/entries/by-symbol/ISIL:FIX-1': entry }));
+    const { history } = renderDirectory(['/directory/entries/by-symbol/ISIL:FIX-1?query=fix']);
+
+    await waitFor(() => expect(at(history)).toBe('/directory/entries/e1?query=fix'));
+    expect((await findEntryPane()).getByText('ISIL:FIX-1')).toBeInTheDocument();
+    expect(entryRow()).toHaveClass('mclSelected');
+  });
+
+  it('says when no entry has a linked symbol and closes back to the list', async () => {
+    mockOkapi.setResponses(responses({
+      'directory/entries/by-symbol/ISIL:NONE': () => {
+        throw Object.assign(new Error('Entry not found'), { status: 404 });
+      },
+    }));
+    const { history } = renderDirectory(['/directory/entries/by-symbol/ISIL:NONE?query=fix']);
+
+    expect(await screen.findByText('ui-rsdir.entry.symbolNotFound')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'stripes-components.closeItem' }));
+    expect(at(history)).toBe('/directory/entries?query=fix');
+  });
+
   it('edits the entry in a pane of its own and cancels or closes back to the view', async () => {
     const { history } = renderDirectory(['/directory/entries/e1?query=fix']);
 
