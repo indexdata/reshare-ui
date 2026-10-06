@@ -5,6 +5,57 @@ import {
 } from './vendorFieldMapping';
 
 describe('vendorFieldMapping', () => {
+  it('attributes overridden leaves and locked selections without attributing other disabled fields', () => {
+    const source = { setting: 'catalogConfig.profile', name: 'Alma' };
+    const mapping = [{
+      fieldName: 'format',
+      valueType: 'subField',
+      onlyOne: true,
+      subMap: [{
+        fieldName: 'opac',
+        valueType: 'subField',
+        subMap: [{ fieldName: 'fixed' }, { fieldName: 'editable' }],
+      }, { fieldName: 'marc', disabled: true }],
+    }];
+    const result = applyDisabledPaths(mapping, ['format.opac.fixed'], source);
+    expect(result[0].overrideSource).toEqual(source);
+    expect(result[0].subMap[0]).not.toHaveProperty('overrideSource');
+    expect(result[0].subMap[0].subMap[0].overrideSource).toEqual(source);
+    expect(result[0].subMap[0].subMap[1]).not.toHaveProperty('overrideSource');
+    expect(result[0].subMap[1]).not.toHaveProperty('overrideSource');
+    expect(mapping[0]).not.toHaveProperty('overrideSource');
+  });
+
+  const exclusiveMapping = [{
+    fieldName: 'format',
+    valueType: 'subField',
+    onlyOne: true,
+    subMap: [{
+      fieldName: 'first',
+      valueType: 'subField',
+      onlyOne: true,
+      subMap: [{ fieldName: 'value' }, { fieldName: 'other' }],
+    }, { fieldName: 'second' }],
+  }];
+
+  it.each(['format.first', 'format.first.value'])('locks the branch containing %s', path => {
+    const result = applyDisabledPaths(exclusiveMapping, [path]);
+    expect(result[0].lockedSelection).toBe('first');
+    expect(exclusiveMapping[0]).not.toHaveProperty('lockedSelection');
+  });
+
+  it('locks nested selectors and matches complete path segments', () => {
+    const result = applyDisabledPaths(exclusiveMapping, ['format.first.value']);
+    expect(result[0].subMap[0].lockedSelection).toBe('value');
+    expect(applyDisabledPaths(exclusiveMapping, ['format.firstly.value'])[0]).not.toHaveProperty('lockedSelection');
+    expect(applyDisabledPaths(exclusiveMapping, [])[0]).not.toHaveProperty('lockedSelection');
+  });
+
+  it('rejects contradictory branch overrides', () => {
+    expect(() => applyDisabledPaths(exclusiveMapping, ['format.first', 'format.second']))
+      .toThrow('Conflicting vendor overrides for onlyOne field "format".');
+  });
+
   it('stores the expected restrictions for each supported vendor', () => {
     expect(vendorFieldMapping).toEqual({
       Alma: {
@@ -105,7 +156,7 @@ describe('vendorFieldMapping', () => {
       { fieldName: 'ncipNamespaceEnabled' },
       { fieldName: 'address' },
     ], 'Generic', 'lmsConfig')).toEqual([
-      { fieldName: 'ncipNamespaceEnabled', disabled: true },
+      { fieldName: 'ncipNamespaceEnabled', disabled: true, overrideSource: { setting: 'lmsConfig.vendor', name: 'Generic' } },
       { fieldName: 'address', disabled: false },
     ]);
     expect(vendorFieldMappingForVendor([

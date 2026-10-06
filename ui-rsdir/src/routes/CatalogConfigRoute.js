@@ -237,9 +237,10 @@ const CatalogConfigRoute = () => {
   const vendor = entryQuery.data?.lmsConfig?.vendor;
   const profile = entryQuery.data?.catalogConfig?.profile;
   const selectedProfile = profile || vendor;
+  const overrideSetting = profile ? 'catalogConfig.profile' : 'lmsConfig.vendor';
   const mappedFields = useMemo(
-    () => vendorFieldMappingForVendor(fieldMap, selectedProfile, 'catalogConfig'),
-    [selectedProfile],
+    () => vendorFieldMappingForVendor(fieldMap, selectedProfile, 'catalogConfig', overrideSetting),
+    [selectedProfile, overrideSetting],
   );
 
   if (!entryQuery.isSuccess) return <EntryLoadingPane />;

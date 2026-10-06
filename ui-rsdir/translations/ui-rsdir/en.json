@@ -292,5 +292,9 @@
   "symbol.authority" : "Authority",
   "symbol.symbol" : "Symbol",
   "symbol.add" : "Add symbol",
+  "settingsConfig.vendorBadge": "[Vendor]",
+  "settingsConfig.showOverrideSource": "Show override source for {field}",
+  "settingsConfig.overriddenByVendor": "Overridden by LMSConfig vendor: {name}",
+  "settingsConfig.overriddenByProfile": "Overridden by CatalogConfig profile: {name}",
   "SENTINEL" : "SENTINEL"
 }
