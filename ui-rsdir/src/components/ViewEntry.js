@@ -11,6 +11,7 @@ import { useStripes } from '@folio/stripes/core';
 import { DirectLink, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import { apiAddressToDisplayComponents } from '../util/addressAdapter';
 import { getAddressPlugin } from '../util/addressPlugin';
+import { normalizeLendToBorrowRatio } from '../util/lendToBorrowRatio';
 
 const normalizeList = data => (Array.isArray(data) ? data : data?.items || []);
 
@@ -139,6 +140,12 @@ const ViewEntry = ({ entry }) => {
           <KeyValue
             label={<FormattedMessage id="ui-rsdir.entry.tenant" />}
             value={entry.tenant}
+          />
+        </Col>
+        <Col xs={4}>
+          <KeyValue
+            label={<FormattedMessage id="ui-rsdir.entry.lendToBorrowRatio" />}
+            value={normalizeLendToBorrowRatio(entry.lendToBorrowRatio)}
           />
         </Col>
       </Row>

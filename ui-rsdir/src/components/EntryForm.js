@@ -12,7 +12,8 @@ import {
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 import PropTypes from 'prop-types';
 import SymbolsField from './SymbolsField';
-import { required } from '../util/validators';
+import { lendToBorrowRatio, required } from '../util/validators';
+import { normalizeLendToBorrowRatio } from '../util/lendToBorrowRatio';
 import AddressesField from './AddressesField';
 
 const types = [
@@ -110,6 +111,8 @@ const ParentField = () => {
 };
 
 const EntryForm = ({ addressPlugin }) => {
+  const form = useForm();
+
   return (
     <AccordionSet>
       <Accordion
@@ -163,6 +166,34 @@ const EntryForm = ({ addressPlugin }) => {
               component={TextField}
               label={<FormattedMessage id="ui-rsdir.entry.tenant" />}
             />
+          </Col>
+          <Col xs={4}>
+            <Field
+              name="lendToBorrowRatio"
+              parse={value => (value === '' ? null : value)}
+              validate={lendToBorrowRatio}
+            >
+              {({ input, meta }) => (
+                <>
+                  <TextField
+                    {...input}
+                    label={<FormattedMessage id="ui-rsdir.entry.lendToBorrowRatio" />}
+                    aria-describedby="entry-lend-to-borrow-ratio-help"
+                    marginBottom0
+                    error={meta.touched ? meta.error : undefined}
+                    onBlur={event => {
+                      input.onBlur(event);
+                      const normalized = normalizeLendToBorrowRatio(input.value);
+
+                      if (normalized !== input.value) form.change(input.name, normalized);
+                    }}
+                  />
+                  <p id="entry-lend-to-borrow-ratio-help">
+                    <FormattedMessage id="ui-rsdir.entry.lendToBorrowRatio.help" />
+                  </p>
+                </>
+              )}
+            </Field>
           </Col>
         </Row>
         <Row>
