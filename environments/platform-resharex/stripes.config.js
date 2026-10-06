@@ -37,7 +37,8 @@ module.exports = {
     "@projectreshare/rs": {},
     "@projectreshare/rsdir": {},
     "@projectreshare/request": {},
-    "@projectreshare/supply": {}
+    "@projectreshare/supply": {},
+    "@projectreshare/update": {}
   },
   branding: {
     style: {},

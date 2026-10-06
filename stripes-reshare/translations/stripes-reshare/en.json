@@ -78,14 +78,6 @@
   "states.WILL_SUPPLY_PENDING": "Will supply pending",
   "states.undefined": "ERROR: State undefined",
 
-  "catalogInfo.viewRecord": "View record",
-  "catalogInfo.error": "Error rendering record",
-  "catalogInfo.title": "Title",
-  "catalogInfo.author": "Author",
-  "catalogInfo.issn": "ISSN",
-  "catalogInfo.isbn": "ISBN",
-  "catalogInfo.date": "Date",
-
 
 
   "AND": "AND",

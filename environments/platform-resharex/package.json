@@ -88,6 +88,7 @@
     "@projectreshare/rsdir": "file:../../ui-rsdir",
     "@projectreshare/request": "file:../../ui-request",
     "@projectreshare/supply": "file:../../ui-supply",
+    "@projectreshare/update": "file:../../ui-update",
     "final-form": "^4.20.7",
     "final-form-arrays": "^3.0.2",
     "moment": "~2.29.0",

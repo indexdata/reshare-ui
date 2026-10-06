@@ -6,7 +6,8 @@
     "ui-request",
     "ui-rs",
     "ui-rsdir",
-    "ui-supply"
+    "ui-supply",
+    "ui-update"
   ],
   "resolutions": {
     "downshift": "9.0.13",

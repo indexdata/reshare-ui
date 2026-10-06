@@ -20,6 +20,7 @@ The repo has several top level directories, including the following applications
 
 - `ui-rs`: the main front end component of ReShare
 - `ui-rsdir`: the interface for managing the directory of member institutions
+- `ui-update`: quickly update a batch of requests by choosing an action and scanning their barcodes
 - `ui-request` and `ui-supply`: alias applications to surface ui-rs as distinct request and supply apps within the top level Stripes toolbar
 
 `stripes-reshare` contains components and utilities used by multiple apps.

@@ -1,138 +1,46 @@
-import React, { useEffect, useRef, useState } from 'react';
-import PropTypes from 'prop-types';
+import React, { useRef } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { Form, Field } from 'react-final-form';
-import _ from 'lodash';
-import { stripesConnect, useOkapiKy } from '@folio/stripes/core';
-import { KeyValue, Layout, MessageBanner, Modal, Row, Col, Pane, Paneset, PaneHeader, PaneHeaderIconButton, PaneMenu, Select, TextField, Tooltip } from '@folio/stripes/components';
-import { usePerformAction } from '@projectreshare/stripes-reshare';
+import { Layout, MessageBanner, Modal, Row, Col, Pane, Paneset, PaneHeader, PaneHeaderIconButton, PaneMenu, Select, TextField, Tooltip } from '@folio/stripes/components';
 
 import ScanList from '../components/ScanList';
-import useScanActions from '../useScanActions';
-import STATUS from '../scanStatus';
 import SelectedRequest from '../components/SelectedRequest';
+import scanActions from '../scanActions';
+import STATUS from '../scanStatus';
+import { answerPrompt, dismissPrompt, selectScan, setAction, useScanState } from '../scanStore';
+import useScan from '../useScan';
 import css from './ScanRoute.css';
 import emptyPlaceholder from '../update-empty.svg';
 
-// Need this outside the component as it gets re-rendered while the modal
-// is still up. When tidying this and breaking into separate files I'll
-// try and have the modal-promise-maker inject the whole thing into the DOM
-// from within the promise so it can be self-contained
-const itemModalHandlers = {};
+const SIDE_GROUPS = [
+  { side: 'borrowing', label: 'ui-update.action.asRequester' },
+  { side: 'lending', label: 'ui-update.action.asSupplier' },
+];
 
-const ScanRoute = ({ mutator, resources: { currentAction, selScan, scans, scanData } }) => {
+const actionLabel = (action) => <FormattedMessage id={`stripes-reshare.actions.${action}`} />;
+
+const ScanError = ({ error }) => (error.messageId ? <FormattedMessage id={error.messageId} /> : error.message);
+
+const ScanRoute = () => {
   const intl = useIntl();
-  const [showItemModal, setShowItemModal] = useState(false);
-  const itemModalInput = useRef();
-  const performAction = usePerformAction();
-  const scanActions = useScanActions();
+  const { action, scans, scanData, selected, prompt } = useScanState();
+  const scan = useScan();
   const scanInput = useRef();
-  const selData = scanData?.[selScan];
+  const itemInput = useRef();
+  const selData = scanData[selected];
   const selReq = selData?.request;
-  const updatedScanData = { ...scanData };
-  const updateScan = (scannedAt, newData) => {
-    // multiple updates might happen before re-rendering so we can't just use scanData
-    updatedScanData[scannedAt] = { ...updatedScanData[scannedAt], ...newData };
-    mutator.scanData.update({ [scannedAt]: updatedScanData[scannedAt] });
-  };
-  const okapiKy = useOkapiKy().extend({ timeout: false });
-  useEffect(() => {
-    if (scanActions && !currentAction) {
-      mutator.currentAction.replace(scanActions[0]);
-    }
-  });
-
-  // wait for actions to load and pick the first one
-  if (scanActions === null || currentAction === null) return null;
-
-  // mod-rs action names are translated in stripes-reshare, but some are specific to this app
-  // TODO: this can easily be factored out into a hook once stripes-core upgrades react-intl
-  // so useIntl is available
-  const trAction = (action, suffix = '') => {
-    if (`ui-update.actions.${action}` in intl.messages) {
-      return intl.formatMessage({ id: `ui-update.actions.${action}${suffix}` });
-    }
-    return intl.formatMessage({ id: `stripes-reshare.actions.${action}${suffix}` }, { errMsg: '' });
-  };
-
-  const getItemBarcode = () => {
-    const itemBarcodePromise = new Promise((resolve, reject) => {
-      itemModalHandlers.cancel = () => {
-        setShowItemModal(false);
-        reject(new Error(intl.formatMessage({ id: 'ui-update.error.dismissed' })));
-      };
-      itemModalHandlers.submit = (values) => {
-        setShowItemModal(false);
-        resolve(values.itemBarcode);
-      };
-    });
-    setShowItemModal(true);
-    return itemBarcodePromise;
-  };
+  const promptData = scanData[prompt];
+  const lookupFailed = promptData?.status === STATUS.FAIL;
 
   const actionChange = e => {
-    mutator.scans.replace([]);
-    mutator.scanData.replace({});
-    mutator.currentAction.replace(e.target.value);
+    setAction(e.target.value);
     scanInput.current.focus();
   };
 
-  const onSubmit = (values, form) => {
-    // scannedAt functions as the id of the scan rather than reqId, enabling
-    const scannedAt = Date.now();
-    const updateThis = newData => updateScan(scannedAt, newData);
-    updateThis({ status: STATUS.PENDING, hrid: values.hrid });
-    mutator.scans.replace([scannedAt, ...scans]);
-    mutator.selScan.replace(scannedAt);
-
-    const promptForItem = action => async (requestPromise) => {
-      const itemBarcode = await getItemBarcode();
-      const request = await requestPromise;
-      return performAction(request, action,
-        { itemBarcodes: [{ itemId: itemBarcode }] },
-        { display: 'none' });
-    };
-
-    const scanHandlers = {
-      supplierCheckInToReshare: promptForItem('supplierCheckInToReshare'),
-      supplierCheckInToReshareAndSupplierMarkShipped: promptForItem('supplierCheckInToReshareAndSupplierMarkShipped'),
-    };
-
-    // Reset form so user can proceed to scan the next item while this is loading
-    form.initialize(_.omit(values, 'hrid'));
-
-    // Give scanHandlers a promise rather than a resolved request so they can
-    // choose to include logic that happens without waiting for the request or
-    // merely await it.
-    const requestPromise = (async () => {
-      const results = await okapiKy.get('rs/patronrequests', { searchParams: { fullRecord: 'true', filters: `hrid==${values.hrid}` } }).json();
-      // When locally testing with requests where both sides (requester & supplier) exist on the same tenant, we can filter out one side
-      // const results = await okapiKy.get('rs/patronrequests', { searchParams: `?fullRecord=true&filters=hrid==${values.hrid}&filters=isRequester==false` }).json();
-      if (results?.length === 1) {
-        const request = results[0];
-        updateThis({ request });
-        return request;
-      } else if (results?.length > 1) {
-        // Should never happen in real world use, may happen in dev environments where requester and supplier are the same tenant
-        throw new Error(intl.formatMessage({ id: 'ui-update.error.multipleRequestsForHRID' }));
-      }
-      throw new Error(intl.formatMessage({ id: 'ui-update.error.noRequest' }));
-    })();
-
-    (async () => {
-      if (currentAction in scanHandlers) {
-        await scanHandlers[currentAction](requestPromise);
-      }
-      const request = await requestPromise;
-      if (!(currentAction in scanHandlers)) {
-        await performAction(request, currentAction, {}, { display: 'none' });
-      }
-      const updated = await okapiKy.get(`rs/patronrequests/${request.id}`).json();
-      updateThis({ request: updated, status: STATUS.SUCCESS });
-    })()
-      .catch(error => {
-        updateThis({ status: STATUS.FAIL, error });
-      });
+  const onSubmit = ({ hrid }, form) => {
+    // Clear the field at once so the next request can be scanned while this one runs.
+    form.initialize({});
+    if (hrid?.trim()) scan(hrid.trim());
   };
 
   return (
@@ -145,9 +53,18 @@ const ScanRoute = ({ mutator, resources: { currentAction, selScan, scans, scanDa
             header={(
               <Row style={{ width: '100%' }}>
                 <Col xs={6}>
-                  <Select onChange={actionChange} value={currentAction || undefined} marginBottom0>
-                    {scanActions.map(action => (
-                      <option key={action} value={action}>{trAction(action)}</option>
+                  <Select
+                    aria-label={intl.formatMessage({ id: 'ui-update.action' })}
+                    onChange={actionChange}
+                    value={action}
+                    marginBottom0
+                  >
+                    {SIDE_GROUPS.map(({ side, label }) => (
+                      <optgroup key={side} label={intl.formatMessage({ id: label })}>
+                        {scanActions.filter(a => a.side === side).map(({ action: a }) => (
+                          <option key={a} value={a}>{intl.formatMessage({ id: `stripes-reshare.actions.${a}` })}</option>
+                        ))}
+                      </optgroup>
                     ))}
                   </Select>
                 </Col>
@@ -155,8 +72,16 @@ const ScanRoute = ({ mutator, resources: { currentAction, selScan, scans, scanDa
                   <Form
                     onSubmit={onSubmit}
                     render={({ handleSubmit }) => (
-                      <form onSubmit={handleSubmit}>
-                        <Field name="hrid" component={TextField} marginBottom0 inputRef={scanInput} autoFocus placeholder="Scan or enter barcode..." />
+                      <form onSubmit={handleSubmit} autoComplete="off">
+                        <Field
+                          name="hrid"
+                          component={TextField}
+                          marginBottom0
+                          inputRef={scanInput}
+                          autoFocus
+                          aria-label={intl.formatMessage({ id: 'ui-update.scanPlaceholder' })}
+                          placeholder={intl.formatMessage({ id: 'ui-update.scanPlaceholder' })}
+                        />
                       </form>
                     )}
                   />
@@ -166,12 +91,12 @@ const ScanRoute = ({ mutator, resources: { currentAction, selScan, scans, scanDa
           />
         )}
       >
-        {scans?.length > 0 &&
+        {scans.length > 0 &&
           <ScanList
             scans={scans}
             scanData={scanData}
-            selectedScan={selScan}
-            onRowClick={(e, row) => mutator.selScan.replace(row.scannedAt)}
+            selectedScan={selected}
+            onRowClick={(e, row) => selectScan(row.id)}
           />
         }
       </Pane>
@@ -193,20 +118,20 @@ const ScanRoute = ({ mutator, resources: { currentAction, selScan, scans, scanDa
           renderHeader={renderProps => (
             <PaneHeader
               {...renderProps}
-              paneTitle={selData.hrid}
+              paneTitle={selData.barcode}
             />
           )}
           lastMenu={selReq?.id &&
             <PaneMenu>
               <Tooltip
-                id="rs-local-note-tooltip"
+                id="ui-update-request-link-tooltip"
                 text={<FormattedMessage id="ui-update.requestLink" />}
               >
                 {({ ref, ariaIds }) => (
                   <PaneHeaderIconButton
                     key="icon-request"
                     icon="document"
-                    to={`${selReq.isRequester ? 'request' : 'supply'}/requests/view/${selReq.id}`}
+                    to={`/${selReq.side === 'lending' ? 'supply' : 'request'}/requests/${selReq.id}`}
                     aria-labelledby={ariaIds.text}
                     ref={ref}
                   />
@@ -216,33 +141,53 @@ const ScanRoute = ({ mutator, resources: { currentAction, selScan, scans, scanDa
           }
         >
           {selData.status === STATUS.SUCCESS && (
-            <MessageBanner type="success">
-              <FormattedMessage id={trAction(currentAction, '.success')} />
-            </MessageBanner>
+            <Layout className="padding-bottom-gutter">
+              <MessageBanner type="success">
+                <FormattedMessage id="stripes-reshare.actions.generic.success" values={{ action: actionLabel(selData.action) }} />
+              </MessageBanner>
+            </Layout>
           )}
           {selData.status === STATUS.FAIL && (
-            <MessageBanner type="error">
-              <KeyValue label={trAction(currentAction, '.error')}>
-                {selData.error?.message || ''}
-              </KeyValue>
-            </MessageBanner>
+            <Layout className="padding-bottom-gutter">
+              <MessageBanner type="error">
+                <FormattedMessage
+                  id="stripes-reshare.actions.generic.error"
+                  values={{ action: actionLabel(selData.action), errMsg: <ScanError error={selData.error} /> }}
+                />
+              </MessageBanner>
+            </Layout>
           )}
-          {selReq && <SelectedRequest initialRequest={selReq} initialRequestTime={selScan} />}
+          {selReq && <SelectedRequest key={selected} initialRequest={selReq} />}
         </Pane>
       )}
       <Modal
-        open={showItemModal}
-        onOpen={() => itemModalInput.current.focus()}
-        onClose={() => itemModalHandlers.cancel()}
-        label={<FormattedMessage id="ui-update.checkInPrompt" />}
+        open={prompt !== null}
+        onOpen={() => itemInput.current?.focus()}
+        onClose={() => dismissPrompt()}
+        label={<FormattedMessage id="ui-update.itemPrompt" values={{ barcode: promptData?.barcode }} />}
         dismissible
         restoreFocus
       >
+        {/* A failed lookup leaves the prompt open to catch the item scan, so say why it will go nowhere. */}
+        {lookupFailed && (
+          <Layout className="padding-bottom-gutter">
+            <MessageBanner type="error">
+              <FormattedMessage id="ui-update.itemPrompt.lookupFailed" values={{ errMsg: <ScanError error={promptData.error} /> }} />
+            </MessageBanner>
+          </Layout>
+        )}
         <Form
-          onSubmit={itemModalHandlers.submit}
+          onSubmit={({ itemBarcode }) => { if (itemBarcode?.trim()) answerPrompt(itemBarcode.trim()); }}
           render={({ handleSubmit }) => (
             <form onSubmit={handleSubmit} autoComplete="off">
-              <Field name="itemBarcode" inputRef={itemModalInput} component={TextField} />
+              <Field
+                name="itemBarcode"
+                inputRef={itemInput}
+                component={TextField}
+                aria-label={intl.formatMessage({ id: 'ui-update.itemBarcode' })}
+                placeholder={lookupFailed ? intl.formatMessage({ id: 'ui-update.itemPrompt.lookupFailedPlaceholder' }) : undefined}
+                autoFocus
+              />
             </form>
           )}
         />
@@ -251,16 +196,4 @@ const ScanRoute = ({ mutator, resources: { currentAction, selScan, scans, scanDa
   );
 };
 
-ScanRoute.manifest = {
-  currentAction: { initialValue: null },
-  selScan: {},
-  scans: { initialValue: [] },
-  scanData: { initialValue: {} },
-};
-
-ScanRoute.propTypes = {
-  mutator: PropTypes.object.isRequired,
-  resources: PropTypes.object.isRequired,
-};
-
-export default stripesConnect(ScanRoute);
+export default ScanRoute;
