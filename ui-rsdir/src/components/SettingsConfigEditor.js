@@ -3,6 +3,7 @@ import { FormattedMessage, useIntl } from 'react-intl';
 import { useQueryClient } from 'react-query';
 import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
 import {
+  Badge,
   Button,
   Card,
   ConfirmationModal,
@@ -474,8 +475,12 @@ const SettingsConfigEditor = ({
                 onClick={toggle}
                 type="button"
               >
-                <Icon icon="info" size="small" aria-hidden="true" />
-                <FormattedMessage id="ui-rsdir.settingsConfig.vendorBadge" defaultMessage="[Vendor]" />
+                <Badge color="default" size="small">
+                  <span className={css.vendorBadgeContent}>
+                    <Icon icon="info" size="small" aria-hidden="true" />
+                    <FormattedMessage id="ui-rsdir.settingsConfig.vendorBadge" defaultMessage="[Vendor]" />
+                  </span>
+                </Badge>
               </button>
             )}
           >

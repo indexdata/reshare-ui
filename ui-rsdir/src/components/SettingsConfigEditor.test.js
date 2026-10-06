@@ -39,6 +39,7 @@ jest.mock('react-query', () => ({
 }));
 
 jest.mock('@folio/stripes/components', () => ({
+  Badge: jest.requireActual('@folio/stripes-components/lib/Badge').default,
   ConfirmationModal: jest.requireActual('@folio/stripes-components/lib/ConfirmationModal').default,
   Icon: ({ icon, 'aria-hidden': ariaHidden }) => <svg aria-hidden={ariaHidden} data-icon={icon} />,
   Popover: jest.requireActual('@folio/stripes-components/lib/Popover').default,
