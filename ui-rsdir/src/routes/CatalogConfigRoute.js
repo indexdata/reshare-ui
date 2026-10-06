@@ -4,7 +4,7 @@ import { FormattedMessage } from 'react-intl';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 import EntryPane, { EntryLoadingPane } from '../components/EntryPane';
 import SettingsConfigEditor from '../components/SettingsConfigEditor';
-import { vendorFieldMappingForVendor } from '../config/vendorFieldMapping';
+import { selectionChangeImpact, vendorFieldMappingForVendor } from '../config/vendorFieldMapping';
 
 const STALE_QUERY_TIME = 2 * 60 * 1000;
 const entryPath = id => `directory/entries/by-id/${id}`;
@@ -237,9 +237,10 @@ const CatalogConfigRoute = () => {
   const vendor = entryQuery.data?.lmsConfig?.vendor;
   const profile = entryQuery.data?.catalogConfig?.profile;
   const selectedProfile = profile || vendor;
+  const overrideSetting = profile ? 'catalogConfig.profile' : 'lmsConfig.vendor';
   const mappedFields = useMemo(
-    () => vendorFieldMappingForVendor(fieldMap, selectedProfile, 'catalogConfig'),
-    [selectedProfile],
+    () => vendorFieldMappingForVendor(fieldMap, selectedProfile, 'catalogConfig', overrideSetting),
+    [selectedProfile, overrideSetting],
   );
 
   if (!entryQuery.isSuccess) return <EntryLoadingPane />;
@@ -257,6 +258,9 @@ const CatalogConfigRoute = () => {
         }
         fieldLabelId={fieldLabelId}
         fieldMapping={mappedFields}
+        getSelectionChangeImpact={({ fieldName, nextValue, resource }) => (
+          fieldName === 'profile' ? selectionChangeImpact({ configKey: 'catalogConfig', nextValue, resource }) : undefined
+        )}
         initialResource={entryQuery.data}
         resourcePath={entryPath(id)}
         successMessage={<FormattedMessage id="ui-rsdir.catalogConfig.edit.success" />}

@@ -13,6 +13,8 @@ Entry configuration routes use `SettingsConfigEditor` to edit an object stored o
 
 Each top-level mapping is displayed in its own card and saved independently. Saving a card patches the corresponding property beneath `configKey`.
 
+The optional editor callback `getSelectionChangeImpact({ fieldName, nextValue, resource })` can return `{ source: { setting, name }, groups: [{ configKey, paths }], catalogProfile? }` to require confirmation before a top-level dropdown draft changes. The optional `catalogProfile` names the explicit profile that prevents a proposed LMS vendor's catalog overrides from applying; it triggers confirmation even with no affected groups. Empty groups without `catalogProfile`, or an undefined result, apply the change immediately. Confirming updates the draft only; Save persists it. LMS vendor and catalog profile routes use `selectionChangeImpact` to list new override paths from `vendorFieldMapping`, respecting an independent catalog profile. Clearing either selection bypasses confirmation and updates the draft immediately; Save persists `null`, and a cleared catalog profile falls back to the LMS vendor. Removed overrides are not listed.
+
 ## Common field properties
 
 | Property | Type | Required | Description |
@@ -22,6 +24,8 @@ Each top-level mapping is displayed in its own card and saved independently. Sav
 | `required` | boolean | No | Prevents saving when the value is empty. For an `objectArray` child, it also prevents adding an object without that value. |
 | `disabled` | boolean | No | Renders a greyed-out field label with no value or editing controls. Supported on top-level mappings, `subMap` children, and `objectMap` children. Disabled fields skip their own validation but retain their normal serialized value and still count when an enabled parent checks whether it is empty. |
 | `onlyOne` | boolean | No | For a `subField`, allows at most one direct `subMap` child to be selected. The editor renders a child selector and omits unselected children from the saved value. Disabled children remain visible but unavailable in the selector. Combine with `required` to require exactly one selection. |
+| `lockedSelection` | string | No | Names the required direct child of an `onlyOne` field and disables its selector. Vendor/profile mappings derive this from overridden child or descendant paths. The editor displays that branch and retains its values, initializing it if absent; competing mapped branches are omitted on the next explicit save. Other fields within the branch remain editable unless disabled separately. |
+| `overrideSource` | object | No | UI attribution `{ setting, name }`, where `setting` is `lmsConfig.vendor` or `catalogConfig.profile` and `name` is the selected vendor/profile. Vendor mappings attach it to overridden fields and locked `onlyOne` selectors. Renders a clickable `[Vendor]` badge beside the label explaining the source; overridden values remain hidden. This metadata is never saved to the configuration. |
 | `minValue` | number | No | Inclusive minimum for an `integer` or `number` field. |
 | `maxValue` | number | No | Inclusive maximum for an `integer` or `number` field. |
 | `nullOnEmpty` | boolean | No | For a `string` field, serializes an exact empty string as `null`. |

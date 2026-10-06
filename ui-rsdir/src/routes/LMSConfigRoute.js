@@ -4,7 +4,7 @@ import { FormattedMessage } from 'react-intl';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 import EntryPane, { EntryLoadingPane } from '../components/EntryPane';
 import SettingsConfigEditor from '../components/SettingsConfigEditor';
-import { vendorFieldMappingForVendor } from '../config/vendorFieldMapping';
+import { selectionChangeImpact, vendorFieldMappingForVendor } from '../config/vendorFieldMapping';
 
 const STALE_QUERY_TIME = 2 * 60 * 1000;
 const entryPath = id => `directory/entries/by-id/${id}`;
@@ -156,6 +156,9 @@ const LMSConfigRoute = () => {
         }
         fieldLabelId={fieldLabelId}
         fieldMapping={mappedFields}
+        getSelectionChangeImpact={({ fieldName, nextValue, resource }) => (
+          fieldName === 'vendor' ? selectionChangeImpact({ configKey: 'lmsConfig', nextValue, resource }) : undefined
+        )}
         initialResource={entryQuery.data}
         resourcePath={entryPath(id)}
         successMessage={<FormattedMessage id="ui-rsdir.lmsConfig.edit.success" />}

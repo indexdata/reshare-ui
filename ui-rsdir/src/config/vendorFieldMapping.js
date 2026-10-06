@@ -63,7 +63,7 @@ export const vendorFieldMapping = {
   },
 };
 
-export const applyDisabledPaths = (fieldMapping, disabledPaths) => {
+export const applyDisabledPaths = (fieldMapping, disabledPaths, overrideSource) => {
   const disabledPathSet = new Set(disabledPaths);
 
   const applyToFields = (fields, parentPath = '') => fields.map(field => {
@@ -73,8 +73,32 @@ export const applyDisabledPaths = (fieldMapping, disabledPaths) => {
       disabled: field.disabled || disabledPathSet.has(path),
     };
 
+    if (overrideSource && disabledPathSet.has(path)) {
+      nextField.overrideSource = overrideSource;
+    }
+
     if (Array.isArray(field.subMap)) {
       nextField.subMap = applyToFields(field.subMap, path);
+
+      if (field.onlyOne) {
+        const overriddenChildren = field.subMap.filter(child => {
+          const childPath = `${path}.${child.fieldName}`;
+          return disabledPaths.some(disabledPath => (
+            disabledPath === childPath || disabledPath.startsWith(`${childPath}.`)
+          ));
+        });
+
+        if (overriddenChildren.length > 1) {
+          throw new Error(`Conflicting vendor overrides for onlyOne field "${path}".`);
+        }
+
+        if (overriddenChildren.length === 1) {
+          nextField.lockedSelection = overriddenChildren[0].fieldName;
+          if (overrideSource) {
+            nextField.overrideSource = overrideSource;
+          }
+        }
+      }
     }
 
     if (Array.isArray(field.objectMap)) {
@@ -87,6 +111,28 @@ export const applyDisabledPaths = (fieldMapping, disabledPaths) => {
   return applyToFields(fieldMapping);
 };
 
-export const vendorFieldMappingForVendor = (fieldMapping, vendor, configKey) => (
-  applyDisabledPaths(fieldMapping, vendorFieldMapping[vendor]?.[configKey] || [])
+export const vendorFieldMappingForVendor = (fieldMapping, vendor, configKey, setting = 'lmsConfig.vendor') => (
+  applyDisabledPaths(fieldMapping, vendorFieldMapping[vendor]?.[configKey] || [], { setting, name: vendor })
 );
+
+export const selectionChangeImpact = ({ configKey, nextValue, resource }) => {
+  if (!nextValue) {
+    return undefined;
+  }
+
+  const isVendor = configKey === 'lmsConfig';
+  const name = nextValue;
+  const setting = isVendor ? 'lmsConfig.vendor' : 'catalogConfig.profile';
+  const configKeys = isVendor ?
+    ['lmsConfig', ...(!resource?.catalogConfig?.profile ? ['catalogConfig'] : [])] :
+    ['catalogConfig'];
+  const groups = configKeys.map(key => ({
+    configKey: key,
+    paths: [...new Set(vendorFieldMapping[name]?.[key] || [])],
+  })).filter(group => group.paths.length > 0);
+
+  const catalogProfile = isVendor && vendorFieldMapping[name]?.catalogConfig?.length > 0 ?
+    resource?.catalogConfig?.profile : undefined;
+
+  return { source: { setting, name }, groups, ...(catalogProfile ? { catalogProfile } : {}) };
+};

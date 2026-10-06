@@ -3,9 +3,13 @@ import { FormattedMessage, useIntl } from 'react-intl';
 import { useQueryClient } from 'react-query';
 import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
 import {
+  Badge,
   Button,
   Card,
+  ConfirmationModal,
+  Icon,
   IconButton,
+  Popover,
   Select,
   TextField,
   Tooltip,
@@ -71,6 +75,10 @@ const validateFieldDefinition = (field, path = field.fieldName) => {
     throw new Error(`SettingsConfigEditor field "${path}" can use onlyOne only with type subField.`);
   }
 
+  if (field.lockedSelection !== undefined && !field.onlyOne) {
+    throw new Error(`SettingsConfigEditor field "${path}" requires lockedSelection to name an onlyOne child.`);
+  }
+
   if (type === STRING_MAP && field.requiredKeys !== undefined && (
     !Array.isArray(field.requiredKeys) ||
     field.requiredKeys.some(key => typeof key !== 'string')
@@ -104,10 +112,32 @@ const validateFieldDefinition = (field, path = field.fieldName) => {
     throw new Error(`SettingsConfigEditor field "${path}" requires a subMap array.`);
   }
 
+  if (field.lockedSelection !== undefined && (
+    !field.subMap.some(child => child.fieldName === field.lockedSelection)
+  )) {
+    throw new Error(`SettingsConfigEditor field "${path}" requires lockedSelection to name an onlyOne child.`);
+  }
+
   field.subMap.forEach(child => {
     const childPath = `${path}.${child.fieldName}`;
     validateFieldDefinition(child, childPath);
   });
+};
+
+const sourceWithLockedSelection = (value, field, initializeChild) => {
+  const source = isObject(value) ? { ...value } : {};
+
+  if (field.lockedSelection !== undefined) {
+    field.subMap.forEach(child => {
+      if (child.fieldName !== field.lockedSelection) {
+        delete source[child.fieldName];
+      } else if (!hasOwnValue(source, child.fieldName)) {
+        source[child.fieldName] = initializeChild(child);
+      }
+    });
+  }
+
+  return source;
 };
 
 const toEditorValue = (value, field, onlyPresent = false) => {
@@ -146,7 +176,7 @@ const toEditorValue = (value, field, onlyPresent = false) => {
   }
 
   if (type === SUB_FIELD) {
-    const source = isObject(value) ? value : {};
+    const source = sourceWithLockedSelection(value, field, child => toEditorValue(undefined, child, true));
     const preserveAbsence = onlyPresent || field.onlyOne;
 
     return field.subMap.reduce((acc, child) => {
@@ -205,7 +235,7 @@ const valueForPatch = (value, field, onlyPresent = false) => {
   }
 
   if (type === SUB_FIELD) {
-    const source = isObject(value) ? value : {};
+    const source = sourceWithLockedSelection(value, field, child => toEditorValue(undefined, child, true));
     const preserveAbsence = onlyPresent || field.onlyOne;
 
     return field.subMap.reduce((acc, child) => {
@@ -302,6 +332,7 @@ const SettingsConfigEditor = ({
   emptyMessage,
   fieldLabelId,
   fieldMapping = [],
+  getSelectionChangeImpact,
   initialResource,
   onSave,
   resourcePath,
@@ -326,10 +357,15 @@ const SettingsConfigEditor = ({
   const [newStringMapEntries, setNewStringMapEntries] = useState({});
   const [stringMapEntryErrors, setStringMapEntryErrors] = useState({});
   const [newObjectValues, setNewObjectValues] = useState({});
+  const [pendingSelection, setPendingSelection] = useState(null);
   const editingFieldsRef = useRef({});
   const activeResourcePathRef = useRef(resourcePath);
   const previousResourcePathRef = useRef(resourcePath);
   activeResourcePathRef.current = resourcePath;
+
+  useEffect(() => {
+    setPendingSelection(null);
+  }, [configKey, resourcePath, resource?.lmsConfig?.vendor, resource?.catalogConfig?.profile]);
 
   const booleanOptions = useMemo(() => [
     { label: '', value: '' },
@@ -350,7 +386,7 @@ const SettingsConfigEditor = ({
       return fieldMapping.reduce((acc, field) => ({
         ...acc,
         [field.fieldName]: editingFieldsRef.current[field.fieldName] ?
-          current[field.fieldName] ?? toEditorValue(undefined, field) :
+          toEditorValue(current[field.fieldName], field, true) :
           nextValues[field.fieldName],
       }), {});
     });
@@ -410,44 +446,75 @@ const SettingsConfigEditor = ({
   const renderFieldLabel = (field, path, instance) => {
     const label = labelForPath(path);
 
-    if (!field.defaultDesc) {
-      return label;
-    }
-
     const tooltipId = [
       controlIdPrefix,
       path.split('.').join('-'),
       instance,
       'description',
     ].filter(Boolean).join('-');
-    const description = intl.formatMessage({
+    const description = field.defaultDesc && intl.formatMessage({
       id: `${fieldLabelId(path)}.desc`,
       defaultMessage: field.defaultDesc,
     });
 
     return (
       <span className={css.fieldLabel}>
-        <span>{label}</span>
-        <Tooltip
-          id={tooltipId}
-          placement="top"
-          text={description}
-        >
-          {({ ref, ariaIds }) => (
-            <IconButton
-              ref={ref}
-              aria-describedby={ariaIds.text}
-              aria-label={intl.formatMessage({
-                id: 'ui-rsdir.settingsConfig.showFieldDescription',
-                defaultMessage: 'Show description for {field}',
-              }, { field: label })}
-              icon="question-mark"
-              iconSize="small"
-              id={`${tooltipId}-trigger`}
-              size="small"
+        <span className={css.fieldLabelText}>{label}</span>
+        {field.overrideSource &&
+          <Popover
+            renderTrigger={({ ref, toggle, open }) => (
+              <button
+                ref={ref}
+                aria-expanded={!!open}
+                aria-haspopup="dialog"
+                aria-label={intl.formatMessage({
+                  id: 'ui-rsdir.settingsConfig.showOverrideSource',
+                  defaultMessage: 'Show override source for {field}',
+                }, { field: label })}
+                className={css.vendorBadge}
+                onClick={toggle}
+                type="button"
+              >
+                <Badge color="default" size="small">
+                  <span className={css.vendorBadgeContent}>
+                    <Icon icon="info" size="small" aria-hidden="true" />
+                    <FormattedMessage id="ui-rsdir.settingsConfig.vendorBadge" defaultMessage="[Vendor]" />
+                  </span>
+                </Badge>
+              </button>
+            )}
+          >
+            <FormattedMessage
+              id={field.overrideSource.setting === 'catalogConfig.profile' ?
+                'ui-rsdir.settingsConfig.overriddenByProfile' : 'ui-rsdir.settingsConfig.overriddenByVendor'}
+              defaultMessage={field.overrideSource.setting === 'catalogConfig.profile' ?
+                'Overridden by CatalogConfig profile: {name}' : 'Overridden by LMSConfig vendor: {name}'}
+              values={{ name: field.overrideSource.name }}
             />
-          )}
-        </Tooltip>
+          </Popover>
+        }
+        {field.defaultDesc &&
+          <Tooltip
+            id={tooltipId}
+            placement="top"
+            text={description}
+          >
+            {({ ref, ariaIds }) => (
+              <IconButton
+                ref={ref}
+                aria-describedby={ariaIds.text}
+                aria-label={intl.formatMessage({
+                  id: 'ui-rsdir.settingsConfig.showFieldDescription',
+                  defaultMessage: 'Show description for {field}',
+                }, { field: label })}
+                icon="question-mark"
+                iconSize="small"
+                id={`${tooltipId}-trigger`}
+                size="small"
+              />
+            )}
+          </Tooltip>
+        }
       </span>
     );
   };
@@ -475,6 +542,10 @@ const SettingsConfigEditor = ({
   };
 
   const selectOnlyOneChild = (field, parentContext) => event => {
+    if (field.lockedSelection !== undefined) {
+      return;
+    }
+
     const selectedFieldName = event.target.value;
     const mappedFieldNames = new Set(field.subMap.map(child => child.fieldName));
     const selectedField = selectedFieldName ?
@@ -535,6 +606,7 @@ const SettingsConfigEditor = ({
   };
 
   const cancelEditingField = field => {
+    setPendingSelection(null);
     setValues(current => ({
       ...current,
       [field.fieldName]: committedTopLevelValue(field),
@@ -544,7 +616,23 @@ const SettingsConfigEditor = ({
   };
 
   const handleChange = (field, parentField) => event => {
-    setDraftFieldValue(field, parentField, event.target.value);
+    const nextValue = event.target.value;
+    if (nextValue === draftFieldValue(field, parentField)) {
+      return;
+    }
+
+    const impact = parentField ? undefined : getSelectionChangeImpact?.({
+      fieldName: field.fieldName,
+      nextValue,
+      resource,
+    });
+
+    if (impact?.groups.length > 0 || impact?.catalogProfile) {
+      setPendingSelection({ field, nextValue, impact });
+      return;
+    }
+
+    setDraftFieldValue(field, parentField, nextValue);
   };
 
   const handleNewStringChange = path => event => {
@@ -1925,7 +2013,7 @@ const SettingsConfigEditor = ({
                 value: child.fieldName,
               })),
             ]}
-            disabled={savingFields[topFieldName(field, parentContext)]}
+            disabled={field.lockedSelection !== undefined || savingFields[topFieldName(field, parentContext)]}
             id={`${controlIdPrefix}-${path.split('.').join('-')}-selection`}
             onChange={selectOnlyOneChild(field, parentContext)}
             value={selectedFieldName}
@@ -1954,6 +2042,67 @@ const SettingsConfigEditor = ({
 
   return (
     <div>
+      {pendingSelection &&
+        <ConfirmationModal
+          bodyTag="div"
+          open
+          heading={<FormattedMessage id="ui-rsdir.settingsConfig.confirmSelection.heading" defaultMessage="Confirm configuration change" />}
+          confirmLabel={<FormattedMessage id="ui-rsdir.settingsConfig.confirmSelection.confirm" defaultMessage="Confirm change" />}
+          cancelLabel={<FormattedMessage id="stripes-components.cancel" defaultMessage="Cancel" />}
+          onCancel={() => setPendingSelection(null)}
+          onConfirm={() => {
+            setDraftFieldValue(pendingSelection.field, undefined, pendingSelection.nextValue);
+            setPendingSelection(null);
+          }}
+          message={
+            <div>
+              <p>
+                {pendingSelection.impact.groups.length === 0 ?
+                  <FormattedMessage
+                    id="ui-rsdir.settingsConfig.confirmSelection.vendorChange"
+                    defaultMessage="Change LMSConfig vendor to {name}?"
+                    values={{ name: pendingSelection.impact.source.name }}
+                  /> : <FormattedMessage
+                    id={pendingSelection.impact.source.setting === 'catalogConfig.profile' ?
+                      'ui-rsdir.settingsConfig.confirmSelection.profile' : 'ui-rsdir.settingsConfig.confirmSelection.vendor'}
+                    defaultMessage={pendingSelection.impact.source.setting === 'catalogConfig.profile' ?
+                      'Using CatalogConfig profile {name} will override the following fields when saved.' :
+                      'Using LMSConfig vendor {name} will override the following fields when saved.'}
+                    values={{ name: pendingSelection.impact.source.name }}
+                  />
+                }
+              </p>
+              {pendingSelection.impact.catalogProfile &&
+                <p>
+                  <FormattedMessage
+                    id="ui-rsdir.settingsConfig.confirmSelection.catalogProfile"
+                    defaultMessage="CatalogConfig is currently configured by profile {profile}. Changing the LMSConfig vendor to {vendor} will not affect CatalogConfig."
+                    values={{
+                      profile: pendingSelection.impact.catalogProfile,
+                      vendor: pendingSelection.impact.source.name,
+                    }}
+                  />
+                </p>
+              }
+              {pendingSelection.impact.groups.map(group => (
+                <div key={group.configKey}>
+                  <h3><FormattedMessage id={`ui-rsdir.entry.section.${group.configKey}`} /></h3>
+                  <ul>
+                    {group.paths.map(path => (
+                      <li key={path}>
+                        {path.split('.').map((segment, index, segments) => intl.formatMessage({
+                          id: `ui-rsdir.${group.configKey}.${segments.slice(0, index + 1).join('.')}`,
+                          defaultMessage: segment,
+                        })).join(' › ')}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          }
+        />
+      }
       {fieldMapping.map(field => {
         const { fieldName } = field;
         const isEditing = editingFields[fieldName];
