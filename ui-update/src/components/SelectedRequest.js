@@ -2,25 +2,24 @@ import React from 'react';
 import { FormattedMessage } from 'react-intl';
 import { Headline, KeyValue } from '@folio/stripes/components';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
-import { CatalogInfo, RequesterSupplier } from '@projectreshare/stripes-reshare/cards';
-import { useStripes } from '@folio/stripes/core';
+import ItemCard from './ItemCard';
+import RequesterSupplier from './RequesterSupplier';
 
-const SelectedRequest = ({ initialRequest, initialRequestTime }) => {
-  const stripes = useStripes();
-  const q = useOkapiQuery(`rs/patronrequests/${initialRequest.id}`, {
+const SelectedRequest = ({ initialRequest }) => {
+  const { data: request } = useOkapiQuery(`broker/patron_requests/${initialRequest.id}`, {
     initialData: initialRequest,
-    initialDataUpdatedAt: initialRequestTime,
-    staleTime: 2 * 60 * 1000,
+    useErrorBoundary: false,
   });
-  const request = q.data;
 
   return (
     <>
-      <KeyValue label={<FormattedMessage id="stripes-reshare.requestState" />}>
-        <Headline size="large" faded><FormattedMessage id={`stripes-reshare.states.${request.state?.code}`} /></Headline>
+      <KeyValue label={<FormattedMessage id="ui-update.state" />}>
+        <Headline size="large" faded>
+          {request.state ? <FormattedMessage id={`stripes-reshare.states.${request.state}`} defaultMessage={request.state} /> : ''}
+        </Headline>
       </KeyValue>
-      <CatalogInfo request={request} stripes={stripes} />
       <RequesterSupplier request={request} />
+      <ItemCard request={request} />
     </>
   );
 };

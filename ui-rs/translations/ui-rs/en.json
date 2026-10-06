@@ -347,7 +347,6 @@
   "actions.messagesAllSeen.error": "Error marking all messages as read. {errMsg}",
   "actions.messagesAllUnseen.success": "All messages marked as unread",
   "actions.messagesAllUnseen.error": "Error marking all messages as unread. {errMsg}",
-  "cards.reqSup.searching": "Searching for supplier.",
   "pullSlip": "Pull slip",
   "pullSlips": "Pull slips",
   "printPullslip": "Print pull slip",

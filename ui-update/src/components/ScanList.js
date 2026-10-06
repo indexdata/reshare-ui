@@ -1,8 +1,13 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { FormattedMessage } from 'react-intl';
 import { Icon, MultiColumnList, Tooltip } from '@folio/stripes/components';
 import STATUS from '../scanStatus';
+
+const NoteIcon = ({ id, icon, textId }) => (
+  <Tooltip id={id} text={<FormattedMessage id={textId} />}>
+    {({ ref, ariaIds }) => <Icon icon={icon} aria-labelledby={ariaIds.text} ref={ref} />}
+  </Tooltip>
+);
 
 const scanFormatter = {
   status: scan => {
@@ -16,49 +21,23 @@ const scanFormatter = {
   },
   notes: scan => (
     <>
-      {scan.notes?.localNote &&
-        <Tooltip
-          id="rs-local-note-tooltip"
-          text={<FormattedMessage id="stripes-reshare.hasLocalNote" />}
-        >
-          {({ ref, ariaIds }) => (
-            <Icon
-              icon="report"
-              aria-labelledby={ariaIds.text}
-              ref={ref}
-            />
-          )}
-        </Tooltip>
-      }
-      {scan.notes?.patronNote &&
-        <Tooltip
-          id="rs-patron-note-tooltip"
-          text={<FormattedMessage id="stripes-reshare.hasPatronNote" />}
-        >
-          {({ ref, ariaIds }) => (
-            <Icon
-              icon="profile"
-              aria-labelledby={ariaIds.text}
-              ref={ref}
-            />
-          )}
-        </Tooltip>
-      }
+      {scan.notes.localNote && <NoteIcon id={`rs-local-note-tooltip-${scan.id}`} icon="report" textId="stripes-reshare.hasLocalNote" />}
+      {scan.notes.patronNote && <NoteIcon id={`rs-patron-note-tooltip-${scan.id}`} icon="profile" textId="stripes-reshare.hasPatronNote" />}
     </>
-  )
+  ),
 };
 
 const ScanList = ({ scans, scanData, selectedScan, onRowClick }) => {
-  const formattedScans = scans.map(scannedAt => {
-    const scan = scanData[scannedAt];
+  const formattedScans = scans.map(id => {
+    const { status, barcode, request } = scanData[id];
     return {
-      status: scan?.status ?? '',
-      hrid: scan?.hrid ?? '',
-      requester: scan?.request?.requestingInstitutionSymbol ?? '',
-      supplier: scan?.request?.supplyingInstitutionSymbol ?? '',
-      title: scan?.request?.title ?? '',
-      notes: { localNote: scan?.request?.localNote, patronNote: scan?.request?.patronNote },
-      scannedAt,
+      status,
+      hrid: barcode,
+      requester: request?.requesterSymbol ?? '',
+      supplier: request?.supplierSymbol ?? '',
+      title: request?.illRequest?.bibliographicInfo?.title ?? '',
+      notes: { localNote: request?.internalNote, patronNote: request?.illRequest?.serviceInfo?.note },
+      id,
     };
   });
 
@@ -67,7 +46,7 @@ const ScanList = ({ scans, scanData, selectedScan, onRowClick }) => {
       contentData={formattedScans}
       formatter={scanFormatter}
       visibleColumns={['status', 'hrid', 'notes', 'requester', 'supplier', 'title']}
-      isSelected={({ item }) => selectedScan === item.scannedAt}
+      isSelected={({ item }) => selectedScan === item.id}
       onRowClick={onRowClick}
       columnMapping={{
         status: '',
@@ -77,10 +56,6 @@ const ScanList = ({ scans, scanData, selectedScan, onRowClick }) => {
         title: <FormattedMessage id="ui-update.column.title" />,
         notes: ''
       }}
-      // It would be better to express the fixed-width columns in em and let
-      // the remaining space go to Title, alas there seems to be an MCL bug
-      // preventing this. Adding up to less than 100% is necessary to avoid
-      // scrollbars introduced by some negative margin somewhere.
       columnWidths={{
         status: { max: 40 },
         hrid: { max: 100 },
@@ -90,13 +65,6 @@ const ScanList = ({ scans, scanData, selectedScan, onRowClick }) => {
       }}
     />
   );
-};
-
-ScanList.propTypes = {
-  scans: PropTypes.arrayOf(PropTypes.number),
-  scanData: PropTypes.object.isRequired,
-  selectedScan: PropTypes.number.isRequired,
-  onRowClick: PropTypes.func.isRequired,
 };
 
 export default ScanList;
