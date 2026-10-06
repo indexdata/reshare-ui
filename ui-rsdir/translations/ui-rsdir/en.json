@@ -296,5 +296,11 @@
   "settingsConfig.showOverrideSource": "Show override source for {field}",
   "settingsConfig.overriddenByVendor": "Overridden by LMSConfig vendor: {name}",
   "settingsConfig.overriddenByProfile": "Overridden by CatalogConfig profile: {name}",
+  "settingsConfig.confirmSelection.heading": "Confirm configuration change",
+  "settingsConfig.confirmSelection.confirm": "Confirm change",
+  "settingsConfig.confirmSelection.profile": "Using CatalogConfig profile {name} will override the following fields when saved.",
+  "settingsConfig.confirmSelection.vendor": "Using LMSConfig vendor {name} will override the following fields when saved.",
+  "settingsConfig.confirmSelection.vendorChange": "Change LMSConfig vendor to {name}?",
+  "settingsConfig.confirmSelection.catalogProfile": "CatalogConfig is currently configured by profile {profile}. Changing the LMSConfig vendor to {vendor} will not affect CatalogConfig.",
   "SENTINEL" : "SENTINEL"
 }

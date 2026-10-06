@@ -33,16 +33,28 @@ it('attributes LMS overrides to the LMS vendor setting', () => {
   render(<LMSConfigRoute />);
   expect(mapping().find(field => field.fieldName === 'ncipNamespaceEnabled').overrideSource)
     .toEqual({ setting: 'lmsConfig.vendor', name: 'Generic' });
+  const { getSelectionChangeImpact } = SettingsConfigEditor.mock.calls[0][0];
+  expect(getSelectionChangeImpact({ fieldName: 'vendor', nextValue: 'Koha', resource: mockResource }).groups)
+    .toEqual([{ configKey: 'lmsConfig', paths: ['ncipNamespaceEnabled'] }]);
+  expect(getSelectionChangeImpact({ fieldName: 'vendor', nextValue: 'Alma', resource: mockResource }))
+    .toMatchObject({ groups: [], catalogProfile: 'Alma' });
+  expect(getSelectionChangeImpact({ fieldName: 'address', nextValue: 'changed', resource: mockResource })).toBeUndefined();
+  expect(getSelectionChangeImpact({ fieldName: 'vendor', nextValue: '', resource: mockResource })).toBeUndefined();
 });
 
 it('uses an explicit catalog profile, falls back to the vendor, and updates identical-name attribution', () => {
   mockResource = { lmsConfig: { vendor: 'Alma' }, catalogConfig: { profile: 'Koha' } };
   const { rerender } = render(<CatalogConfigRoute />);
   expect(holdingsSource()).toEqual({ setting: 'catalogConfig.profile', name: 'Koha' });
+  const { getSelectionChangeImpact } = SettingsConfigEditor.mock.calls[0][0];
+  expect(getSelectionChangeImpact({ fieldName: 'profile', nextValue: 'Alma', resource: mockResource }).groups
+    .map(group => group.configKey)).toEqual(['catalogConfig']);
+  expect(getSelectionChangeImpact({ fieldName: 'holdingsFormat', nextValue: {}, resource: mockResource })).toBeUndefined();
+  expect(getSelectionChangeImpact({ fieldName: 'profile', nextValue: '', resource: mockResource })).toBeUndefined();
   mockResource = { lmsConfig: { vendor: 'Alma' }, catalogConfig: { profile: 'Alma' } };
   rerender(<CatalogConfigRoute />);
   expect(holdingsSource()).toEqual({ setting: 'catalogConfig.profile', name: 'Alma' });
-  mockResource = { lmsConfig: { vendor: 'Alma' }, catalogConfig: {} };
+  mockResource = { lmsConfig: { vendor: 'Alma' }, catalogConfig: { profile: null } };
   rerender(<CatalogConfigRoute />);
   expect(holdingsSource()).toEqual({ setting: 'lmsConfig.vendor', name: 'Alma' });
   mockResource = { lmsConfig: {}, catalogConfig: {} };

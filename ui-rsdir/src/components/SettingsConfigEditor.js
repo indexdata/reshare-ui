@@ -5,6 +5,7 @@ import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
 import {
   Button,
   Card,
+  ConfirmationModal,
   Icon,
   IconButton,
   Popover,
@@ -330,6 +331,7 @@ const SettingsConfigEditor = ({
   emptyMessage,
   fieldLabelId,
   fieldMapping = [],
+  getSelectionChangeImpact,
   initialResource,
   onSave,
   resourcePath,
@@ -354,10 +356,15 @@ const SettingsConfigEditor = ({
   const [newStringMapEntries, setNewStringMapEntries] = useState({});
   const [stringMapEntryErrors, setStringMapEntryErrors] = useState({});
   const [newObjectValues, setNewObjectValues] = useState({});
+  const [pendingSelection, setPendingSelection] = useState(null);
   const editingFieldsRef = useRef({});
   const activeResourcePathRef = useRef(resourcePath);
   const previousResourcePathRef = useRef(resourcePath);
   activeResourcePathRef.current = resourcePath;
+
+  useEffect(() => {
+    setPendingSelection(null);
+  }, [configKey, resourcePath, resource?.lmsConfig?.vendor, resource?.catalogConfig?.profile]);
 
   const booleanOptions = useMemo(() => [
     { label: '', value: '' },
@@ -594,6 +601,7 @@ const SettingsConfigEditor = ({
   };
 
   const cancelEditingField = field => {
+    setPendingSelection(null);
     setValues(current => ({
       ...current,
       [field.fieldName]: committedTopLevelValue(field),
@@ -603,7 +611,23 @@ const SettingsConfigEditor = ({
   };
 
   const handleChange = (field, parentField) => event => {
-    setDraftFieldValue(field, parentField, event.target.value);
+    const nextValue = event.target.value;
+    if (nextValue === draftFieldValue(field, parentField)) {
+      return;
+    }
+
+    const impact = parentField ? undefined : getSelectionChangeImpact?.({
+      fieldName: field.fieldName,
+      nextValue,
+      resource,
+    });
+
+    if (impact?.groups.length > 0 || impact?.catalogProfile) {
+      setPendingSelection({ field, nextValue, impact });
+      return;
+    }
+
+    setDraftFieldValue(field, parentField, nextValue);
   };
 
   const handleNewStringChange = path => event => {
@@ -2013,6 +2037,67 @@ const SettingsConfigEditor = ({
 
   return (
     <div>
+      {pendingSelection &&
+        <ConfirmationModal
+          bodyTag="div"
+          open
+          heading={<FormattedMessage id="ui-rsdir.settingsConfig.confirmSelection.heading" defaultMessage="Confirm configuration change" />}
+          confirmLabel={<FormattedMessage id="ui-rsdir.settingsConfig.confirmSelection.confirm" defaultMessage="Confirm change" />}
+          cancelLabel={<FormattedMessage id="stripes-components.cancel" defaultMessage="Cancel" />}
+          onCancel={() => setPendingSelection(null)}
+          onConfirm={() => {
+            setDraftFieldValue(pendingSelection.field, undefined, pendingSelection.nextValue);
+            setPendingSelection(null);
+          }}
+          message={
+            <div>
+              <p>
+                {pendingSelection.impact.groups.length === 0 ?
+                  <FormattedMessage
+                    id="ui-rsdir.settingsConfig.confirmSelection.vendorChange"
+                    defaultMessage="Change LMSConfig vendor to {name}?"
+                    values={{ name: pendingSelection.impact.source.name }}
+                  /> : <FormattedMessage
+                    id={pendingSelection.impact.source.setting === 'catalogConfig.profile' ?
+                      'ui-rsdir.settingsConfig.confirmSelection.profile' : 'ui-rsdir.settingsConfig.confirmSelection.vendor'}
+                    defaultMessage={pendingSelection.impact.source.setting === 'catalogConfig.profile' ?
+                      'Using CatalogConfig profile {name} will override the following fields when saved.' :
+                      'Using LMSConfig vendor {name} will override the following fields when saved.'}
+                    values={{ name: pendingSelection.impact.source.name }}
+                  />
+                }
+              </p>
+              {pendingSelection.impact.catalogProfile &&
+                <p>
+                  <FormattedMessage
+                    id="ui-rsdir.settingsConfig.confirmSelection.catalogProfile"
+                    defaultMessage="CatalogConfig is currently configured by profile {profile}. Changing the LMSConfig vendor to {vendor} will not affect CatalogConfig."
+                    values={{
+                      profile: pendingSelection.impact.catalogProfile,
+                      vendor: pendingSelection.impact.source.name,
+                    }}
+                  />
+                </p>
+              }
+              {pendingSelection.impact.groups.map(group => (
+                <div key={group.configKey}>
+                  <h3><FormattedMessage id={`ui-rsdir.entry.section.${group.configKey}`} /></h3>
+                  <ul>
+                    {group.paths.map(path => (
+                      <li key={path}>
+                        {path.split('.').map((segment, index, segments) => intl.formatMessage({
+                          id: `ui-rsdir.${group.configKey}.${segments.slice(0, index + 1).join('.')}`,
+                          defaultMessage: segment,
+                        })).join(' › ')}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          }
+        />
+      }
       {fieldMapping.map(field => {
         const { fieldName } = field;
         const isEditing = editingFields[fieldName];

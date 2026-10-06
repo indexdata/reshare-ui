@@ -13,6 +13,8 @@ Entry configuration routes use `SettingsConfigEditor` to edit an object stored o
 
 Each top-level mapping is displayed in its own card and saved independently. Saving a card patches the corresponding property beneath `configKey`.
 
+The optional editor callback `getSelectionChangeImpact({ fieldName, nextValue, resource })` can return `{ source: { setting, name }, groups: [{ configKey, paths }], catalogProfile? }` to require confirmation before a top-level dropdown draft changes. The optional `catalogProfile` names the explicit profile that prevents a proposed LMS vendor's catalog overrides from applying; it triggers confirmation even with no affected groups. Empty groups without `catalogProfile`, or an undefined result, apply the change immediately. Confirming updates the draft only; Save persists it. LMS vendor and catalog profile routes use `selectionChangeImpact` to list new override paths from `vendorFieldMapping`, respecting an independent catalog profile. Clearing either selection bypasses confirmation and updates the draft immediately; Save persists `null`, and a cleared catalog profile falls back to the LMS vendor. Removed overrides are not listed.
+
 ## Common field properties
 
 | Property | Type | Required | Description |

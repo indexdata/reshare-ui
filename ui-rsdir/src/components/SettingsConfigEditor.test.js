@@ -1,13 +1,13 @@
 import React from 'react';
 // Provided by the shared Stripes test environment.
 // eslint-disable-next-line import/no-extraneous-dependencies
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 // Provided by the shared Stripes test environment.
 // eslint-disable-next-line import/no-extraneous-dependencies
 import userEvent from '@testing-library/user-event';
 import SettingsConfigEditor from './SettingsConfigEditor';
 import { fieldMap as catalogFieldMapping } from '../routes/CatalogConfigRoute';
-import { applyDisabledPaths, vendorFieldMappingForVendor } from '../config/vendorFieldMapping';
+import { applyDisabledPaths, selectionChangeImpact, vendorFieldMappingForVendor } from '../config/vendorFieldMapping';
 
 const mockPatch = jest.fn();
 const mockKy = jest.fn();
@@ -39,6 +39,7 @@ jest.mock('react-query', () => ({
 }));
 
 jest.mock('@folio/stripes/components', () => ({
+  ConfirmationModal: jest.requireActual('@folio/stripes-components/lib/ConfirmationModal').default,
   Icon: ({ icon, 'aria-hidden': ariaHidden }) => <svg aria-hidden={ariaHidden} data-icon={icon} />,
   Popover: jest.requireActual('@folio/stripes-components/lib/Popover').default,
   Button: ({ children, disabled, id, onClick }) => (
@@ -84,12 +85,14 @@ const renderEditor = ({
   fieldMapping: editorFieldMapping = fieldMapping,
   initialResource,
   onSave,
+  getSelectionChangeImpact,
 } = {}) => render(
   <SettingsConfigEditor
     configKey={configKey}
     fieldLabelId={path => path}
     fieldMapping={editorFieldMapping}
     initialResource={initialResource || { [configKey]: {} }}
+    getSelectionChangeImpact={getSelectionChangeImpact}
     onSave={onSave}
     resourcePath="directory/entries/by-id/entry-id"
     successMessage="Saved"
@@ -100,6 +103,211 @@ beforeEach(() => {
   mockPatch.mockReset();
   mockKy.mockReset();
   mockPatch.mockResolvedValue({ text: () => Promise.resolve('') });
+});
+
+describe('SettingsConfigEditor selection confirmation', () => {
+  const vendorMapping = [{
+    fieldName: 'vendor',
+    valueType: 'string',
+    nullOnEmpty: true,
+    validChoices: ['Alma', 'Koha', 'Generic', 'WMS'],
+  }];
+  const vendorImpact = ({ fieldName, nextValue, resource }) => (
+    fieldName === 'vendor' ? selectionChangeImpact({ configKey: 'lmsConfig', nextValue, resource }) : undefined
+  );
+
+  it('lists only new override paths and applies the captured choice only after confirmation', async () => {
+    renderEditor({
+      configKey: 'lmsConfig',
+      fieldMapping: vendorMapping,
+      getSelectionChangeImpact: vendorImpact,
+      initialResource: { lmsConfig: { vendor: 'Generic' } },
+    });
+    fireEvent.click(document.getElementById('edit-settings-config-vendor'));
+    const selector = screen.getByRole('combobox', { name: 'vendor' });
+    fireEvent.change(selector, { target: { value: 'Alma' } });
+    expect(selector).toHaveValue('Generic');
+    expect(screen.getByRole('dialog')).toHaveTextContent('Using LMSConfig vendor Alma');
+    expect(screen.getByRole('heading', { name: 'ui-rsdir.entry.section.catalogConfig' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'ui-rsdir.entry.section.lmsConfig' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(5);
+    expect(screen.getByText('holdingsFormat › opac › availabilityRule')).toBeInTheDocument();
+    expect(mockPatch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm change' }));
+    expect(selector).toHaveValue('Alma');
+    expect(mockPatch).not.toHaveBeenCalled();
+    fireEvent.click(document.getElementById('save-settings-config-vendor'));
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(
+      'directory/entries/by-id/entry-id', { json: { lmsConfig: { vendor: 'Alma' } } },
+    ));
+  });
+
+  it('preserves the previous draft on cancellation, Escape, and repeated selections', async () => {
+    const user = userEvent.setup();
+    renderEditor({
+      configKey: 'lmsConfig',
+      fieldMapping: vendorMapping,
+      getSelectionChangeImpact: vendorImpact,
+      initialResource: { lmsConfig: { vendor: 'Generic' } },
+    });
+    fireEvent.click(document.getElementById('edit-settings-config-vendor'));
+    const selector = screen.getByRole('combobox', { name: 'vendor' });
+    fireEvent.change(selector, { target: { value: 'Alma' } });
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+    expect(selector).toHaveValue('Generic');
+    fireEvent.change(selector, { target: { value: 'Koha' } });
+    expect(screen.getAllByRole('listitem')).toHaveLength(5);
+    await user.keyboard('{Escape}');
+    expect(selector).toHaveValue('Generic');
+    fireEvent.change(selector, { target: { value: 'Koha' } });
+    await user.click(screen.getByRole('button', { name: 'Confirm change' }));
+    expect(selector).toHaveValue('Koha');
+    fireEvent.change(selector, { target: { value: 'Alma' } });
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+    expect(selector).toHaveValue('Koha');
+    expect(mockPatch).not.toHaveBeenCalled();
+  });
+
+  it('skips confirmation for unchanged selections and changes with no applicable overrides', () => {
+    renderEditor({
+      configKey: 'lmsConfig',
+      fieldMapping: vendorMapping,
+      getSelectionChangeImpact: vendorImpact,
+      initialResource: { lmsConfig: { vendor: 'Generic' }, catalogConfig: { profile: 'Koha' } },
+    });
+    fireEvent.click(document.getElementById('edit-settings-config-vendor'));
+    const selector = screen.getByRole('combobox', { name: 'vendor' });
+    fireEvent.change(selector, { target: { value: 'Generic' } });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    fireEvent.change(selector, { target: { value: 'WMS' } });
+    expect(selector).toHaveValue('WMS');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    fireEvent.change(selector, { target: { value: '' } });
+    expect(selector).toHaveValue('');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['Alma', 'Koha', 0],
+    ['Koha', 'Alma', 1],
+    ['Alma', 'Alma', 0],
+  ])('explains profile %s protection when selecting vendor %s with %s LMS impacts', (vendor, profile, count) => {
+    renderEditor({
+      configKey: 'lmsConfig',
+      fieldMapping: vendorMapping,
+      getSelectionChangeImpact: vendorImpact,
+      initialResource: { lmsConfig: { vendor: 'Generic' }, catalogConfig: { profile } },
+    });
+    fireEvent.click(document.getElementById('edit-settings-config-vendor'));
+    const selector = screen.getByRole('combobox', { name: 'vendor' });
+    fireEvent.change(selector, { target: { value: vendor } });
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent(`CatalogConfig is currently configured by profile ${profile}.`);
+    expect(dialog).toHaveTextContent(`Changing the LMSConfig vendor to ${vendor} will not affect CatalogConfig.`);
+    expect(within(dialog).queryAllByRole('listitem')).toHaveLength(count);
+    expect(within(dialog).queryByRole('heading', { name: 'ui-rsdir.entry.section.catalogConfig' })).not.toBeInTheDocument();
+    if (count === 0) {
+      expect(dialog).toHaveTextContent(`Change LMSConfig vendor to ${vendor}?`);
+      expect(dialog).not.toHaveTextContent('following fields');
+    }
+    expect(selector).toHaveValue('Generic');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(selector).toHaveValue('Generic');
+    fireEvent.change(selector, { target: { value: vendor } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm change' }));
+    expect(selector).toHaveValue(vendor);
+    expect(mockPatch).not.toHaveBeenCalled();
+  });
+
+  it('continues confirming nonempty profiles but skips confirmation when clearing the confirmed draft', () => {
+    renderEditor({
+      configKey: 'catalogConfig',
+      fieldMapping: catalogFieldMapping,
+      getSelectionChangeImpact: ({ fieldName, nextValue, resource }) => (
+        fieldName === 'profile' ? selectionChangeImpact({ configKey: 'catalogConfig', nextValue, resource }) : undefined
+      ),
+      initialResource: { lmsConfig: { vendor: 'Alma' }, catalogConfig: { profile: 'Koha' } },
+    });
+    fireEvent.click(document.getElementById('edit-settings-config-profile'));
+    const selector = screen.getByRole('combobox', { name: 'profile' });
+    fireEvent.change(selector, { target: { value: 'Sierra' } });
+    expect(screen.getByRole('dialog')).toHaveTextContent('Using CatalogConfig profile Sierra');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm change' }));
+    fireEvent.change(selector, { target: { value: '' } });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(selector).toHaveValue('');
+    expect(mockPatch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['lmsConfig', 'vendor', 'Alma', 'Koha'],
+    ['lmsConfig', 'vendor', 'Alma', undefined],
+    ['catalogConfig', 'profile', 'Alma', 'Koha'],
+    ['catalogConfig', 'profile', undefined, 'Koha'],
+  ])('clears %s.%s without a modal and saves null with vendor %s and profile %s', async (
+    configKey, fieldName, vendor, profile,
+  ) => {
+    renderEditor({
+      configKey,
+      fieldMapping: configKey === 'lmsConfig' ? vendorMapping : catalogFieldMapping,
+      getSelectionChangeImpact: ({ fieldName: changedField, nextValue, resource }) => (
+        changedField === fieldName ? selectionChangeImpact({ configKey, nextValue, resource }) : undefined
+      ),
+      initialResource: { lmsConfig: { vendor }, catalogConfig: { profile } },
+    });
+    fireEvent.click(document.getElementById(`edit-settings-config-${fieldName}`));
+    const selector = screen.getByRole('combobox', { name: fieldName });
+    fireEvent.change(selector, { target: { value: '' } });
+    expect(selector).toHaveValue('');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mockPatch).not.toHaveBeenCalled();
+    fireEvent.click(document.getElementById(`save-settings-config-${fieldName}`));
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(
+      'directory/entries/by-id/entry-id', { json: { [configKey]: { [fieldName]: null } } },
+    ));
+  });
+
+  it.each(['entry', 'settings'])('discards pending confirmation when %s changes', change => {
+    const editor = (resourcePath, initialResource) => (
+      <SettingsConfigEditor
+        configKey="lmsConfig"
+        fieldLabelId={path => path}
+        fieldMapping={vendorMapping}
+        getSelectionChangeImpact={vendorImpact}
+        initialResource={initialResource}
+        resourcePath={resourcePath}
+        successMessage="Saved"
+      />
+    );
+    const initialResource = { lmsConfig: { vendor: 'Generic' } };
+    const { rerender } = render(editor('entry-one', initialResource));
+    fireEvent.click(document.getElementById('edit-settings-config-vendor'));
+    fireEvent.change(screen.getByRole('combobox', { name: 'vendor' }), { target: { value: 'Alma' } });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    rerender(editor(change === 'entry' ? 'entry-two' : 'entry-one',
+      { ...initialResource, catalogConfig: { profile: 'Koha' } }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mockPatch).not.toHaveBeenCalled();
+  });
+
+  it('preserves a confirmed draft after a save failure', async () => {
+    mockPatch.mockRejectedValue(new Error('Save failed'));
+    renderEditor({
+      configKey: 'lmsConfig',
+      fieldMapping: vendorMapping,
+      getSelectionChangeImpact: vendorImpact,
+      initialResource: { lmsConfig: { vendor: 'Generic' } },
+    });
+    fireEvent.click(document.getElementById('edit-settings-config-vendor'));
+    const selector = screen.getByRole('combobox', { name: 'vendor' });
+    fireEvent.change(selector, { target: { value: 'Alma' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm change' }));
+    fireEvent.click(document.getElementById('save-settings-config-vendor'));
+    expect(mockPatch).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(document.getElementById('save-settings-config-vendor')).toBeEnabled());
+    expect(selector).toHaveValue('Alma');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });
 
 describe('SettingsConfigEditor override attribution', () => {

@@ -2,9 +2,57 @@ import {
   applyDisabledPaths,
   vendorFieldMapping,
   vendorFieldMappingForVendor,
+  selectionChangeImpact,
 } from './vendorFieldMapping';
 
 describe('vendorFieldMapping', () => {
+  it.each([
+    ['lmsConfig', 'Alma', 'Koha', 'Koha'],
+    ['lmsConfig', 'Koha', 'Alma', 'Alma'],
+    ['lmsConfig', 'Alma', 'Alma', 'Alma'],
+    ['lmsConfig', 'Alma', undefined, undefined],
+    ['lmsConfig', 'Generic', 'Alma', undefined],
+    ['catalogConfig', 'Koha', 'Alma', undefined],
+  ])('reports the protecting profile for %s selection %s with profile %s', (configKey, nextValue, profile, expected) => {
+    expect(selectionChangeImpact({
+      configKey,
+      nextValue,
+      resource: { lmsConfig: { vendor: 'Alma' }, catalogConfig: { profile } },
+    }).catalogProfile).toBe(expected);
+  });
+
+  it.each([
+    ['lmsConfig', 'Alma', undefined, undefined, ['catalogConfig'], 'Alma'],
+    ['lmsConfig', 'Koha', undefined, undefined, ['lmsConfig', 'catalogConfig'], 'Koha'],
+    ['lmsConfig', 'Koha', 'Alma', 'Sierra', ['lmsConfig'], 'Koha'],
+    ['lmsConfig', 'Alma', 'Koha', 'Sierra', [], 'Alma'],
+    ['catalogConfig', 'Koha', 'Alma', 'Sierra', ['catalogConfig'], 'Koha'],
+    ['catalogConfig', 'Generic', 'Alma', 'Koha', [], 'Generic'],
+  ])('lists new impacts for %s selection %s with profile %s and vendor %s', (
+    configKey, nextValue, profile, vendor, groupKeys, name,
+  ) => {
+    const resource = { lmsConfig: { vendor }, catalogConfig: { profile } };
+    const impact = selectionChangeImpact({ configKey, nextValue, resource });
+    expect(impact.groups.map(group => group.configKey)).toEqual(groupKeys);
+    expect(impact.source).toEqual({
+      name,
+      setting: configKey === 'lmsConfig' || !nextValue ? 'lmsConfig.vendor' : 'catalogConfig.profile',
+    });
+    impact.groups.forEach(group => {
+      expect(group.paths).toEqual(vendorFieldMapping[name][group.configKey]);
+      expect(group.paths).not.toBe(vendorFieldMapping[name][group.configKey]);
+    });
+  });
+
+  it.each(['lmsConfig', 'catalogConfig'])('skips confirmation when clearing %s', configKey => {
+    expect(selectionChangeImpact({
+      configKey,
+      nextValue: '',
+      resource: { lmsConfig: { vendor: 'Alma' }, catalogConfig: { profile: 'Koha' } },
+    })).toBeUndefined();
+    expect(selectionChangeImpact({ configKey, nextValue: '', resource: {} })).toBeUndefined();
+  });
+
   it('attributes overridden leaves and locked selections without attributing other disabled fields', () => {
     const source = { setting: 'catalogConfig.profile', name: 'Alma' };
     const mapping = [{

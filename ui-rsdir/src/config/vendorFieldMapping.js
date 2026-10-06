@@ -114,3 +114,25 @@ export const applyDisabledPaths = (fieldMapping, disabledPaths, overrideSource) 
 export const vendorFieldMappingForVendor = (fieldMapping, vendor, configKey, setting = 'lmsConfig.vendor') => (
   applyDisabledPaths(fieldMapping, vendorFieldMapping[vendor]?.[configKey] || [], { setting, name: vendor })
 );
+
+export const selectionChangeImpact = ({ configKey, nextValue, resource }) => {
+  if (!nextValue) {
+    return undefined;
+  }
+
+  const isVendor = configKey === 'lmsConfig';
+  const name = nextValue;
+  const setting = isVendor ? 'lmsConfig.vendor' : 'catalogConfig.profile';
+  const configKeys = isVendor ?
+    ['lmsConfig', ...(!resource?.catalogConfig?.profile ? ['catalogConfig'] : [])] :
+    ['catalogConfig'];
+  const groups = configKeys.map(key => ({
+    configKey: key,
+    paths: [...new Set(vendorFieldMapping[name]?.[key] || [])],
+  })).filter(group => group.paths.length > 0);
+
+  const catalogProfile = isVendor && vendorFieldMapping[name]?.catalogConfig?.length > 0 ?
+    resource?.catalogConfig?.profile : undefined;
+
+  return { source: { setting, name }, groups, ...(catalogProfile ? { catalogProfile } : {}) };
+};
