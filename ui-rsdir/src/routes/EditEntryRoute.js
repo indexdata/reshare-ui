@@ -10,6 +10,7 @@ import { useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import EntryForm from '../components/EntryForm';
 import { ENTRY_PANE_ID, EntryLoadingPane } from '../components/EntryPane';
 import { getAddressPlugin } from '../util/addressPlugin';
+import { normalizeLendToBorrowRatio } from '../util/lendToBorrowRatio';
 import {
   apiAddressesToFormAddresses,
   pluginAddressesToApiAddresses,
@@ -107,10 +108,14 @@ const EditEntryRoute = () => {
   const submit = (values, form) => {
     const submitValues = {
       ...values,
+      lendToBorrowRatio: normalizeLendToBorrowRatio(values.lendToBorrowRatio),
       addresses: pluginAddressesToApiAddresses(values.addresses, addressPlugin),
     };
 
     if (op === CREATE) {
+      // Creation accepts an omitted ratio; only PATCH accepts null to clear it.
+      if (submitValues.lendToBorrowRatio === null) delete submitValues.lendToBorrowRatio;
+
       return creator.mutateAsync(submitValues);
     }
 
