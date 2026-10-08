@@ -18,7 +18,7 @@ const TitleAndSILink = ({ request }) => {
       rel="noopener noreferrer"
       href={siURL}
     >
-      <FormattedMessage id="ui-rs.flow.info.viewInSharedIndex" />
+      <FormattedMessage id="stripes-reshare.viewInSharedIndex" />
     </a>
   ) : null;
 

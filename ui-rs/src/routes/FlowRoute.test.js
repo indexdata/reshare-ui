@@ -182,7 +182,7 @@ describe('FlowRoute', () => {
     expect(screen.getByText('ISIL:REQ')).toBeInTheDocument();
     expect(screen.getByText('ISIL:SUP')).toBeInTheDocument();
 
-    const siLink = screen.getByText('ui-rs.flow.info.viewInSharedIndex').closest('a');
+    const siLink = screen.getByText('stripes-reshare.viewInSharedIndex').closest('a');
     expect(siLink).toHaveAttribute('href', 'https://shared-index.example/inventory/view/instance-1');
 
     expect(screen.getByText('ui-rs.flow.loanConditions.status')).toBeInTheDocument();

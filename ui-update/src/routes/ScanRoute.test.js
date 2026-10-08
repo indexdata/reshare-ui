@@ -11,7 +11,10 @@ const mockOkapi = makeOkapiKyMock();
 
 jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
 jest.mock('@folio/stripes/core', () => ({
-  ...require('@projectreshare/stripes-reshare/testing/stripesCore').makeStripesCoreMock(() => mockOkapi),
+  ...require('@projectreshare/stripes-reshare/testing/stripesCore').makeStripesCoreMock(
+    () => mockOkapi,
+    () => ({ sharedIndex: { item: 'https://shared-index.example/item/{itemid}' } })
+  ),
   coreEvents: { LOGIN: 'LOGIN' },
 }));
 
@@ -30,7 +33,7 @@ const request = {
   supplierName: 'Supplier Library',
   internalNote: 'Fragile',
   state: 'SEARCHING',
-  illRequest: { bibliographicInfo: { title: 'A Title', author: 'An Author' } },
+  illRequest: { bibliographicInfo: { title: 'A Title', author: 'An Author', supplierUniqueRecordId: 'inst-1' } },
 };
 
 const actionOk = () => ({ json: async () => ({ outcome: 'success' }) });
@@ -92,6 +95,8 @@ describe('ScanRoute', () => {
     const item = within(document.getElementById('item-card'));
     expect(item.getByText('A Title')).toBeInTheDocument();
     expect(item.getByText('An Author')).toBeInTheDocument();
+    expect(item.getByRole('link', { name: 'stripes-reshare.viewInSharedIndex' }))
+      .toHaveAttribute('href', 'https://shared-index.example/item/inst-1');
   });
 
   it('shows an earlier scan when its row is selected', async () => {

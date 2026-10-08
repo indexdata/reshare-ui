@@ -1,18 +1,9 @@
-/** Returns a function that takes an id and returns an SI URL or null if none configured */
+/** Returns a function that takes an item id and returns an SI URL or null if none configured.
+ *  The configured `sharedIndex.item` is a template with an `{itemid}` placeholder. */
 import { useStripes } from '@folio/stripes/core';
 
 export default () => {
-  const siCfg = useStripes().config?.reshare?.sharedIndex;
+  const template = useStripes().config?.reshare?.sharedIndex?.item;
 
-  return id => {
-    if (!id || !siCfg?.ui) return null;
-    switch (siCfg?.type) {
-      case 'folio':
-        return `${siCfg.ui}/inventory/view/${id}`;
-      case 'vufind':
-        return `${siCfg.ui}/Record/${id}`;
-      default:
-        return `${siCfg.ui}${id}`;
-    }
-  };
+  return id => (id && template ? template.replace('{itemid}', id) : null);
 };

@@ -2,6 +2,7 @@
   "hasLocalNote": "Interne Notiz vorhanden",
   "hasPatronNote": "Benutzernotiz vorhanden",
   "requestState": "Bestellstatus",
+  "viewInSharedIndex": "Im gemeinsamen Index ansehen",
 
   "action.notValidForState": "Aktion in diesem Status nicht möglich",
   "actions.generic.success": "Erfolg: {action}",

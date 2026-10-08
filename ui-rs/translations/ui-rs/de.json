@@ -147,7 +147,6 @@
   "flow.sections.volumes": "Bände",
   "flow.sections.ilsCirculation": "Status im Lokalsystem",
   "flow.info.updated": "Aktualisiert: {date}",
-  "flow.info.viewInSharedIndex": "Im gemeinsamen Index ansehen",
   "flow.info.viewAuditLog": "(Prüfprotokoll anzeigen)",
   "flow.info.itemBarcode": "Exemplarbarcode",
   "flow.info.itemCallNumber": "Exemplarsignatur",

@@ -2,6 +2,7 @@
   "hasLocalNote": "Has internal note",
   "hasPatronNote": "Has patron note",
   "requestState": "Request state",
+  "viewInSharedIndex": "View in shared index",
 
   "action.notValidForState": "Action not valid for current state",
   "actions.generic.success": "Success: {action}",

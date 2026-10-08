@@ -8,6 +8,7 @@ module.exports = {
     hasAllPerms: false,
     showDevInfo: true,
     reshare: {
+      sharedIndex: { item: 'https://shared-index.example/item/{itemid}' },
       showRefresh: true,
       liveUpdates: true,
       showCost: true,

@@ -211,7 +211,6 @@
   "flow.sections.volumes": "Volumes",
   "flow.sections.ilsCirculation": "ILS Circulation",
   "flow.info.updated": "Updated: {date}",
-  "flow.info.viewInSharedIndex": "View in shared index",
   "flow.info.viewAuditLog": "(view event history)",
   "flow.info.dueDate": "Due date",
   "flow.info.dueDate.current": "Current due date",

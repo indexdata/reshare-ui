@@ -13,8 +13,7 @@ module.exports = {
     reshare: {
       maxDMSUpload: 250,
       sharedIndex: {
-        type: 'vufind',
-        ui: 'https://borrowdirect.reshare.indexdata.com',
+        item: 'https://shared-index.example/item/{itemid}',
         query: 'https://borrowdirect.reshare.indexdata.com',
       },
       showCost: true,
