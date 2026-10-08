@@ -135,6 +135,7 @@
   "holdingsPolicy.itemLoanPolicies.code" : "Code",
   "holdingsPolicy.itemLoanPolicies.name" : "Name",
   "holdingsPolicy.itemLoanPolicies.lendable" : "Lendable",
+  "illConfig.loadBalancingPolicy" : "Load balancing policy",
   "illConfig.isPickupLocation" : "Offer as pickup location",
   "illConfig.edit.success" : "ILL configuration updated successfully",
   "illConfig.empty" : "No ILL configuration has been saved for this entry.",
