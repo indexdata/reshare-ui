@@ -176,6 +176,65 @@ describe('directory entries', () => {
     expect(mockOkapi.calledUrls()).toContain('directory/networks?limit=1000');
   });
 
+  it.each(['deficit', 'proportional'])('views and changes the ILL load balancing policy from %s', async policy => {
+    mockOkapi.setResponses(responses({
+      'directory/entries/by-id/e1': { ...entry, illConfig: { ...entry.illConfig, loadBalancingPolicy: policy } },
+    }));
+    renderDirectory(['/directory/entries/e1/illconfig']);
+
+    expect(await screen.findByText(policy)).toBeInTheDocument();
+    fireEvent.click(document.getElementById('edit-ill-config-loadBalancingPolicy'));
+    const input = screen.getByRole('combobox', { name: 'loadBalancingPolicy' });
+    expect(input).toHaveValue(policy);
+    expect(within(input).getAllByRole('option').map(option => option.value)).toEqual(['', 'deficit', 'proportional']);
+
+    const nextPolicy = policy === 'deficit' ? 'proportional' : 'deficit';
+    fireEvent.change(input, { target: { value: nextPolicy } });
+    fireEvent.click(document.getElementById('save-ill-config-loadBalancingPolicy'));
+    await waitFor(() => expect(mockOkapi.patch).toHaveBeenCalledWith(
+      'directory/entries/by-id/e1',
+      { json: { illConfig: { loadBalancingPolicy: nextPolicy } } }
+    ));
+    expect(await screen.findByText(nextPolicy)).toBeInTheDocument();
+    expect(screen.getByText('1.5')).toBeInTheDocument();
+  });
+
+  it('clears the ILL load balancing policy with null', async () => {
+    mockOkapi.setResponses(responses({
+      'directory/entries/by-id/e1': { ...entry, illConfig: { ...entry.illConfig, loadBalancingPolicy: 'deficit' } },
+    }));
+    renderDirectory(['/directory/entries/e1/illconfig']);
+
+    await screen.findByText('deficit');
+    fireEvent.click(document.getElementById('edit-ill-config-loadBalancingPolicy'));
+    fireEvent.change(screen.getByRole('combobox', { name: 'loadBalancingPolicy' }), { target: { value: '' } });
+    fireEvent.click(document.getElementById('save-ill-config-loadBalancingPolicy'));
+    await waitFor(() => expect(mockOkapi.patch).toHaveBeenCalledWith(
+      'directory/entries/by-id/e1',
+      { json: { illConfig: { loadBalancingPolicy: null } } }
+    ));
+    expect(screen.getByText('1.5')).toBeInTheDocument();
+  });
+
+  it.each([undefined, null])('leaves an unset ILL load balancing policy unchanged (%s)', async policy => {
+    mockOkapi.setResponses(responses({
+      'directory/entries/by-id/e1': { ...entry, illConfig: { ...entry.illConfig, loadBalancingPolicy: policy } },
+    }));
+    renderDirectory(['/directory/entries/e1/illconfig']);
+
+    await screen.findByText('1.5');
+    expect(mockOkapi.patch).not.toHaveBeenCalled();
+    fireEvent.click(document.getElementById('edit-ill-config-loadBalancingPolicy'));
+    const input = screen.getByRole('combobox', { name: 'loadBalancingPolicy' });
+    expect(input).toHaveValue('');
+    fireEvent.change(input, { target: { value: 'deficit' } });
+    fireEvent.click(document.getElementById('cancel-ill-config-loadBalancingPolicy'));
+    expect(screen.queryByRole('combobox', { name: 'loadBalancingPolicy' })).not.toBeInTheDocument();
+    expect(mockOkapi.patch).not.toHaveBeenCalled();
+    fireEvent.click(document.getElementById('edit-ill-config-loadBalancingPolicy'));
+    expect(screen.getByRole('combobox', { name: 'loadBalancingPolicy' })).toHaveValue('');
+  });
+
   it('edits an optional non-negative minimum cost in the ILL configuration', async () => {
     renderDirectory(['/directory/entries/e1/illconfig']);
 
