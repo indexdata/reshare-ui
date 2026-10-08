@@ -30,10 +30,12 @@ The optional editor callback `getSelectionChangeImpact({ fieldName, nextValue, r
 | `maxValue` | number | No | Inclusive maximum for an `integer` or `number` field. |
 | `nullOnEmpty` | boolean | No | For a `string` field, serializes an exact empty string as `null`. |
 | `validChoices` | array | No | Renders a scalar field as a select containing these choices plus an empty choice. Values are converted to strings in the editor. |
-| `defaultDesc` | string | No | Displays a question-mark tooltip beside the field label, using this value when no translated description is available. |
+| `defaultDesc` | string | No | Displays a blue circle “i” tooltip before the field label, using this value when no translated description is available. Manual help takes precedence over OpenAPI help. |
 | `getSaveErrorMessage` | function | No | Receives a failed PATCH error and may return a field-specific React node or string. Returning `undefined` uses the error's default message. |
 
 Use `valueType`, not `type`, when declaring a field type.
+
+For `lmsConfig`, `catalogConfig`, `holdingsPolicy`, and `illConfig`, the editor also fetches `directory/openapi.json` and resolves descriptions from the corresponding resource schemas (`LmsConfig`, `CatalogConfig`, `HoldingsPolicy`, and `IllConfig`). Nested properties, array items, local references, and `allOf` are supported. Descriptions on a property take precedence over referenced descriptions. API descriptions are displayed as plain text, including any literal placeholders. Fields without a manual or schema description have no help icon. The shared specification cache stays fresh for 30 minutes; loading or failure does not block editing.
 
 ## Value types
 

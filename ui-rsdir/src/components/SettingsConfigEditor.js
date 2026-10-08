@@ -16,6 +16,8 @@ import {
 } from '@folio/stripes/components';
 
 import css from './SettingsConfigEditor.css';
+import useDirectoryOpenApi from '../hooks/useDirectoryOpenApi';
+import { configFieldDescription, supportsConfigDescriptions } from '../util/configFieldDescription';
 
 const STRING_ARRAY = 'stringarray';
 const STRING_MAP = 'stringmap';
@@ -343,6 +345,7 @@ const SettingsConfigEditor = ({
     return null;
   }, [fieldMapping]);
   const ky = useOkapiKy();
+  const openApiQuery = useDirectoryOpenApi(supportsConfigDescriptions(configKey));
   const intl = useIntl();
   const callout = useContext(CalloutContext);
   const queryClient = useQueryClient();
@@ -452,13 +455,37 @@ const SettingsConfigEditor = ({
       instance,
       'description',
     ].filter(Boolean).join('-');
-    const description = field.defaultDesc && intl.formatMessage({
+    const manualDescription = field.defaultDesc?.trim() && intl.formatMessage({
       id: `${fieldLabelId(path)}.desc`,
       defaultMessage: field.defaultDesc,
     });
+    const description = manualDescription || configFieldDescription(openApiQuery.data, configKey, path);
 
     return (
       <span className={css.fieldLabel}>
+        {description &&
+          <Tooltip
+            id={tooltipId}
+            placement="top"
+            text={description}
+          >
+            {({ ref, ariaIds }) => (
+              <IconButton
+                ref={ref}
+                aria-describedby={ariaIds.text}
+                aria-label={intl.formatMessage({
+                  id: 'ui-rsdir.settingsConfig.showFieldDescription',
+                  defaultMessage: 'Show description for {field}',
+                }, { field: label })}
+                className={css.descriptionIcon}
+                icon="info"
+                iconSize="small"
+                id={`${tooltipId}-trigger`}
+                size="small"
+              />
+            )}
+          </Tooltip>
+        }
         <span className={css.fieldLabelText}>{label}</span>
         {field.overrideSource &&
           <Popover
@@ -492,28 +519,6 @@ const SettingsConfigEditor = ({
               values={{ name: field.overrideSource.name }}
             />
           </Popover>
-        }
-        {field.defaultDesc &&
-          <Tooltip
-            id={tooltipId}
-            placement="top"
-            text={description}
-          >
-            {({ ref, ariaIds }) => (
-              <IconButton
-                ref={ref}
-                aria-describedby={ariaIds.text}
-                aria-label={intl.formatMessage({
-                  id: 'ui-rsdir.settingsConfig.showFieldDescription',
-                  defaultMessage: 'Show description for {field}',
-                }, { field: label })}
-                icon="question-mark"
-                iconSize="small"
-                id={`${tooltipId}-trigger`}
-                size="small"
-              />
-            )}
-          </Tooltip>
         }
       </span>
     );

@@ -11,6 +11,12 @@ import { applyDisabledPaths, selectionChangeImpact, vendorFieldMappingForVendor 
 
 const mockPatch = jest.fn();
 const mockKy = jest.fn();
+let mockOpenApiData;
+
+jest.mock('../hooks/useDirectoryOpenApi', () => ({
+  __esModule: true,
+  default: () => ({ data: mockOpenApiData }),
+}));
 
 mockKy.patch = mockPatch;
 
@@ -49,9 +55,9 @@ jest.mock('@folio/stripes/components', () => ({
   Card: ({ cardClass, children, headerEnd, headerStart }) => (
     <section className={cardClass}>{headerStart}{headerEnd}{children}</section>
   ),
-  IconButton: ({ 'aria-label': ariaLabel, disabled, id, onClick }) => (
-    <button aria-label={ariaLabel} disabled={disabled} id={id} onClick={onClick} type="button">×</button>
-  ),
+  IconButton: jest.requireActual('react').forwardRef(({ icon, iconSize: _iconSize, size: _size, ...props }, ref) => (
+    <button {...props} data-icon={icon} ref={ref} type="button">×</button>
+  )),
   Select: ({ 'aria-label': ariaLabel, dataOptions, disabled, id, onChange, value }) => (
     <select aria-label={ariaLabel} disabled={disabled} id={id} onChange={onChange} value={value}>
       {dataOptions.map(option => (
@@ -76,7 +82,7 @@ jest.mock('@folio/stripes/components', () => ({
       {error && <span role="alert">{error}</span>}
     </>
   ),
-  Tooltip: ({ children }) => children({ ariaIds: {}, ref: jest.fn() }),
+  Tooltip: jest.requireActual('@folio/stripes-components/lib/Tooltip').default,
 }));
 
 const fieldMapping = [{ fieldName: 'selectedSymbols', valueType: 'symbolList' }];
@@ -101,9 +107,73 @@ const renderEditor = ({
 );
 
 beforeEach(() => {
+  mockOpenApiData = undefined;
   mockPatch.mockReset();
   mockKy.mockReset();
   mockPatch.mockResolvedValue({ text: () => Promise.resolve('') });
+});
+
+describe('SettingsConfigEditor field descriptions', () => {
+  const descriptionMapping = [
+    { fieldName: 'address', defaultDesc: 'Manual address help' },
+    { fieldName: 'requesterPatronPattern' },
+    { fieldName: 'ncipNamespaceEnabled', valueType: 'boolean' },
+    {
+      fieldName: 'patronProfiles',
+      valueType: 'objectArray',
+      objectMap: [{ fieldName: 'code' }],
+    },
+  ];
+  const spec = { components: { schemas: {
+    LmsConfig: { properties: {
+      address: { description: 'API address help' },
+      requesterPatronPattern: { description: "'{requesterSymbol}' is replaced with the agency ISIL" },
+      patronProfiles: { type: 'array', items: { properties: { code: { description: 'Profile code' } } } },
+    } },
+  } } };
+
+  it('prefers manual help, preserves placeholders and shows help on hover and focus', async () => {
+    mockOpenApiData = spec;
+    renderEditor({ configKey: 'lmsConfig', fieldMapping: descriptionMapping });
+    const trigger = document.getElementById('settings-config-address-description-trigger');
+    expect(trigger).toHaveAttribute('data-icon', 'info');
+    expect(trigger.parentElement.querySelector('.fieldLabelText')).toHaveTextContent('address');
+    expect(trigger.compareDocumentPosition(trigger.parentElement.querySelector('.fieldLabelText')))
+      .toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(trigger).toHaveAccessibleDescription('Manual address help');
+    expect(screen.queryByText('API address help')).not.toBeInTheDocument();
+    expect(document.getElementById('settings-config-ncipNamespaceEnabled-description-trigger')).not.toBeInTheDocument();
+    fireEvent.mouseOver(trigger);
+    await waitFor(() => expect(document.querySelector('[data-test-tooltip-text]')).toHaveTextContent('Manual address help'));
+    fireEvent.mouseOut(trigger);
+    await waitFor(() => expect(document.querySelector('[data-test-tooltip-text]')).not.toBeInTheDocument());
+    const patternTrigger = document.getElementById('settings-config-requesterPatronPattern-description-trigger');
+    fireEvent.focus(patternTrigger);
+    await waitFor(() => expect(document.querySelector('[data-test-tooltip-text]'))
+      .toHaveTextContent("'{requesterSymbol}' is replaced with the agency ISIL"));
+  });
+
+  it('adds late-arriving help without changing an active draft and gives array instances unique IDs', () => {
+    const resource = { lmsConfig: { requesterPatronPattern: 'original', patronProfiles: [{ code: 'STAFF' }, { code: 'STUDENT' }] } };
+    const { rerender } = renderEditor({ configKey: 'lmsConfig', fieldMapping: descriptionMapping, initialResource: resource });
+    fireEvent.click(document.getElementById('edit-settings-config-requesterPatronPattern'));
+    fireEvent.change(screen.getByRole('textbox', { name: 'requesterPatronPattern' }), { target: { value: 'draft' } });
+    mockOpenApiData = spec;
+    rerender(<SettingsConfigEditor
+      configKey="lmsConfig"
+      fieldLabelId={path => path}
+      fieldMapping={descriptionMapping}
+      initialResource={resource}
+      resourcePath="directory/entries/by-id/entry-id"
+    />);
+    expect(screen.getByRole('textbox', { name: 'requesterPatronPattern' })).toHaveValue('draft');
+    expect(document.getElementById('settings-config-requesterPatronPattern-description-trigger')).toBeInTheDocument();
+    fireEvent.click(document.getElementById('edit-settings-config-patronProfiles'));
+    const triggers = screen.getAllByRole('button', { name: 'Show description for {field}' }).filter(trigger => trigger.id.includes('patronProfiles-code-'));
+    expect(triggers).toHaveLength(3);
+    expect(new Set(triggers.map(trigger => trigger.id)).size).toBe(3);
+    triggers.forEach(trigger => expect(trigger).toHaveAccessibleDescription('Profile code'));
+  });
 });
 
 describe('SettingsConfigEditor selection confirmation', () => {
