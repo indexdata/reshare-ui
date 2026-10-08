@@ -19,6 +19,10 @@
   gap: var(--gutter-static-one-third);
 }
 
+.fieldLabel .descriptionIcon {
+  color: var(--color-link);
+}
+
 .vendorBadge {
   display: inline-flex;
   padding: 0;
