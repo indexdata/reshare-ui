@@ -10,6 +10,12 @@ const entryPath = id => `directory/entries/by-id/${id}`;
 const fieldLabelId = fieldName => `ui-rsdir.illConfig.${fieldName}`;
 const fieldMap = [
   {
+    fieldName: 'loadBalancingPolicy',
+    valueType: 'string',
+    validChoices: ['deficit', 'proportional'],
+    nullOnEmpty: true,
+  },
+  {
     fieldName: 'isPickupLocation',
     valueType: 'boolean',
   },
