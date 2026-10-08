@@ -1,7 +1,7 @@
 import React from 'react';
 import { Route } from 'react-router-dom';
 import { createMemoryHistory } from 'history';
-import { fireEvent, screen, waitFor, within } from '@folio/jest-config-stripes/testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@folio/jest-config-stripes/testing-library/react';
 
 import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
@@ -36,6 +36,7 @@ const responses = (overrides = {}) => ({
   'directory/entries/by-id/e1/networks': [],
   'directory/entries/by-id/e1/tiers': [],
   'directory/networks': [],
+  'directory/entry-networks': { items: [] },
   'directory/tiers': [],
   ...overrides,
 });
@@ -78,6 +79,7 @@ describe('directory entries', () => {
     mockOkapi.post.mockClear();
     mockOkapi.patch.mockClear();
     mockOkapi.delete.mockClear();
+    sendCallout.mockClear();
     mockOkapi.setResponses(responses());
   });
 
@@ -174,6 +176,230 @@ describe('directory entries', () => {
 
     expect(await screen.findByRole('button', { name: 'ui-rsdir.networks.add' })).toBeInTheDocument();
     expect(mockOkapi.calledUrls()).toContain('directory/networks?limit=1000');
+  });
+
+  const priorityFixtures = (overrides = {}) => responses({
+    'directory/entries/by-id/e1/networks': { items: [
+      { id: 'n1', name: 'Alpha network', priority: 7 },
+      { id: 'n2', name: 'Beta network', priority: -8 },
+      { id: 'n3', name: 'Gamma network', priority: 0 },
+    ] },
+    'directory/networks': [{ id: 'n4', name: 'Available network' }],
+    'directory/entry-networks': { items: [
+      { id: 'm1', entry: 'e1', network: 'n1', priority: 7 },
+      { id: 'm2', entry: 'e1', network: 'n2', priority: -8 },
+      { id: 'm3', entry: 'e1', network: 'n3', priority: 0 },
+    ] },
+    ...overrides,
+  });
+  const networkTable = () => within(document.getElementById('entry-networks-list'));
+  const editPriority = async () => {
+    const button = await screen.findByRole('button', { name: 'ui-rsdir.network.priority.edit' });
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
+    return screen.getByRole('spinbutton', { name: 'ui-rsdir.network.priority.forNetwork' });
+  };
+  const singlePriorityFixtures = (overrides = {}) => priorityFixtures({
+    'directory/entries/by-id/e1/networks': [{ id: 'n1', name: 'Alpha network', priority: 7 }],
+    ...overrides,
+  });
+
+  it('displays membership priorities and sorts them numerically', async () => {
+    mockOkapi.setResponses(priorityFixtures());
+    renderDirectory(['/directory/entries/e1/networks']);
+
+    await screen.findByText('Alpha network');
+    const table = networkTable();
+    expect(table.getByText('7')).toBeInTheDocument();
+    expect(table.getByText('-8')).toBeInTheDocument();
+    expect(table.getByText('0')).toBeInTheDocument();
+    const order = () => table.getAllByRole('row').slice(1).map(row => row.cells[0].textContent);
+    expect(order()).toEqual(['Alpha network', 'Beta network', 'Gamma network']);
+    fireEvent.click(table.getByRole('button', { name: 'ui-rsdir.network.priority' }));
+    expect(order()).toEqual(['Beta network', 'Gamma network', 'Alpha network']);
+    fireEvent.click(table.getByRole('button', { name: 'ui-rsdir.network.priority' }));
+    expect(order()).toEqual(['Alpha network', 'Gamma network', 'Beta network']);
+  });
+
+  it.each(['0', '-8', '2147483647', '-2147483648'])('adds a network with priority %s and resets the fields', async value => {
+    mockOkapi.setResponses(priorityFixtures());
+    renderDirectory(['/directory/entries/e1/networks']);
+
+    const input = await screen.findByRole('spinbutton', { name: 'ui-rsdir.network.priority' });
+    expect(input).toHaveValue(0);
+    fireEvent.change(screen.getByLabelText('ui-rsdir.networks.available'), { target: { value: 'n4' } });
+    if (value !== '0') fireEvent.change(input, { target: { value } });
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.networks.add' }));
+    await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledWith(
+      'directory/entries/by-id/e1/networks', { json: { id: 'n4', priority: Number(value) } }
+    ));
+    await waitFor(() => expect(input).toHaveValue(0));
+    expect(screen.getByLabelText('ui-rsdir.networks.available')).toHaveValue('');
+  });
+
+  it.each(['', '1.5', '2147483648', '-2147483649'])('rejects invalid priority %s when adding and editing', async value => {
+    mockOkapi.setResponses(singlePriorityFixtures());
+    renderDirectory(['/directory/entries/e1/networks']);
+
+    const addInput = await screen.findByRole('spinbutton', { name: 'ui-rsdir.network.priority' });
+    fireEvent.change(screen.getByLabelText('ui-rsdir.networks.available'), { target: { value: 'n4' } });
+    fireEvent.change(addInput, { target: { value } });
+    expect(screen.getByRole('button', { name: 'ui-rsdir.networks.add' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.networks.add' }));
+    expect(mockOkapi.post).not.toHaveBeenCalled();
+
+    const input = await editPriority();
+    fireEvent.change(input, { target: { value } });
+    expect(screen.getByRole('button', { name: 'ui-rsdir.network.priority.save' })).toBeDisabled();
+    expect(screen.getAllByText('ui-rsdir.network.priority.invalid')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.network.priority.save' }));
+    expect(mockOkapi.patch).not.toHaveBeenCalled();
+  });
+
+  it.each(['0', '-8', '2147483647', '-2147483648'])('updates priority %s using the membership ID and refreshes the list', async value => {
+    mockOkapi.setResponses(singlePriorityFixtures());
+    renderDirectory(['/directory/entries/e1/networks']);
+
+    const input = await editPriority();
+    expect(input).toHaveValue(7);
+    expect(screen.getByRole('button', { name: 'ui-rsdir.network.priority.save' })).toBeDisabled();
+    fireEvent.change(input, { target: { value } });
+    mockOkapi.setResponses(singlePriorityFixtures({
+      'directory/entries/by-id/e1/networks': [{ id: 'n1', name: 'Alpha network', priority: Number(value) }],
+      'directory/entry-networks': { items: [{ id: 'm1', entry: 'e1', network: 'n1', priority: Number(value) }] },
+    }));
+    mockOkapi.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.network.priority.save' }));
+    await waitFor(() => expect(mockOkapi.patch).toHaveBeenCalledWith(
+      'directory/entry-networks/m1', { json: { priority: Number(value) } }
+    ));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'ui-rsdir.network.priority.save' })).not.toBeInTheDocument());
+    expect(networkTable().getByText(value)).toBeInTheDocument();
+    expect(mockOkapi.calledUrls()).toContain('directory/entry-networks?q=entry%3De1&limit=1000&offset=0');
+    expect(mockOkapi.calledUrls()).toContain('directory/entries/by-id/e1/networks');
+    expect(mockOkapi.calledUrls()).toContain('directory/entries/by-id/e1');
+    expect(mockOkapi.calledUrls().some(url => url.startsWith('directory/entries?'))).toBe(true);
+    expect(sendCallout).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
+  });
+
+  it('cancels a priority edit without updating and only permits one edit at a time', async () => {
+    mockOkapi.setResponses(priorityFixtures());
+    renderDirectory(['/directory/entries/e1/networks']);
+    await screen.findByText('Alpha network');
+    const buttons = screen.getAllByRole('button', { name: 'ui-rsdir.network.priority.edit' });
+    await waitFor(() => expect(buttons[0]).toBeEnabled());
+    fireEvent.click(buttons[0]);
+    expect(buttons[1]).toBeDisabled();
+    expect(document.getElementById('clickable-delete-network-n1')).toBeDisabled();
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'ui-rsdir.network.priority.forNetwork' }), { target: { value: '9' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.network.priority.cancel' }));
+    expect(mockOkapi.patch).not.toHaveBeenCalled();
+    expect(networkTable().getByText('7')).toBeInTheDocument();
+    expect(buttons[1]).toBeEnabled();
+  });
+
+  it.each([true, false])('handles a refreshed network list with edited network removed: %s', async removed => {
+    mockOkapi.setResponses(priorityFixtures());
+    const { queryClient } = renderDirectory(['/directory/entries/e1/networks']);
+    await screen.findByText('Alpha network');
+    const edit = document.getElementById('clickable-edit-network-priority-n1');
+    await waitFor(() => expect(edit).toBeEnabled());
+    fireEvent.click(edit);
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'ui-rsdir.network.priority.forNetwork' }), { target: { value: '9' } });
+
+    mockOkapi.setResponses(priorityFixtures({
+      'directory/entries/by-id/e1/networks': { items: [
+        ...(removed ? [] : [{ id: 'n1', name: 'Alpha network', priority: 7 }]),
+        { id: 'n2', name: 'Beta network', priority: -8 },
+      ] },
+    }));
+    await act(async () => {
+      await queryClient.invalidateQueries(['directory/entries/by-id/e1/networks']);
+    });
+
+    const otherEdit = document.getElementById('clickable-edit-network-priority-n2');
+    if (removed) {
+      expect(screen.queryByText('Alpha network')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'ui-rsdir.network.priority.cancel' })).not.toBeInTheDocument();
+      expect(otherEdit).toBeEnabled();
+      fireEvent.click(otherEdit);
+      expect(screen.getByRole('spinbutton', { name: 'ui-rsdir.network.priority.forNetwork' })).toHaveValue(-8);
+    } else {
+      expect(screen.getByRole('spinbutton', { name: 'ui-rsdir.network.priority.forNetwork' })).toHaveValue(9);
+      expect(screen.getByRole('button', { name: 'ui-rsdir.network.priority.cancel' })).toBeInTheDocument();
+      expect(otherEdit).toBeDisabled();
+    }
+    expect(mockOkapi.patch).not.toHaveBeenCalled();
+  });
+
+  it('prevents duplicate priority saves while the request is pending', async () => {
+    mockOkapi.setResponses(singlePriorityFixtures());
+    renderDirectory(['/directory/entries/e1/networks']);
+    const input = await editPriority();
+    fireEvent.change(input, { target: { value: '9' } });
+    let finishSave;
+    mockOkapi.patch.mockImplementationOnce(() => new Promise(resolve => { finishSave = resolve; }));
+    const save = screen.getByRole('button', { name: 'ui-rsdir.network.priority.save' });
+    fireEvent.click(save);
+    await waitFor(() => expect(save).toBeDisabled());
+    expect(input).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'ui-rsdir.network.priority.cancel' })).toBeDisabled();
+    fireEvent.click(save);
+    expect(mockOkapi.patch).toHaveBeenCalledTimes(1);
+    finishSave({});
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'ui-rsdir.network.priority.save' })).not.toBeInTheDocument());
+  });
+
+  it('disables editing when a network has no matching membership ID', async () => {
+    mockOkapi.setResponses(singlePriorityFixtures({ 'directory/entry-networks': { items: [] } }));
+    renderDirectory(['/directory/entries/e1/networks']);
+    const button = await screen.findByRole('button', { name: 'ui-rsdir.network.priority.edit' });
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(screen.queryByRole('button', { name: 'ui-rsdir.network.priority.save' })).not.toBeInTheDocument();
+    expect(mockOkapi.patch).not.toHaveBeenCalled();
+  });
+
+  it('retains a failed priority edit for retry', async () => {
+    mockOkapi.setResponses(singlePriorityFixtures());
+    renderDirectory(['/directory/entries/e1/networks']);
+    const input = await editPriority();
+    fireEvent.change(input, { target: { value: '-4' } });
+    mockOkapi.patch.mockRejectedValueOnce(new Error('Save failed'));
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.network.priority.save' }));
+    await waitFor(() => expect(sendCallout).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' })));
+    expect(input).toHaveValue(-4);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'ui-rsdir.network.priority.save' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.network.priority.save' }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'ui-rsdir.network.priority.save' })).not.toBeInTheDocument());
+    expect(mockOkapi.patch).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps networks visible when membership loading fails and disables editing', async () => {
+    mockOkapi.setResponses(singlePriorityFixtures({
+      'directory/entry-networks': () => { throw new Error('Membership lookup failed'); },
+    }));
+    renderDirectory(['/directory/entries/e1/networks']);
+    expect(await screen.findByText('Alpha network')).toBeInTheDocument();
+    expect((await screen.findByText('ui-rsdir.network.priority.load.error')).closest('[role="alert"]')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ui-rsdir.network.priority.edit' })).toBeDisabled();
+    expect(networkTable().getByText('7')).toBeInTheDocument();
+  });
+
+  it('loads all membership pages and uses a membership from the second page', async () => {
+    mockOkapi.setResponses(singlePriorityFixtures({
+      'directory/entry-networks': url => (new URLSearchParams(url.split('?')[1]).get('offset') === '0'
+        ? { items: Array.from({ length: 1000 }, (_, i) => ({ id: `other-${i}`, network: `other-${i}`, priority: 0 })) }
+        : { items: [{ id: 'm1', entry: 'e1', network: 'n1', priority: 7 }] }),
+    }));
+    renderDirectory(['/directory/entries/e1/networks']);
+    const input = await editPriority();
+    expect(mockOkapi.calledUrls()).toContain('directory/entry-networks?q=entry%3De1&limit=1000&offset=1000');
+    fireEvent.change(input, { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.network.priority.save' }));
+    await waitFor(() => expect(mockOkapi.patch).toHaveBeenCalledWith(
+      'directory/entry-networks/m1', { json: { priority: 2 } }
+    ));
   });
 
   it.each(['deficit', 'proportional'])('views and changes the ILL load balancing policy from %s', async policy => {
