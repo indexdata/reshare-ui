@@ -34,13 +34,21 @@ const Entries = ({
     setPagination({ query: searchQuery, offset: 0 });
   }, [searchQuery]);
 
-  const entries = entriesQuery?.data?.pages?.[offset / perPage]?.items || [];
+  const cachedPageAtOffset = pageOffset => {
+    const pageIndex = entriesQuery?.data?.pageParams?.findIndex(pageParam => (pageParam ?? 0) === pageOffset);
+    return entriesQuery?.data?.pages?.[pageIndex];
+  };
+
+  const entries = cachedPageAtOffset(offset)?.items || [];
   const openEntry = matchPath(location.pathname, { path: `${match.path}/:id` })?.params;
   const sparseEntries = (new Array(offset)).concat(entries);
   const totalCount = entriesQuery?.data?.pages?.[0]?.about?.count || 0;
 
   const fetchMore = (_askAmount, index) => {
-    entriesQuery.fetchNextPage({ pageParam: index });
+    // fetchNextPage appends even if this offset already exists in the cache.
+    if (!cachedPageAtOffset(index)) {
+      entriesQuery.fetchNextPage({ pageParam: index });
+    }
     setPagination({ query: searchQuery, offset: index });
   };
 

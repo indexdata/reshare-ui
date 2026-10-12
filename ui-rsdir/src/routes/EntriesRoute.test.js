@@ -18,12 +18,18 @@ jest.mock('@projectreshare/stripes-reshare', () => ({
 // with a paging control so tests can drive Entries' offset without layout timing.
 jest.mock('@folio/stripes/components', () => ({
   ...jest.requireActual('@folio/stripes/components'),
-  MultiColumnList: ({ contentData, onNeedMoreData, pageAmount }) => (
-    <div>
-      {contentData.map(entry => <div key={entry.id}>{entry.name}</div>)}
-      <button type="button" onClick={() => onNeedMoreData(pageAmount, pageAmount)}>Next page</button>
-    </div>
-  ),
+  MultiColumnList: ({ contentData, onNeedMoreData, pageAmount }) => {
+    const offset = Math.max(0, contentData.findIndex(Boolean));
+    return (
+      <div>
+        {contentData.map(entry => <div key={entry.id}>{entry.name}</div>)}
+        <button type="button" onClick={() => onNeedMoreData(pageAmount, offset + pageAmount)}>Next page</button>
+        <button disabled={offset === 0} type="button" onClick={() => onNeedMoreData(pageAmount, offset - pageAmount)}>
+          Previous page
+        </button>
+      </div>
+    );
+  },
 }));
 
 const queryInput = () => document.querySelector('input[name="query"]');
@@ -149,5 +155,45 @@ it('returns to page one when switching to an already cached search', async () =>
   act(() => history.goForward());
   await screen.findByText('University Central Library');
   expect(screen.queryByText('Second page entry')).not.toBeInTheDocument();
+  queryClient.clear();
+});
+
+it('reuses cached pages after revisiting a search and correctly loads subsequent pages', async () => {
+  mockOkapi.setResponses({
+    'directory/entries': url => {
+      const offset = Number(new URLSearchParams(url.split('?')[1]).get('offset'));
+      return { items: [{ id: `entry-${offset}`, name: `Page ${offset}` }], about: { count: 301 } };
+    },
+  });
+  const { history, queryClient } = renderList('?qindex=name&query=Central');
+  await screen.findByText('Page 0');
+  fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+  await screen.findByText('Page 100');
+  submitSearch('Library', 'name');
+  await screen.findByText('Page 0');
+  act(() => history.goBack());
+  await screen.findByText('Page 0');
+  const requestsBeforePaging = mockOkapi.calledUrls().length;
+
+  fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+  await screen.findByText('Page 100');
+  expect(mockOkapi.calledUrls()).toHaveLength(requestsBeforePaging);
+  fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+  await screen.findByText('Page 200');
+  expect(lastParams().get('offset')).toBe('200');
+  const requestsAfterNewPage = mockOkapi.calledUrls().length;
+
+  fireEvent.click(screen.getByRole('button', { name: 'Previous page' }));
+  await screen.findByText('Page 100');
+  fireEvent.click(screen.getByRole('button', { name: 'Previous page' }));
+  await screen.findByText('Page 0');
+  fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+  await screen.findByText('Page 100');
+  fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+  await screen.findByText('Page 200');
+  expect(mockOkapi.calledUrls()).toHaveLength(requestsAfterNewPage);
+  const cached = queryClient.getQueryData(['directory/entries', 'name="*Central*"', '@projectreshare/rsdir']);
+  expect(cached.pageParams.map(offset => offset ?? 0)).toEqual([0, 100, 200]);
+  expect(cached.pages).toHaveLength(3);
   queryClient.clear();
 });
