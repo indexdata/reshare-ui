@@ -44,6 +44,16 @@ const EXISTING_TEMPLATES = {
   }],
 };
 
+const PLACEHOLDERS = {
+  singleRecord: [
+    { placeholder: '{{.ReqId}}', description: 'Requester request identifier' },
+    { placeholder: '{{.Title}}', description: 'Title of the requested item' },
+  ],
+  batchRecord: [
+    { placeholder: '{{.FullCount}}', description: 'Total number of requests matched by the batch query' },
+  ],
+};
+
 const baseInitial = {
   title: '',
   purpose: 'email',
@@ -89,9 +99,11 @@ describe('TemplateForm', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    lastEditor.selection = null;
     mockOkapi.setResponses({
       'broker/state_model/templates': PRESETS,
       'broker/templates': EXISTING_TEMPLATES,
+      'broker/templates/placeholders': PLACEHOLDERS,
     });
   });
 
@@ -271,6 +283,88 @@ describe('TemplateForm', () => {
     });
 
     expect([...byId('template-audience').options].map(opt => opt.value)).toEqual(['', 'patron', 'staff']);
+  });
+
+  describe('placeholders', () => {
+    const editingValues = {
+      ...baseInitial,
+      title: 'T',
+      subject: 'Hello world',
+      body: 'Request details',
+      labels: ['notice'],
+    };
+
+    it('shows the broker placeholders in their data-source groups', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: editingValues });
+
+      fireEvent.click(byId('template-subject-placeholder'));
+
+      expect(await screen.findByText('{{.ReqId}}')).toBeInTheDocument();
+      expect(screen.getByText('Requester request identifier')).toBeInTheDocument();
+      expect(screen.getByText('{{.FullCount}}')).toBeInTheDocument();
+      expect(screen.getByText('Total number of requests matched by the batch query')).toBeInTheDocument();
+      expect(screen.getByText('ui-rs.settings.templates.placeholders.singleRecord')).toBeInTheDocument();
+      expect(screen.getByText('ui-rs.settings.templates.placeholders.batchRecord')).toBeInTheDocument();
+    });
+
+    it('offers placeholders while creating a template', async () => {
+      await renderForm(jest.fn());
+
+      fireEvent.click(byId('template-subject-placeholder'));
+
+      expect(await screen.findByText('{{.ReqId}}')).toBeInTheDocument();
+      expect(byId('template-body-placeholder')).toBeInTheDocument();
+    });
+
+    it('inserts selected placeholders at the subject cursor', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: editingValues });
+      const subject = byId('template-subject');
+      subject.setSelectionRange(6, 6);
+
+      fireEvent.click(byId('template-subject-placeholder'));
+      fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.ReqId\}\}/ }));
+      fireEvent.click(screen.getByRole('checkbox', { name: /\{\{\.Title\}\}/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
+
+      expect(subject.value).toBe('Hello {{.ReqId}} {{.Title}}world');
+    });
+
+    it('inserts a selected placeholder at the body cursor', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: editingValues });
+      const body = byId('template-body');
+      body.setSelectionRange(8, 8);
+
+      fireEvent.click(byId('template-body-placeholder'));
+      fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.FullCount\}\}/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
+
+      expect(body.value).toBe('Request {{.FullCount}}details');
+    });
+
+    it('inserts a selected placeholder at the rich-text cursor', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: htmlValues });
+      lastEditor.setSelection(2);
+      lastEditor.blur();
+
+      fireEvent.click(byId('template-body-placeholder'));
+      fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.ReqId\}\}/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
+
+      expect(byId('template-body').value).toBe('<p>Hi{{.ReqId}}</p>');
+    });
+
+    it('keeps editing available when placeholders cannot be fetched', async () => {
+      mockOkapi.setResponses({
+        'broker/state_model/templates': PRESETS,
+        'broker/templates': EXISTING_TEMPLATES,
+      });
+      await renderForm(jest.fn(), { editing: true, initialValues: editingValues });
+
+      fireEvent.click(byId('template-subject-placeholder'));
+
+      expect(await screen.findByText('ui-rs.settings.templates.placeholders.unavailable')).toBeInTheDocument();
+      expect(byId('template-subject')).toBeEnabled();
+    });
   });
 
   describe('labels', () => {

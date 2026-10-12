@@ -10,6 +10,8 @@ import {
   ConfirmationModal,
   Editor,
   Label,
+  Modal,
+  ModalFooter,
   Pane,
   PaneFooter,
   RepeatableField,
@@ -109,6 +111,77 @@ const LabelSuggestions = ({ suggestions }) => {
   );
 };
 
+const PlaceholderPicker = ({ placeholders, isLoading, isError, onClose, onInsert }) => {
+  const [selected, setSelected] = useState([]);
+  const groups = [
+    ['singleRecord', placeholders?.singleRecord ?? []],
+    ['batchRecord', placeholders?.batchRecord ?? []],
+  ];
+
+  const toggle = (placeholder) => {
+    setSelected(current => (
+      current.includes(placeholder)
+        ? current.filter(value => value !== placeholder)
+        : [...current, placeholder]
+    ));
+  };
+
+  return (
+    <Modal
+      label={<FormattedMessage id="ui-rs.settings.templates.placeholders.heading" />}
+      open
+      onClose={onClose}
+      dismissible
+    >
+      {isLoading && (
+        <div role="status"><FormattedMessage id="ui-rs.settings.templates.placeholders.loading" /></div>
+      )}
+      {isError && (
+        <div role="alert"><FormattedMessage id="ui-rs.settings.templates.placeholders.unavailable" /></div>
+      )}
+      {!isLoading && !isError && groups.map(([name, entries]) => (
+        <section key={name} className={css.placeholderGroup}>
+          <h3><FormattedMessage id={`ui-rs.settings.templates.placeholders.${name}`} /></h3>
+          <div className={css.placeholderList}>
+            {entries.map(({ placeholder, description }) => (
+              <Checkbox
+                key={placeholder}
+                checked={selected.includes(placeholder)}
+                fullWidth
+                label={(
+                  <span>
+                    <code>{placeholder}</code>
+                    <span className={css.placeholderDescription}>{description}</span>
+                  </span>
+                )}
+                onChange={() => toggle(placeholder)}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
+      <ModalFooter>
+        <Button
+          buttonStyle="primary"
+          disabled={!selected.length}
+          onClick={() => onInsert(selected.join(' '))}
+        >
+          <FormattedMessage id="ui-rs.settings.templates.placeholders.insert" />
+        </Button>
+        <Button onClick={onClose}>
+          <FormattedMessage id="stripes-core.button.cancel" />
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+};
+
+const PlaceholderButton = ({ id, onClick }) => (
+  <Button id={id} buttonStyle="link" marginBottom0 onClick={onClick}>
+    <FormattedMessage id="ui-rs.settings.templates.placeholders.open" />
+  </Button>
+);
+
 // The body, as either the WYSIWYG or its markup. Quill has no source view of its
 // own, so the toggle is separate from contentType, which decides what is stored.
 // Going back to Quill re-parses the markup and drops anything it has no format
@@ -127,7 +200,7 @@ const SourceToggle = ({ checked, onChange }) => (
   />
 );
 
-const BodyField = ({ isHtml, storedBody }) => {
+const BodyField = ({ isHtml, storedBody, editorRef, editorSelectionRef }) => {
   const form = useForm();
   const [sourceMode, setSourceMode] = useState(false);
   const [confirmWysiwyg, setConfirmWysiwyg] = useState(false);
@@ -167,10 +240,14 @@ const BodyField = ({ isHtml, storedBody }) => {
         {({ input, meta }) => (
           <Editor
             id="template-body"
+            editorRef={editorRef}
             input={input}
             meta={meta}
             required
             label={label}
+            onChangeSelection={(range) => {
+              if (range) editorSelectionRef.current = range;
+            }}
             // Spread after `input` by formField, so this wins over input.onChange
             // and decides for itself what reaches the form.
             onChange={(value, delta, source) => {
@@ -204,11 +281,21 @@ const BodyField = ({ isHtml, storedBody }) => {
 
 const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, submitting, editing }) => {
   const intl = useIntl();
+  const [placeholderTarget, setPlaceholderTarget] = useState(null);
+  const bodyEditorRef = useRef(null);
+  const bodyEditorSelectionRef = useRef(null);
   // Presets seed the form; stored templates contribute any locally used labels.
   // Both are optional, so either request can fail without disabling free-text labels.
   const { data: presets } = useOkapiQuery('broker/state_model/templates', { useErrorBoundary: false });
   const { data: templates } = useOkapiQuery('broker/templates', {
     searchParams: { limit: 100 },
+    useErrorBoundary: false,
+  });
+  const {
+    data: placeholders,
+    isLoading: placeholdersLoading,
+    isError: placeholdersError,
+  } = useOkapiQuery('broker/templates/placeholders', {
     useErrorBoundary: false,
   });
   const labelSources = [...(presets ?? []), ...(templates?.items ?? [])];
@@ -261,6 +348,44 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
       {({ handleSubmit, values, pristine, invalid, form }) => {
         const isHtml = values.contentType === 'html';
         const isPullslip = values.purpose === 'pullslip';
+        const openPlaceholderPicker = (field) => {
+          if (field === 'body' && isHtml && bodyEditorRef.current) {
+            const editor = bodyEditorRef.current.getEditor();
+            const range = editor.getSelection() ?? bodyEditorSelectionRef.current ?? {
+              index: Math.max(0, editor.getLength() - 1),
+              length: 0,
+            };
+            setPlaceholderTarget({
+              field,
+              start: range.index,
+              end: range.index + range.length,
+              richText: true,
+            });
+            return;
+          }
+          const element = document.getElementById(`template-${field}`);
+          const value = form.getState().values[field] ?? '';
+          const start = typeof element?.selectionStart === 'number' ? element.selectionStart : value.length;
+          const end = typeof element?.selectionEnd === 'number' ? element.selectionEnd : start;
+          setPlaceholderTarget({ field, start, end });
+        };
+        const insertPlaceholders = (value) => {
+          const { field, start, end, richText } = placeholderTarget;
+          if (richText && bodyEditorRef.current) {
+            const editor = bodyEditorRef.current.getEditor();
+            const ops = [];
+            if (start) ops.push({ retain: start });
+            if (end > start) ops.push({ delete: end - start });
+            ops.push({ insert: value });
+            editor.updateContents({ ops }, 'user');
+            editor.setSelection(start + value.length, 0);
+            setPlaceholderTarget(null);
+            return;
+          }
+          const current = form.getState().values[field] ?? '';
+          form.change(field, `${current.slice(0, start)}${value}${current.slice(end)}`);
+          setPlaceholderTarget(null);
+        };
         const footer = (
           <PaneFooter
             renderStart={
@@ -350,6 +475,12 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
                     component={TextField}
                     label={<FormattedMessage id="ui-rs.settings.templates.field.subject" />}
                   />
+                  {!isPullslip && (
+                    <PlaceholderButton
+                      id="template-subject-placeholder"
+                      onClick={() => openPlaceholderPicker('subject')}
+                    />
+                  )}
                   {isPullslip && (
                     <div id="template-subject-help" className={css.help}>
                       <FormattedMessage id="ui-rs.settings.templates.field.subjectHelp" />
@@ -393,7 +524,16 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
 
               <Row>
                 <Col xs={12}>
-                  <BodyField isHtml={isHtml} storedBody={initialValues?.body} />
+                  <BodyField
+                    isHtml={isHtml}
+                    storedBody={initialValues?.body}
+                    editorRef={bodyEditorRef}
+                    editorSelectionRef={bodyEditorSelectionRef}
+                  />
+                  <PlaceholderButton
+                    id="template-body-placeholder"
+                    onClick={() => openPlaceholderPicker('body')}
+                  />
                 </Col>
               </Row>
 
@@ -425,6 +565,15 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
                   <LabelSuggestions suggestions={suggestedLabels(labelSources)} />
                 </Col>
               </Row>
+              {placeholderTarget && (
+                <PlaceholderPicker
+                  placeholders={placeholders}
+                  isLoading={placeholdersLoading}
+                  isError={placeholdersError}
+                  onClose={() => setPlaceholderTarget(null)}
+                  onInsert={insertPlaceholders}
+                />
+              )}
             </form>
           </Pane>
         );

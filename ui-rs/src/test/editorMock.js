@@ -7,15 +7,45 @@ import React from 'react';
 // That path is the formField-wrapped export, so the stub gets final-form's
 // `input`/`meta` and wires the handlers itself.
 //
-// This exists so tests can run, not so they can assert on the editor: anything it
-// appears to prove about rich text is a property of this stub.
-// react-quill also fires changes nobody typed (its own re-parse, source `api`), and
-// no DOM event can produce one. Rather than have the stub imitate Quill, it hands the
-// current handler back so a test can call it with the arguments react-quill documents.
-export const lastEditor = { onChange: null };
+// react-quill also fires changes and selection events no DOM event can reproduce in
+// jsdom. The stub exposes the small Quill API surface the form uses so tests exercise
+// that boundary while keeping the editor's own rendering out of scope.
+export const lastEditor = {
+  onChange: null,
+  selection: null,
+  setSelection(index, length = 0) {
+    this.selection = { index, length };
+    this.onChangeSelection?.(this.selection);
+  },
+  blur() {
+    this.selection = null;
+    this.onChangeSelection?.(null);
+  },
+};
 
-const Editor = ({ input = {}, id, label, value, readOnly, onChange }) => {
+const Editor = ({ input = {}, id, label, value, readOnly, onChange, onChangeSelection, editorRef }) => {
   lastEditor.onChange = onChange ?? ((html) => input.onChange(html));
+  lastEditor.onChangeSelection = onChangeSelection;
+  lastEditor.value = input.value ?? value ?? '';
+
+  const quill = {
+    getSelection: () => lastEditor.selection,
+    getLength: () => lastEditor.value.replace(/<[^>]*>/g, '').length + 1,
+    updateContents: ({ ops }, source) => {
+      const retain = ops.find(op => op.retain)?.retain ?? 0;
+      const remove = ops.find(op => op.delete)?.delete ?? 0;
+      const insert = ops.find(op => op.insert)?.insert ?? '';
+      const paragraph = lastEditor.value.match(/^<p>(.*)<\/p>$/s);
+      const text = paragraph ? paragraph[1] : lastEditor.value;
+      const nextText = `${text.slice(0, retain)}${insert}${text.slice(retain + remove)}`;
+      const nextValue = paragraph ? `<p>${nextText}</p>` : nextText;
+      lastEditor.value = nextValue;
+      lastEditor.onChange(nextValue, null, source);
+    },
+    setSelection: (index, length = 0) => lastEditor.setSelection(index, length),
+  };
+  if (editorRef) editorRef.current = { getEditor: () => quill };
+
   return (
     <textarea
       id={id}
