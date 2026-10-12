@@ -28,11 +28,15 @@ const SearchAndFilter = ({
         name="query"
         indexName="qindex"
         onChange={searchHandlers.query}
-        onClear={searchHandlers.reset}
+        onClear={() => {
+          // SearchField emits a native input change after onClear. Reset last so
+          // that event cannot restore the previous index from batched state.
+          Promise.resolve().then(() => searchHandlers.reset());
+        }}
         searchableIndexes={indexes}
-        selectedIndex={searchValue.qindex}
+        selectedIndex={searchValue.qindex || ''}
         onChangeIndex={searchHandlers.query}
-        value={searchValue.query}
+        value={searchValue.query || ''}
       />
       <Button
         buttonStyle="primary"

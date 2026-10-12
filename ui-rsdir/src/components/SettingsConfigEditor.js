@@ -505,7 +505,11 @@ const SettingsConfigEditor = ({
                 <Badge color="default" size="small">
                   <span className={css.vendorBadgeContent}>
                     <Icon icon="info" size="small" aria-hidden="true" />
-                    <FormattedMessage id="ui-rsdir.settingsConfig.vendorBadge" defaultMessage="[Vendor]" />
+                    <FormattedMessage
+                      id="ui-rsdir.settingsConfig.vendorBadge"
+                      defaultMessage="[{name}]"
+                      values={{ name: field.overrideSource.name }}
+                    />
                   </span>
                 </Badge>
               </button>
@@ -1459,6 +1463,63 @@ const SettingsConfigEditor = ({
     return value;
   };
 
+  // Profile values are display metadata; never read them into drafts or PATCH values.
+  const renderOverrideValue = (field, value, path) => {
+    if (value === null) return 'null';
+    if (value === '') return '""';
+    if (Array.isArray(value)) {
+      if (value.length === 0) return '[]';
+      if (normalizedValueType(field.valueType) === SYMBOL_LIST) {
+        return renderObjectChildValue(field, value);
+      }
+      if (normalizedValueType(field.valueType) === OBJECT_ARRAY) {
+        return (
+          <div className={css.objectArrayValues}>
+            {value.map((item, index) => (
+              <div className={css.objectArrayValue} key={`${path}-${index}`}>
+                <div className={css.objectArrayComponents}>
+                  {field.objectMap.filter(child => Object.prototype.hasOwnProperty.call(item, child.fieldName)).map(child => (
+                    <div className={css.objectArrayComponent} key={child.fieldName}>
+                      <span className={css.objectArrayComponentLabel}>
+                        {renderFieldLabel(child, `${path}.${child.fieldName}`, `override-${index}`)}:
+                      </span>
+                      <div className={css.objectArrayComponentValue}>
+                        {renderOverrideValue(child, item[child.fieldName], `${path}.${child.fieldName}`)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      }
+      return (
+        <div className={css.structuredValues}>
+          {value.map((item, index) => (
+            <div className={css.structuredValue} key={`${path}-${index}`}>
+              <span className={css.structuredValueText}>{renderOverrideValue({}, item, path)}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    if (isObject(value)) {
+      return (
+        <div className={css.structuredValues}>
+          {Object.entries(value).map(([key, item]) => (
+            <div className={css.structuredValue} key={key}>
+              <span className={css.stringMapKey}>{key}</span>
+              <span className={css.stringMapSeparator}>:</span>
+              <span>{renderOverrideValue({}, item, `${path}.${key}`)}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return value === undefined ? '' : String(value);
+  };
+
   const removeObjectArrayValue = (field, parentField, index) => {
     const path = pathForField(field, parentField);
     setDraftFieldValue(field, parentField, current => (
@@ -1838,6 +1899,11 @@ const SettingsConfigEditor = ({
                     <span className={css.objectArrayComponentLabel}>
                       {renderFieldLabel(child, `${path}.${child.fieldName}`, `value-${index}`)}:
                     </span>
+                    {child.disabled && Object.prototype.hasOwnProperty.call(child, 'overrideValue') &&
+                      <div className={css.objectArrayComponentValue}>
+                        {renderOverrideValue(child, child.overrideValue, `${path}.${child.fieldName}`)}
+                      </div>
+                    }
                     {!child.disabled &&
                       <>
                         <div className={css.objectArrayComponentValue}>
@@ -1896,6 +1962,9 @@ const SettingsConfigEditor = ({
               <div className={css.subFieldLabel}>
                 {renderFieldLabel(child, `${path}.${child.fieldName}`, 'new')}
               </div>
+              {child.disabled && Object.prototype.hasOwnProperty.call(child, 'overrideValue') &&
+                renderOverrideValue(child, child.overrideValue, `${path}.${child.fieldName}`)
+              }
               {!child.disabled && renderNewObjectChildInput(field, parentField, child)}
             </div>
           ))}
@@ -1968,6 +2037,9 @@ const SettingsConfigEditor = ({
   };
 
   const renderFieldDisplay = (field, parentField) => {
+    if (field.disabled && Object.prototype.hasOwnProperty.call(field, 'overrideValue')) {
+      return renderOverrideValue(field, field.overrideValue, pathForField(field, parentField));
+    }
     const type = normalizedValueType(field.valueType);
 
     if (type === STRING_ARRAY) {
@@ -2034,6 +2106,9 @@ const SettingsConfigEditor = ({
               key={child.fieldName}
             >
               <div className={css.subFieldLabel}>{renderFieldLabel(child, childPath)}</div>
+              {child.disabled && Object.prototype.hasOwnProperty.call(child, 'overrideValue') &&
+                renderFieldDisplay(child, context)
+              }
               {!child.disabled && (isChildSubField ?
                 renderSubField(child, isEditing, context) :
                 isEditing ? renderFieldInput(child, context) : renderFieldDisplay(child, context)
@@ -2134,6 +2209,7 @@ const SettingsConfigEditor = ({
               </Button>
             }
           >
+            {field.disabled && Object.prototype.hasOwnProperty.call(field, 'overrideValue') && renderFieldDisplay(field)}
             {!field.disabled && (isEditing ?
               <div className={css.fieldEditor}>
                 <div className={css.fieldInput}>

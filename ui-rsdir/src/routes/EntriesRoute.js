@@ -18,7 +18,8 @@ const EntriesRoute = ({ children }) => {
   const urlParams = queryString.parse(location.search);
   const queryParams = {
     query: urlParams.query || '',
-    qindex: urlParams.qindex || '',
+    // Use our contains-search templates rather than makeQueryFunction's index shortcut.
+    qindex: '',
     filters: '',
     sort: ''
   };
@@ -29,7 +30,7 @@ const EntriesRoute = ({ children }) => {
     'name': 'name="*%{query.query}*"',
   };
 
-  const selectedTemplate = queryTemplates[queryParams.qindex] || queryTemplates[''];
+  const selectedTemplate = queryTemplates[urlParams.qindex] || queryTemplates[''];
 
   // Create CQL query builder using makeQueryFunction with selected template
   const getCQL = makeQueryFunction(
@@ -38,6 +39,8 @@ const EntriesRoute = ({ children }) => {
     {},  // sortMap (empty for now)
     [],  // filterConfig (empty for now)
     0,   // don't fail on empty query
+    undefined,
+    { rightTrunc: false, escape: true },
   );
   const cql = getCQL(queryParams, {}, { query: queryParams }, console);
 
@@ -58,13 +61,13 @@ const EntriesRoute = ({ children }) => {
     }
   );
 
-  if (!entriesQuery.isSuccess) {
-    return null;
-  }
-
   return (
     <SearchAndSortQuery
-      initialSearchState={{ query: '' }}
+      initialSearchState={{ query: '', qindex: '' }}
+      searchParamsMapping={{
+        query: value => ({ query: value }),
+        qindex: value => ({ qindex: value }),
+      }}
     >
       {({
         searchValue,
@@ -76,6 +79,7 @@ const EntriesRoute = ({ children }) => {
         searchChanged,
       }) => (
         <Entries
+          searchQuery={cql || ''}
           entriesQuery={entriesQuery}
           searchValue={searchValue}
           getSearchHandlers={getSearchHandlers}

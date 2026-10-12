@@ -4,7 +4,9 @@ import { FormattedMessage } from 'react-intl';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 import EntryPane, { EntryLoadingPane } from '../components/EntryPane';
 import SettingsConfigEditor from '../components/SettingsConfigEditor';
-import { selectionChangeImpact, vendorFieldMappingForVendor } from '../config/vendorFieldMapping';
+import HostProfilesError from '../components/HostProfilesError';
+import useHostProfiles from '../hooks/useHostProfiles';
+import { hostProfileChoices, selectionChangeImpact, vendorFieldMappingForVendor } from '../config/vendorFieldMapping';
 
 const STALE_QUERY_TIME = 2 * 60 * 1000;
 const entryPath = id => `directory/entries/by-id/${id}`;
@@ -14,7 +16,6 @@ export const fieldMap = [
     fieldName: 'profile',
     valueType: 'string',
     nullOnEmpty: true,
-    validChoices: ['Alma', 'Sierra', 'Koha', 'WMS', 'Aleph', 'FOLIO', 'Generic']
   },
   {
     fieldName: 'sru',
@@ -230,6 +231,8 @@ export const fieldMap = [
 
 const CatalogConfigRoute = () => {
   const { id } = useParams();
+  const hostProfiles = useHostProfiles('catalogConfig', fieldMap);
+  const { metadata } = hostProfiles;
 
   const entryQuery = useOkapiQuery(entryPath(id), {
     staleTime: STALE_QUERY_TIME,
@@ -238,12 +241,26 @@ const CatalogConfigRoute = () => {
   const profile = entryQuery.data?.catalogConfig?.profile;
   const selectedProfile = profile || vendor;
   const overrideSetting = profile ? 'catalogConfig.profile' : 'lmsConfig.vendor';
-  const mappedFields = useMemo(
-    () => vendorFieldMappingForVendor(fieldMap, selectedProfile, 'catalogConfig', overrideSetting),
-    [selectedProfile, overrideSetting],
-  );
+  const mappedFields = useMemo(() => {
+    if (!metadata) return [];
+    const fields = fieldMap.map(field => (
+      field.fieldName === 'profile' ? {
+        ...field,
+        validChoices: hostProfileChoices(metadata.names, profile),
+      } : field
+    ));
+    return vendorFieldMappingForVendor(fields, selectedProfile, 'catalogConfig', metadata.vendorFieldMapping, overrideSetting, metadata.vendorFieldValues);
+  }, [selectedProfile, overrideSetting, metadata, profile]);
 
-  if (!entryQuery.isSuccess) return <EntryLoadingPane />;
+  if (!entryQuery.isSuccess || (!metadata && !hostProfiles.isError)) return <EntryLoadingPane />;
+
+  if (!metadata) {
+    return (
+      <EntryPane entry={entryQuery.data}>
+        <HostProfilesError isFetching={hostProfiles.isFetching} refetch={hostProfiles.refetch} />
+      </EntryPane>
+    );
+  }
 
   return (
     <EntryPane entry={entryQuery.data}>
@@ -259,7 +276,9 @@ const CatalogConfigRoute = () => {
         fieldLabelId={fieldLabelId}
         fieldMapping={mappedFields}
         getSelectionChangeImpact={({ fieldName, nextValue, resource }) => (
-          fieldName === 'profile' ? selectionChangeImpact({ configKey: 'catalogConfig', nextValue, resource }) : undefined
+          fieldName === 'profile' ? selectionChangeImpact({
+            configKey: 'catalogConfig', nextValue, resource, vendorFieldMapping: metadata.vendorFieldMapping,
+          }) : undefined
         )}
         initialResource={entryQuery.data}
         resourcePath={entryPath(id)}

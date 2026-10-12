@@ -4,7 +4,9 @@ import { FormattedMessage } from 'react-intl';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 import EntryPane, { EntryLoadingPane } from '../components/EntryPane';
 import SettingsConfigEditor from '../components/SettingsConfigEditor';
-import { selectionChangeImpact, vendorFieldMappingForVendor } from '../config/vendorFieldMapping';
+import HostProfilesError from '../components/HostProfilesError';
+import useHostProfiles from '../hooks/useHostProfiles';
+import { hostProfileChoices, selectionChangeImpact, vendorFieldMappingForVendor } from '../config/vendorFieldMapping';
 
 const STALE_QUERY_TIME = 2 * 60 * 1000;
 const entryPath = id => `directory/entries/by-id/${id}`;
@@ -14,7 +16,6 @@ const fieldMap = [
     fieldName: 'vendor',
     valueType: 'string',
     nullOnEmpty: true,
-    validChoices: ['Alma', 'Sierra', 'Koha', 'WMS', 'Aleph', 'FOLIO', 'Generic']
   },
   {
     fieldName: 'address',
@@ -131,17 +132,33 @@ const fieldMap = [
 
 const LMSConfigRoute = () => {
   const { id } = useParams();
+  const hostProfiles = useHostProfiles('lmsConfig', fieldMap);
+  const { metadata } = hostProfiles;
 
   const entryQuery = useOkapiQuery(entryPath(id), {
     staleTime: STALE_QUERY_TIME,
   });
   const vendor = entryQuery.data?.lmsConfig?.vendor;
-  const mappedFields = useMemo(
-    () => vendorFieldMappingForVendor(fieldMap, vendor, 'lmsConfig'),
-    [vendor],
-  );
+  const mappedFields = useMemo(() => {
+    if (!metadata) return [];
+    const fields = fieldMap.map(field => (
+      field.fieldName === 'vendor' ? {
+        ...field,
+        validChoices: hostProfileChoices(metadata.names, vendor),
+      } : field
+    ));
+    return vendorFieldMappingForVendor(fields, vendor, 'lmsConfig', metadata.vendorFieldMapping, 'lmsConfig.vendor', metadata.vendorFieldValues);
+  }, [vendor, metadata]);
 
-  if (!entryQuery.isSuccess) return <EntryLoadingPane />;
+  if (!entryQuery.isSuccess || (!metadata && !hostProfiles.isError)) return <EntryLoadingPane />;
+
+  if (!metadata) {
+    return (
+      <EntryPane entry={entryQuery.data}>
+        <HostProfilesError isFetching={hostProfiles.isFetching} refetch={hostProfiles.refetch} />
+      </EntryPane>
+    );
+  }
 
   return (
     <EntryPane entry={entryQuery.data}>
@@ -157,7 +174,9 @@ const LMSConfigRoute = () => {
         fieldLabelId={fieldLabelId}
         fieldMapping={mappedFields}
         getSelectionChangeImpact={({ fieldName, nextValue, resource }) => (
-          fieldName === 'vendor' ? selectionChangeImpact({ configKey: 'lmsConfig', nextValue, resource }) : undefined
+          fieldName === 'vendor' ? selectionChangeImpact({
+            configKey: 'lmsConfig', nextValue, resource, vendorFieldMapping: metadata.vendorFieldMapping,
+          }) : undefined
         )}
         initialResource={entryQuery.data}
         resourcePath={entryPath(id)}

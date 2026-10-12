@@ -8,6 +8,11 @@ import SettingsConfigEditor from '../components/SettingsConfigEditor';
 
 let mockResource;
 
+jest.mock('../hooks/useDirectoryOpenApi', () => ({
+  __esModule: true,
+  default: () => ({ data: require('../../test/fixtures/directoryOpenApi'), isSuccess: true }),
+}));
+
 jest.mock('react-router-dom', () => ({ useParams: () => ({ id: 'entry-id' }) }));
 jest.mock('react-intl', () => ({ FormattedMessage: () => null }));
 jest.mock('@projectreshare/stripes-reshare', () => ({
@@ -21,6 +26,10 @@ jest.mock('../components/EntryPane', () => ({
 jest.mock('../components/SettingsConfigEditor', () => ({
   __esModule: true,
   default: jest.fn(() => null),
+}));
+jest.mock('../components/HostProfilesError', () => ({
+  __esModule: true,
+  default: () => null,
 }));
 
 const mapping = () => SettingsConfigEditor.mock.calls[SettingsConfigEditor.mock.calls.length - 1][0].fieldMapping;

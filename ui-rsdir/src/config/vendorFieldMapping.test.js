@@ -1,9 +1,18 @@
 import {
   applyDisabledPaths,
-  vendorFieldMapping,
-  vendorFieldMappingForVendor,
-  selectionChangeImpact,
+  hostProfilesFromOpenApi,
+  hostProfileChoices,
+  vendorFieldMappingForVendor as mapVendorFields,
+  selectionChangeImpact as changeImpact,
 } from './vendorFieldMapping';
+
+import spec from '../../test/fixtures/directoryOpenApi';
+
+const { vendorFieldMapping, vendorFieldValues } = hostProfilesFromOpenApi(spec);
+const vendorFieldMappingForVendor = (fields, vendor, configKey, setting) => (
+  mapVendorFields(fields, vendor, configKey, vendorFieldMapping, setting)
+);
+const selectionChangeImpact = options => changeImpact({ ...options, vendorFieldMapping });
 
 describe('vendorFieldMapping', () => {
   it.each([
@@ -150,6 +159,7 @@ describe('vendorFieldMapping', () => {
           'holdingsFormat.marc.locationSubField',
           'holdingsFormat.marc.callNumberSubField',
           'holdingsFormat.marc.availability',
+          'holdingsFormat.marc.shelvingLocationSubField',
         ],
       },
       Sierra: {
@@ -213,4 +223,82 @@ describe('vendorFieldMapping', () => {
       { fieldName: 'address', disabled: false },
     ]);
   });
+});
+
+describe('hostProfilesFromOpenApi', () => {
+  it('sorts published names and retains saved selections without inventing rules', () => {
+    const { names } = hostProfilesFromOpenApi(spec);
+    expect(names).toEqual(['Alma', 'FOLIO', 'Generic', 'Koha', 'Sierra']);
+    expect(hostProfileChoices(names, 'WMS')).toEqual([...names, 'WMS']);
+    expect(hostProfileChoices(names, 'Alma')).toBe(names);
+    expect(hostProfileChoices(names, undefined)).toBe(names);
+  });
+
+  it('derives new profile paths from nested objects, treating arrays and falsy scalars as leaves', () => {
+    const input = { 'x-host-profiles': { NewVendor: {
+      lmsConfig: { enabled: false, empty: '', zero: 0, cleared: null, group: { ignored: {}, leaf: true } },
+      catalogConfig: { items: [{ code: 'x' }], emptyItems: [] },
+    },
+    Empty: {} } };
+    const original = JSON.stringify(input);
+    expect(hostProfilesFromOpenApi(input)).toEqual({
+      names: ['Empty', 'NewVendor'],
+      vendorFieldValues: {
+        Empty: { lmsConfig: {}, catalogConfig: {} },
+        NewVendor: {
+          lmsConfig: { enabled: false, empty: '', zero: 0, cleared: null, 'group.leaf': true },
+          catalogConfig: { items: [{ code: 'x' }], emptyItems: [] },
+        },
+      },
+      vendorFieldMapping: {
+        Empty: { lmsConfig: [], catalogConfig: [] },
+        NewVendor: {
+          lmsConfig: ['enabled', 'empty', 'zero', 'cleared', 'group.leaf'],
+          catalogConfig: ['items', 'emptyItems'],
+        },
+      },
+    });
+    expect(JSON.stringify(input)).toBe(original);
+  });
+
+  it.each([
+    undefined, {}, { 'x-host-profiles': null }, { 'x-host-profiles': [] }, { 'x-host-profiles': {} },
+    { 'x-host-profiles': { Bad: null } }, { 'x-host-profiles': { Bad: [] } },
+    { 'x-host-profiles': { Bad: { lmsConfig: false } } },
+    { 'x-host-profiles': { Bad: { catalogConfig: null } } },
+  ])('rejects missing or malformed metadata: %j', input => {
+    expect(() => hostProfilesFromOpenApi(input)).toThrow();
+  });
+
+  it('does not confuse inherited properties with a published profile', () => {
+    expect(mapVendorFields([{ fieldName: 'enabled' }], 'constructor', 'lmsConfig', vendorFieldMapping))
+      .toEqual([{ fieldName: 'enabled', disabled: false }]);
+    expect(changeImpact({ configKey: 'lmsConfig', nextValue: 'constructor', vendorFieldMapping }).groups).toEqual([]);
+  });
+});
+
+it('attaches raw values only to overridden leaves without changing the source mapping', () => {
+  const fields = [{ fieldName: 'ncipNamespaceEnabled' }, { fieldName: 'address' }];
+  const result = mapVendorFields(fields, 'Koha', 'lmsConfig', vendorFieldMapping, undefined, vendorFieldValues);
+  expect(result[0]).toMatchObject({ disabled: true, overrideValue: false });
+  expect(result[1]).not.toHaveProperty('overrideValue');
+  expect(fields[0]).not.toHaveProperty('overrideValue');
+  const catalog = mapVendorFields([{
+    fieldName: 'holdingsFormat', onlyOne: true, subMap: [{ fieldName: 'marc', subMap: [{ fieldName: 'availability' }] }],
+  }], 'Koha', 'catalogConfig', vendorFieldMapping, 'catalogConfig.profile', vendorFieldValues);
+  expect(catalog[0]).not.toHaveProperty('overrideValue');
+  expect(catalog[0].subMap[0].subMap[0].overrideValue)
+    .toEqual(spec['x-host-profiles'].Koha.catalogConfig.holdingsFormat.marc.availability);
+});
+
+it.each([[null], [false], ['bad'], [[{}]], 'bad'].map(value => ({ value })))('rejects malformed object-array override %j before rendering', ({ value }) => {
+  expect(() => applyDisabledPaths([{ fieldName: 'rules', valueType: 'objectArray', objectMap: [] }],
+    ['rules'], { setting: 'catalogConfig.profile', name: 'Custom' }, { rules: value }))
+    .toThrow('Invalid object-array override for "rules".');
+});
+
+it.each([null, [], [{ operator: 'equals', value: '0' }]].map(value => ({ value })))('retains valid object-array override %j', ({ value }) => {
+  const fields = applyDisabledPaths([{ fieldName: 'rules', valueType: 'objectArray', objectMap: [] }],
+    ['rules'], { setting: 'catalogConfig.profile', name: 'Custom' }, { rules: value });
+  expect(fields[0].overrideValue).toEqual(value);
 });

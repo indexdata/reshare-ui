@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { matchPath, useHistory, useRouteMatch, useLocation } from 'react-router-dom';
 import {
@@ -14,6 +14,7 @@ import SearchAndFilter from './SearchAndFilter';
 
 const Entries = ({
   entriesQuery,
+  searchQuery,
   searchValue,
   getSearchHandlers,
   onSubmitSearch,
@@ -26,16 +27,29 @@ const Entries = ({
   const match = useRouteMatch();
   const location = useLocation();
   const intl = useIntl();
-  const [offset, setOffset] = useState(0);
+  const [pagination, setPagination] = useState({ query: searchQuery, offset: 0 });
+  const offset = pagination.query === searchQuery ? pagination.offset : 0;
 
-  const entries = entriesQuery?.data?.pages?.[offset / perPage]?.items || [];
+  useEffect(() => {
+    setPagination({ query: searchQuery, offset: 0 });
+  }, [searchQuery]);
+
+  const cachedPageAtOffset = pageOffset => {
+    const pageIndex = entriesQuery?.data?.pageParams?.findIndex(pageParam => (pageParam ?? 0) === pageOffset);
+    return entriesQuery?.data?.pages?.[pageIndex];
+  };
+
+  const entries = cachedPageAtOffset(offset)?.items || [];
   const openEntry = matchPath(location.pathname, { path: `${match.path}/:id` })?.params;
   const sparseEntries = (new Array(offset)).concat(entries);
   const totalCount = entriesQuery?.data?.pages?.[0]?.about?.count || 0;
 
   const fetchMore = (_askAmount, index) => {
-    entriesQuery.fetchNextPage({ pageParam: index });
-    setOffset(index);
+    // fetchNextPage appends even if this offset already exists in the cache.
+    if (!cachedPageAtOffset(index)) {
+      entriesQuery.fetchNextPage({ pageParam: index });
+    }
+    setPagination({ query: searchQuery, offset: index });
   };
 
   const resultsFormatter = {
@@ -86,6 +100,7 @@ const Entries = ({
         }
       >
         <MultiColumnList
+          key={searchQuery}
           autosize
           id="entries-list"
           contentData={sparseEntries}
