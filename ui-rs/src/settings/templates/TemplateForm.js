@@ -246,7 +246,13 @@ const BodyField = ({ isHtml, storedBody, editorRef, editorSelectionRef }) => {
             required
             label={label}
             onChangeSelection={(range) => {
-              if (range) editorSelectionRef.current = range;
+              if (range && editorRef.current) {
+                editorSelectionRef.current = {
+                  range,
+                  body: form.getState().values.body ?? '',
+                  editor: editorRef.current,
+                };
+              }
             }}
             // Spread after `input` by formField, so this wins over input.onChange
             // and decides for itself what reaches the form.
@@ -350,8 +356,15 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
         const isPullslip = values.purpose === 'pullslip';
         const openPlaceholderPicker = (field) => {
           if (field === 'body' && isHtml && bodyEditorRef.current) {
-            const editor = bodyEditorRef.current.getEditor();
-            const range = editor.getSelection() ?? bodyEditorSelectionRef.current ?? {
+            const editorInstance = bodyEditorRef.current;
+            const editor = editorInstance.getEditor();
+            const currentBody = form.getState().values.body ?? '';
+            const cachedSelection = bodyEditorSelectionRef.current;
+            const cachedRange = cachedSelection?.body === currentBody && cachedSelection.editor === editorInstance
+              ? cachedSelection.range
+              : null;
+            if (cachedSelection && !cachedRange) bodyEditorSelectionRef.current = null;
+            const range = editor.getSelection() ?? cachedRange ?? {
               index: Math.max(0, editor.getLength() - 1),
               length: 0,
             };

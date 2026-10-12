@@ -353,6 +353,48 @@ describe('TemplateForm', () => {
       expect(byId('template-body').value).toBe('<p>Hi{{.ReqId}}</p>');
     });
 
+    it('inserts at the source cursor after the rich-text editor unmounts', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: htmlValues });
+      fireEvent.click(byId('template-body-source'));
+      const source = byId('template-body');
+      source.setSelectionRange(3, 3);
+
+      fireEvent.click(byId('template-body-placeholder'));
+      fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.ReqId\}\}/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
+
+      expect(source.value).toBe('<p>{{.ReqId}}Hi</p>');
+    });
+
+    it('discards the rich-text selection when the body is replaced', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: htmlValues });
+      lastEditor.setSelection(1, 1);
+      lastEditor.blur();
+      act(() => lastEditor.onChange('<p>Changed</p>', null, 'user'));
+
+      fireEvent.click(byId('template-body-placeholder'));
+      fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.ReqId\}\}/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
+
+      expect(byId('template-body').value).toBe('<p>Changed{{.ReqId}}</p>');
+    });
+
+    it('discards the rich-text selection when the editor remounts', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: htmlValues });
+      lastEditor.setSelection(1, 1);
+      lastEditor.blur();
+      fireEvent.click(byId('template-body-source'));
+      fireEvent.click(byId('template-body-source'));
+      fireEvent.click(await screen.findByRole('button', { name: 'ui-rs.settings.templates.wysiwyg.confirm' }));
+      await waitFor(() => expect(byId('template-body-source')).not.toBeChecked());
+
+      fireEvent.click(byId('template-body-placeholder'));
+      fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.ReqId\}\}/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
+
+      expect(byId('template-body').value).toBe('<p>Hi{{.ReqId}}</p>');
+    });
+
     it('keeps editing available when placeholders cannot be fetched', async () => {
       mockOkapi.setResponses({
         'broker/state_model/templates': PRESETS,

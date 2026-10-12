@@ -28,23 +28,40 @@ const Editor = ({ input = {}, id, label, value, readOnly, onChange, onChangeSele
   lastEditor.onChangeSelection = onChangeSelection;
   lastEditor.value = input.value ?? value ?? '';
 
-  const quill = {
-    getSelection: () => lastEditor.selection,
-    getLength: () => lastEditor.value.replace(/<[^>]*>/g, '').length + 1,
-    updateContents: ({ ops }, source) => {
-      const retain = ops.find(op => op.retain)?.retain ?? 0;
-      const remove = ops.find(op => op.delete)?.delete ?? 0;
-      const insert = ops.find(op => op.insert)?.insert ?? '';
-      const paragraph = lastEditor.value.match(/^<p>(.*)<\/p>$/s);
-      const text = paragraph ? paragraph[1] : lastEditor.value;
-      const nextText = `${text.slice(0, retain)}${insert}${text.slice(retain + remove)}`;
-      const nextValue = paragraph ? `<p>${nextText}</p>` : nextText;
-      lastEditor.value = nextValue;
-      lastEditor.onChange(nextValue, null, source);
-    },
-    setSelection: (index, length = 0) => lastEditor.setSelection(index, length),
-  };
-  if (editorRef) editorRef.current = { getEditor: () => quill };
+  const editorInstance = React.useRef();
+  if (!editorInstance.current) {
+    const quill = {
+      getSelection: () => lastEditor.selection,
+      getLength: () => lastEditor.value.replace(/<[^>]*>/g, '').length + 1,
+      updateContents: ({ ops }, source) => {
+        const retain = ops.find(op => op.retain)?.retain ?? 0;
+        const remove = ops.find(op => op.delete)?.delete ?? 0;
+        const insert = ops.find(op => op.insert)?.insert ?? '';
+        const paragraph = lastEditor.value.match(/^<p>(.*)<\/p>$/s);
+        const text = paragraph ? paragraph[1] : lastEditor.value;
+        const nextText = `${text.slice(0, retain)}${insert}${text.slice(retain + remove)}`;
+        const nextValue = paragraph ? `<p>${nextText}</p>` : nextText;
+        lastEditor.value = nextValue;
+        lastEditor.onChange(nextValue, null, source);
+      },
+      setSelection: (index, length = 0) => lastEditor.setSelection(index, length),
+    };
+    editorInstance.current = { getEditor: () => quill };
+  }
+  React.useEffect(() => {
+    const handle = editorInstance.current;
+    if (typeof editorRef === 'function') {
+      editorRef(handle);
+      return () => editorRef(null);
+    }
+    if (editorRef) {
+      editorRef.current = handle;
+      return () => {
+        if (editorRef.current === handle) editorRef.current = null;
+      };
+    }
+    return undefined;
+  }, [editorRef]);
 
   return (
     <textarea
