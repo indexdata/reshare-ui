@@ -1,0 +1,98 @@
+{
+  "openapi": "3.0.0",
+  "x-host-profiles": {
+    "Alma": {
+      "catalogConfig": {
+        "holdingsFormat": {
+          "opac": {
+            "availabilityRule": "availableNow",
+            "requireLocalLocation": true,
+            "includeItemId": true,
+            "includeItemLoanPolicy": true,
+            "allCirculations": true
+          }
+        }
+      },
+      "lmsConfig": {}
+    },
+    "FOLIO": {
+      "catalogConfig": {
+        "holdingsFormat": {
+          "opac": {
+            "availabilityRule": "availableNow",
+            "requireLocalLocation": true,
+            "includeItemId": true,
+            "includeItemLoanPolicy": true,
+            "allCirculations": true,
+            "includeTemporaryLocation": true
+          }
+        }
+      },
+      "lmsConfig": {}
+    },
+    "Generic": {
+      "catalogConfig": {},
+      "lmsConfig": {
+        "ncipNamespaceEnabled": true,
+        "bibIdNormalization": "none",
+        "requestItemRequestType": "Page",
+        "requestItemRequestScopeType": "Item",
+        "requestItemBibIdCode": "SYSNUMBER",
+        "requestItemPickupLocationEnabled": true,
+        "lookupUserEnabled": true,
+        "acceptItemEnabled": true,
+        "checkInItemEnabled": true,
+        "checkOutItemEnabled": true,
+        "requestItemEnabled": true
+      }
+    },
+    "Koha": {
+      "catalogConfig": {
+        "holdingsFormat": {
+          "marc": {
+            "mainField": "952",
+            "locationSubField": "b",
+            "callNumberSubField": "o",
+            "availability": [
+              {
+                "operator": "equals",
+                "subField": "7",
+                "value": "0"
+              },
+              {
+                "operator": "absent",
+                "subField": "q"
+              }
+            ],
+            "shelvingLocationSubField": "c"
+          }
+        }
+      },
+      "lmsConfig": {
+        "ncipNamespaceEnabled": false
+      }
+    },
+    "Sierra": {
+      "catalogConfig": {
+        "holdingsFormat": {
+          "opac": {
+            "availabilityRule": "publicNote",
+            "availablePublicNotes": [
+              "AVAILABLE",
+              "CHECK SHELVES",
+              "CHECK SHELF"
+            ],
+            "shelvingLocationSource": "localLocation",
+            "includeItemId": false,
+            "includeItemLoanPolicy": false
+          }
+        }
+      },
+      "lmsConfig": {
+        "requestItemRequestType": "Hold",
+        "requestItemRequestScopeType": "Title",
+        "bibIdNormalization": "sierra"
+      }
+    }
+  }
+}

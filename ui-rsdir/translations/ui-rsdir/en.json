@@ -306,7 +306,7 @@
   "symbol.authority" : "Authority",
   "symbol.symbol" : "Symbol",
   "symbol.add" : "Add symbol",
-  "settingsConfig.vendorBadge": "[Vendor]",
+  "settingsConfig.vendorBadge": "[{name}]",
   "settingsConfig.showOverrideSource": "Show override source for {field}",
   "settingsConfig.overriddenByVendor": "Overridden by LMSConfig vendor: {name}",
   "settingsConfig.overriddenByProfile": "Overridden by CatalogConfig profile: {name}",
@@ -316,5 +316,7 @@
   "settingsConfig.confirmSelection.vendor": "Using LMSConfig vendor {name} will override the following fields when saved.",
   "settingsConfig.confirmSelection.vendorChange": "Change LMSConfig vendor to {name}?",
   "settingsConfig.confirmSelection.catalogProfile": "CatalogConfig is currently configured by profile {profile}. Changing the LMSConfig vendor to {vendor} will not affect CatalogConfig.",
+  "settingsConfig.hostProfiles.error": "Vendor and catalog profile information is unavailable. Retry to load it before editing these settings.",
+  "settingsConfig.hostProfiles.retry": "Retry",
   "SENTINEL" : "SENTINEL"
 }

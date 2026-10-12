@@ -6,6 +6,7 @@ import { act, fireEvent, screen, waitFor, within } from '@folio/jest-config-stri
 import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
 import RSDir from './index';
+import directoryOpenApi from '../test/fixtures/directoryOpenApi';
 
 // Jest allows the hoisted mock factory to reference variables prefixed with `mock`.
 const mockOkapi = makeOkapiKyMock();
@@ -31,6 +32,7 @@ const entry = {
 };
 
 const responses = (overrides = {}) => ({
+  'directory/openapi.json': directoryOpenApi,
   'directory/entries': { items: [entry], about: { count: 1 } },
   'directory/entries/by-id/e1': entry,
   'directory/entries/by-id/e1/networks': [],
@@ -683,4 +685,37 @@ describe('directory entries', () => {
     await waitFor(() => expect(at(history)).toBe('/directory/entries/new-1?query=fix'));
     expect(await findSectionLink('entry')).toHaveAttribute('href', '/directory/entries/new-1?query=fix');
   });
+});
+
+it('retains an active settings draft between cached list searches', async () => {
+  mockOkapi.mockClear();
+  mockOkapi.setResponses(responses());
+  const { history } = renderDirectory(['/directory/entries/e1/lmsconfig?query=first']);
+  await screen.findByText('fixture-lms-address');
+  act(() => history.push('/directory/entries/e1/lmsconfig?query=second'));
+  await screen.findByText('fixture-lms-address');
+  act(() => history.goBack());
+  await screen.findByText('fixture-lms-address');
+  fireEvent.click(document.getElementById('edit-lms-config-address'));
+  fireEvent.change(document.getElementById('lms-config-address'), { target: { value: 'draft-address' } });
+  act(() => history.goForward());
+  await waitFor(() => expect(document.getElementById('lms-config-address')).toHaveValue('draft-address'));
+});
+
+it('retains an active settings draft while an uncached list search loads', async () => {
+  let finishSearch;
+  mockOkapi.mockClear();
+  mockOkapi.setResponses(responses({
+    'directory/entries': url => (url.includes('pending') ?
+      new Promise(resolve => { finishSearch = resolve; }) : responses()['directory/entries']),
+  }));
+  const { history } = renderDirectory(['/directory/entries/e1/lmsconfig?query=first']);
+  await screen.findByText('fixture-lms-address');
+  fireEvent.click(document.getElementById('edit-lms-config-address'));
+  fireEvent.change(document.getElementById('lms-config-address'), { target: { value: 'draft-address' } });
+  act(() => history.push('/directory/entries/e1/lmsconfig?query=pending'));
+  await waitFor(() => expect(finishSearch).toEqual(expect.any(Function)));
+  expect(document.getElementById('lms-config-address')).toHaveValue('draft-address');
+  await act(async () => finishSearch(responses()['directory/entries']));
+  expect(document.getElementById('lms-config-address')).toHaveValue('draft-address');
 });

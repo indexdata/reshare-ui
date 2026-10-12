@@ -6,8 +6,19 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 // eslint-disable-next-line import/no-extraneous-dependencies
 import userEvent from '@testing-library/user-event';
 import SettingsConfigEditor from './SettingsConfigEditor';
-import { fieldMap as catalogFieldMapping } from '../routes/CatalogConfigRoute';
-import { applyDisabledPaths, selectionChangeImpact, vendorFieldMappingForVendor } from '../config/vendorFieldMapping';
+import { fieldMap as baseCatalogFieldMapping } from '../routes/CatalogConfigRoute';
+import { applyDisabledPaths, hostProfilesFromOpenApi, selectionChangeImpact as changeImpact, vendorFieldMappingForVendor as mapVendorFields } from '../config/vendorFieldMapping';
+
+import specWithProfiles from '../../test/fixtures/directoryOpenApi';
+
+const { names, vendorFieldMapping, vendorFieldValues } = hostProfilesFromOpenApi(specWithProfiles);
+const catalogFieldMapping = baseCatalogFieldMapping.map(field => (
+  field.fieldName === 'profile' ? { ...field, validChoices: names } : field
+));
+const vendorFieldMappingForVendor = (fields, vendor, configKey, setting) => (
+  mapVendorFields(fields, vendor, configKey, vendorFieldMapping, setting, vendorFieldValues)
+);
+const selectionChangeImpact = options => changeImpact({ ...options, vendorFieldMapping });
 
 const mockPatch = jest.fn();
 const mockKy = jest.fn();
@@ -227,7 +238,7 @@ describe('SettingsConfigEditor selection confirmation', () => {
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
     expect(selector).toHaveValue('Generic');
     fireEvent.change(selector, { target: { value: 'Koha' } });
-    expect(screen.getAllByRole('listitem')).toHaveLength(5);
+    expect(screen.getAllByRole('listitem')).toHaveLength(6);
     await user.keyboard('{Escape}');
     expect(selector).toHaveValue('Generic');
     fireEvent.change(selector, { target: { value: 'Koha' } });
@@ -394,7 +405,7 @@ describe('SettingsConfigEditor override attribution', () => {
       initialResource: { lmsConfig: { ncipNamespaceEnabled: true, unrelated: 'hidden' } },
     });
     const badge = screen.getByRole('button', { name: 'Show override source for {field}' });
-    expect(badge).toHaveTextContent('[Vendor]');
+    expect(badge).toHaveTextContent('[Generic]');
     expect(badge).toHaveAttribute('aria-expanded', 'false');
     expect(document.getElementById('edit-settings-config-ncipNamespaceEnabled')).not.toBeInTheDocument();
     expect(screen.queryByText('hidden')).not.toBeInTheDocument();
@@ -429,7 +440,7 @@ describe('SettingsConfigEditor override attribution', () => {
       />
     );
     const { rerender } = render(editor('catalogConfig.profile'));
-    expect(screen.getAllByText('[Vendor]')).toHaveLength(6);
+    expect(screen.getAllByText('[Alma]')).toHaveLength(6);
     expect(screen.queryByText('hidden')).not.toBeInTheDocument();
     const card = screen.getByText('holdingsFormat').closest('section');
     const badge = card.querySelector('button');
@@ -438,7 +449,7 @@ describe('SettingsConfigEditor override attribution', () => {
     rerender(editor('lmsConfig.vendor'));
     expect(screen.getByRole('dialog')).toHaveTextContent('Overridden by LMSConfig vendor: Alma');
     fireEvent.click(document.getElementById('edit-settings-config-holdingsFormat'));
-    expect(screen.getAllByText('[Vendor]')).toHaveLength(6);
+    expect(screen.getAllByText('[Alma]')).toHaveLength(6);
     expect(mockPatch).not.toHaveBeenCalled();
   });
 
@@ -451,10 +462,10 @@ describe('SettingsConfigEditor override attribution', () => {
       }], ['items.fixed'], { setting: 'catalogConfig.profile', name: 'Koha' }),
       initialResource: { config: { items: [{ fixed: 'hidden', editable: 'visible' }] } },
     });
-    expect(screen.getAllByText('[Vendor]')).toHaveLength(1);
+    expect(screen.getAllByText('[Koha]')).toHaveLength(1);
     expect(screen.queryByText('hidden')).not.toBeInTheDocument();
     fireEvent.click(document.getElementById('edit-settings-config-items'));
-    expect(screen.getAllByText('[Vendor]')).toHaveLength(2);
+    expect(screen.getAllByText('[Koha]')).toHaveLength(2);
     expect(screen.queryByText('hidden')).not.toBeInTheDocument();
   });
 });
@@ -902,8 +913,12 @@ describe('SettingsConfigEditor onlyOne subFields', () => {
       target: { value: 'localLocation' },
     });
     rerender(editor('FOLIO'));
+    expect(screen.queryByText('[Alma]')).not.toBeInTheDocument();
+    expect(screen.getAllByText('[FOLIO]')).toHaveLength(7);
     expect(screen.getByRole('combobox', { name: 'shelvingLocationSource' })).toHaveValue('localLocation');
     rerender(editor('Koha'));
+    expect(screen.queryByText('[FOLIO]')).not.toBeInTheDocument();
+    expect(screen.getAllByText('[Koha]')).toHaveLength(6);
     const selector = screen.getByRole('combobox', { name: 'Selected value for {field}' });
     expect(selector).toHaveValue('marc');
     expect(selector).toBeDisabled();
@@ -1261,5 +1276,132 @@ describe('SettingsConfigEditor symbolList', () => {
     expect(authorityInput).toHaveValue('');
     expect(nameInput).toHaveValue('');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('SettingsConfigEditor read-only override values', () => {
+  it('displays top-level overrides with no edit button and hides unrelated disabled fields', () => {
+    renderEditor({
+      fieldMapping: applyDisabledPaths([{ fieldName: 'address' }, { fieldName: 'hidden', disabled: true }],
+        ['address'], { setting: 'lmsConfig.vendor', name: 'Custom' }, { address: 'profile-address' }),
+      initialResource: { config: { address: 'stored-address', hidden: 'stored-secret' } },
+    });
+    expect(screen.getByText('profile-address')).toBeInTheDocument();
+    expect(screen.queryByText('stored-address')).not.toBeInTheDocument();
+    expect(screen.queryByText('stored-secret')).not.toBeInTheDocument();
+    expect(document.getElementById('edit-settings-config-address')).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('displays falsy and empty values while keeping display metadata out of a parent save', async () => {
+    const fields = [{ fieldName: 'group',
+      valueType: 'subField',
+      subMap: [
+        { fieldName: 'enabled', valueType: 'boolean' },
+        { fieldName: 'zero', valueType: 'number' },
+        { fieldName: 'empty' }, { fieldName: 'cleared' },
+        { fieldName: 'list', valueType: 'stringArray' }, { fieldName: 'fixed' }, { fieldName: 'editable' },
+      ] }];
+    const overrideValues = {
+      'group.enabled': false,
+      'group.zero': 0,
+      'group.empty': '',
+      'group.cleared': null,
+      'group.list': [],
+      'group.fixed': 'profile-value',
+    };
+    const initialResource = { config: { group: {
+      enabled: true,
+      zero: 9,
+      empty: 'stored-empty',
+      cleared: 'stored-cleared',
+      list: ['stored-list'],
+      fixed: 'stored-fixed',
+      editable: 'original',
+    } } };
+    renderEditor({
+      fieldMapping: applyDisabledPaths(fields, Object.keys(overrideValues),
+        { setting: 'catalogConfig.profile', name: 'Custom' }, overrideValues),
+      initialResource,
+    });
+    const assertValues = () => {
+      ['false', '0', '""', 'null', '[]', 'profile-value'].forEach(value => {
+        expect(screen.getByText(value)).toBeInTheDocument();
+      });
+      expect(screen.queryByText('stored-fixed')).not.toBeInTheDocument();
+      expect(screen.queryByText('stored-list')).not.toBeInTheDocument();
+    };
+    assertValues();
+    fireEvent.click(document.getElementById('edit-settings-config-group'));
+    assertValues();
+    expect(screen.getAllByRole('textbox')).toHaveLength(1);
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByRole('textbox', { name: 'editable' }), { target: { value: 'changed' } });
+    fireEvent.click(document.getElementById('save-settings-config-group'));
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith('directory/entries/by-id/entry-id', {
+      json: { config: { group: { ...initialResource.config.group, editable: 'changed' } } },
+    }));
+  });
+
+  it('renders Koha availability rules as labeled objects without collection controls', () => {
+    renderEditor({
+      configKey: 'catalogConfig',
+      fieldMapping: vendorFieldMappingForVendor(catalogFieldMapping, 'Koha', 'catalogConfig'),
+      initialResource: { catalogConfig: { holdingsFormat: { marc: { mainField: '852' } } } },
+    });
+    expect(screen.getByText('952')).toBeInTheDocument();
+    expect(screen.queryByText('852')).not.toBeInTheDocument();
+    const rules = screen.getByText('availability').closest('.subField');
+    expect(within(rules).getByText('equals')).toBeInTheDocument();
+    expect(within(rules).getByText('absent')).toBeInTheDocument();
+    expect(rules.querySelectorAll('.objectArrayValue')).toHaveLength(2);
+    fireEvent.click(document.getElementById('edit-settings-config-holdingsFormat'));
+    expect(within(rules).queryByRole('textbox')).not.toBeInTheDocument();
+    expect(within(rules).queryByRole('combobox')).not.toBeInTheDocument();
+    expect(rules.querySelectorAll('button')).toHaveLength(1);
+    expect(screen.getByText('952')).toBeInTheDocument();
+  });
+
+  it('updates effective values with the profile and restores stored values when overrides end', () => {
+    const initialResource = { catalogConfig: { holdingsFormat: { opac: {
+      availabilityRule: 'availableNow', availablePublicNotes: ['stored-note'], includeItemId: true,
+    } } } };
+    const editor = profile => <SettingsConfigEditor
+      configKey="catalogConfig"
+      fieldLabelId={path => path}
+      fieldMapping={vendorFieldMappingForVendor(catalogFieldMapping, profile, 'catalogConfig', 'catalogConfig.profile')}
+      initialResource={initialResource}
+      resourcePath="directory/entries/by-id/entry-id"
+    />;
+    const { rerender } = render(editor('Alma'));
+    expect(screen.getByText('availableNow')).toBeInTheDocument();
+    rerender(editor('Sierra'));
+    expect(screen.queryByText('availableNow')).not.toBeInTheDocument();
+    expect(screen.getByText('publicNote')).toBeInTheDocument();
+    expect(screen.getByText('AVAILABLE')).toBeInTheDocument();
+    expect(screen.queryByText('stored-note')).not.toBeInTheDocument();
+    const itemId = screen.getByText('includeItemId').closest('.subField');
+    expect(within(itemId).getByText('false')).toBeInTheDocument();
+    fireEvent.click(document.getElementById('edit-settings-config-holdingsFormat'));
+    expect(screen.getByText('AVAILABLE')).toBeInTheDocument();
+    expect(document.getElementById('add-settings-config-holdingsFormat-opac-availablePublicNotes')).not.toBeInTheDocument();
+    rerender(editor(undefined));
+    expect(screen.getByRole('combobox', { name: 'availabilityRule' })).toHaveValue('availableNow');
+    expect(screen.queryByText('[Sierra]')).not.toBeInTheDocument();
+    expect(screen.getByText('stored-note')).toBeInTheDocument();
+  });
+
+  it('shows child overrides on existing and new object-array rows without editing controls', () => {
+    renderEditor({
+      fieldMapping: applyDisabledPaths([{ fieldName: 'items',
+        valueType: 'objectArray',
+        objectMap: [{ fieldName: 'fixed' }, { fieldName: 'editable' }] }], ['items.fixed'], { setting: 'catalogConfig.profile', name: 'Custom' }, { 'items.fixed': 'profile-child' }),
+      initialResource: { config: { items: [{ fixed: 'stored-child', editable: 'visible' }] } },
+    });
+    expect(screen.getByText('profile-child')).toBeInTheDocument();
+    expect(screen.queryByText('stored-child')).not.toBeInTheDocument();
+    fireEvent.click(document.getElementById('edit-settings-config-items'));
+    expect(screen.getAllByText('profile-child')).toHaveLength(2);
+    expect(document.getElementById('settings-config-items-new-fixed')).not.toBeInTheDocument();
   });
 });
