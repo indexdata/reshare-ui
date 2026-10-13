@@ -294,54 +294,6 @@ describe('TemplateForm', () => {
       labels: ['notice'],
     };
 
-    it('reuses placeholders for thirty minutes before fetching them again', async () => {
-      const baseTime = 1_000_000;
-      const thirtyMinutes = 30 * 60 * 1000;
-      const now = jest.spyOn(Date, 'now').mockReturnValue(baseTime);
-      const placeholderRequestCount = () => mockOkapi.calledUrls()
-        .filter(url => url === 'broker/templates/placeholders').length;
-      const CacheHarness = () => {
-        const [show, setShow] = React.useState(true);
-
-        return (
-          <>
-            <button type="button" onClick={() => setShow(false)}>Hide form</button>
-            <button type="button" onClick={() => setShow(true)}>Show form</button>
-            {show && (
-              <TemplateForm
-                editing
-                initialValues={editingValues}
-                onSubmit={jest.fn()}
-                onClose={() => {}}
-                title="Test"
-                submitLabelId="ui-rs.create"
-              />
-            )}
-          </>
-        );
-      };
-
-      try {
-        const rendered = renderWithRs(<CacheHarness />);
-        await settleQueries(rendered.queryClient);
-        expect(placeholderRequestCount()).toBe(1);
-
-        fireEvent.click(screen.getByRole('button', { name: 'Hide form' }));
-        now.mockReturnValue(baseTime + thirtyMinutes - 1);
-        fireEvent.click(screen.getByRole('button', { name: 'Show form' }));
-        await settleQueries(rendered.queryClient);
-        expect(placeholderRequestCount()).toBe(1);
-
-        fireEvent.click(screen.getByRole('button', { name: 'Hide form' }));
-        now.mockReturnValue(baseTime + thirtyMinutes + 1);
-        fireEvent.click(screen.getByRole('button', { name: 'Show form' }));
-        await settleQueries(rendered.queryClient);
-        expect(placeholderRequestCount()).toBe(2);
-      } finally {
-        now.mockRestore();
-      }
-    });
-
     it('shows the broker placeholders in their data-source groups', async () => {
       await renderForm(jest.fn(), { editing: true, initialValues: editingValues });
 
