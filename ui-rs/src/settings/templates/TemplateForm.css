@@ -9,3 +9,19 @@
   margin-top: 0.25rem;
   margin-bottom: var(--control-margin-bottom);
 }
+
+.placeholderGroup + .placeholderGroup {
+  margin-top: 1.5rem;
+}
+
+.placeholderList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 0.5rem 1.5rem;
+}
+
+.placeholderDescription {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--color-text-p2);
+}

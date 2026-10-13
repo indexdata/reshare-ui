@@ -42,6 +42,7 @@ describe('Templates', () => {
     mockOkapi.setResponses({
       'broker/templates': { about: { count: 1 }, items: [TEMPLATE] },
       'broker/templates/t1': TEMPLATE,
+      'broker/templates/placeholders': { singleRecord: [], batchRecord: [] },
       'broker/state_model/templates': DEFAULTS,
     });
   });
