@@ -5,6 +5,7 @@
   "index.name" : "Name",
   "index.description" : "Description",
   "index.symbol" : "Symbol",
+  "filter.pickupLocation" : "Pickup Location",
   "empty" : "No LMS configuration present for this entry",
   "address.header" : "{type} address",
   "entry.contactName" : "Contact name",

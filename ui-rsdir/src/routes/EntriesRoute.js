@@ -9,6 +9,20 @@ import { SearchAndSortQuery, makeQueryFunction } from '@folio/stripes/smart-comp
 import Entries from '../components/Entries';
 
 const PER_PAGE = 100;
+const FILTER_CONFIG = [{
+  name: 'type',
+  cql: 'type',
+  values: ['Consortium', 'Institution', 'Branch'],
+  operator: '==',
+},
+{
+  name: 'isPickupLocation',
+  cql: 'isPickupLocation',
+  values: ['true'],
+  restrictWhenAllSelected: true,
+  parse: values => `isPickupLocation=${values[0]}`,
+},
+];
 
 const EntriesRoute = ({ children }) => {
   const ky = useOkapiKy();
@@ -20,7 +34,7 @@ const EntriesRoute = ({ children }) => {
     query: urlParams.query || '',
     // Use our index-specific templates rather than makeQueryFunction's index shortcut.
     qindex: '',
-    filters: '',
+    filters: urlParams.filters || '',
     sort: ''
   };
 
@@ -39,7 +53,7 @@ const EntriesRoute = ({ children }) => {
     'cql.allRecords=1',  // fallback when no search/filters
     selectedTemplate,
     {},  // sortMap (empty for now)
-    [],  // filterConfig (empty for now)
+    FILTER_CONFIG,
     0,   // don't fail on empty query
     undefined,
     { rightTrunc: false, escape: true },
@@ -78,7 +92,6 @@ const EntriesRoute = ({ children }) => {
         activeFilters,
         getFilterHandlers,
         resetAll,
-        searchChanged,
       }) => (
         <Entries
           searchQuery={cql || ''}
@@ -89,7 +102,6 @@ const EntriesRoute = ({ children }) => {
           activeFilters={activeFilters}
           getFilterHandlers={getFilterHandlers}
           resetAll={resetAll}
-          searchChanged={searchChanged}
           perPage={PER_PAGE}
         >
           {children}
