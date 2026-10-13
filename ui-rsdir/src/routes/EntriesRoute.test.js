@@ -75,38 +75,64 @@ it('submits a contains search for Name and retains the selected index', async ()
   expect(queryInput().value).toBe('Central');
 });
 
-it('submits All fields through the form and searches name and description', async () => {
+it('submits All fields through the form using serverChoice without added wildcards', async () => {
   renderList();
   await screen.findByText('University Central Library');
-  fireEvent.change(queryInput(), { target: { name: 'query', value: 'Central' } });
+  fireEvent.change(queryInput(), { target: { name: 'query', value: 'Central Library' } });
   // Enter in the search input invokes the same native form submission.
   fireEvent.submit(queryInput().closest('form'));
 
   await waitFor(() => expect(lastParams().get('cql'))
-    .toBe('(name="*Central*" or description="*Central*")'));
+    .toBe('cql.serverChoice="Central Library"'));
   expect(indexInput().value).toBe('');
 });
 
-it('restores the index on direct navigation and browser back/forward', async () => {
-  const { history } = renderList('?qindex=name&query=Central');
+it.each([
+  ['description', 'Central Library', 'description="*Central Library*"'],
+  ['symbol', 'ABC', 'symbol="ABC"'],
+  ['symbol', 'ISIL:ABC', 'symbol="ISIL:ABC"'],
+])('submits %s search for %s and retains the selected index', async (index, query, cql) => {
+  const { history } = renderList();
   await screen.findByText('University Central Library');
-  expect(indexInput().value).toBe('name');
+  submitSearch(query, index);
+
+  await waitFor(() => expect(lastParams().get('cql')).toBe(cql));
+  expect(new URLSearchParams(history.location.search).get('qindex')).toBe(index);
+  expect(indexInput().value).toBe(index);
+  expect(queryInput().value).toBe(query);
+});
+
+it('preserves a user-entered prefix wildcard in All fields', async () => {
+  renderList();
+  await screen.findByText('University Central Library');
+  submitSearch('Centr*');
+  await waitFor(() => expect(lastParams().get('cql')).toBe('cql.serverChoice="Centr*"'));
+});
+
+it.each(['name', 'description', 'symbol'])('restores %s on direct navigation and browser back/forward', async index => {
+  const { history } = renderList(`?qindex=${index}&query=Central`);
+  await screen.findByText('University Central Library');
+  expect(indexInput().value).toBe(index);
   expect(queryInput().value).toBe('Central');
   submitSearch('Library');
   await waitFor(() => expect(lastParams().get('cql'))
-    .toBe('(name="*Library*" or description="*Library*")'));
+    .toBe('cql.serverChoice="Library"'));
   expect(indexInput().value).toBe('');
 
   act(() => history.goBack());
-  await waitFor(() => expect(indexInput().value).toBe('name'));
+  await waitFor(() => expect(indexInput().value).toBe(index));
   expect(queryInput().value).toBe('Central');
   act(() => history.goForward());
   await waitFor(() => expect(indexInput().value).toBe(''));
   expect(queryInput().value).toBe('Library');
 });
 
-it.each(['clear', 'reset'])('%s removes the applied query and index', async action => {
-  const { history } = renderList('?qindex=name&query=Central');
+it.each([
+  ['clear', 'name'], ['reset', 'name'],
+  ['clear', 'description'], ['reset', 'description'],
+  ['clear', 'symbol'], ['reset', 'symbol'],
+])('%s removes the applied query and %s index', async (action, index) => {
+  const { history } = renderList(`?qindex=${index}&query=Central`);
   await screen.findByText('University Central Library');
   if (action === 'clear') {
     fireEvent.click(screen.getByRole('button', { name: 'stripes-components.clearThisField' }));
@@ -121,11 +147,16 @@ it.each(['clear', 'reset'])('%s removes the applied query and index', async acti
   expect(indexInput().value).toBe('');
 });
 
-it('escapes quotes and backslashes in contains searches', async () => {
+it.each([
+  ['name', 'name="*A\\"B\\\\C*"'],
+  ['description', 'description="*A\\"B\\\\C*"'],
+  ['symbol', 'symbol="A\\"B\\\\C"'],
+  ['', 'cql.serverChoice="A\\"B\\\\C"'],
+])('escapes quotes and backslashes for the %s index', async (index, cql) => {
   renderList();
   await screen.findByText('University Central Library');
-  submitSearch('A"B\\C', 'name');
-  await waitFor(() => expect(lastParams().get('cql')).toBe('name="*A\\"B\\\\C*"'));
+  submitSearch('A"B\\C', index);
+  await waitFor(() => expect(lastParams().get('cql')).toBe(cql));
 });
 
 it('returns to page one when submitting a new search from a later page', async () => {

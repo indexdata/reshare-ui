@@ -3,6 +3,8 @@
   "front.welcome" : "Welcome to ReShare!",
   "index.allFields" : "All fields",
   "index.name" : "Name",
+  "index.description" : "Description",
+  "index.symbol" : "Symbol",
   "empty" : "No LMS configuration present for this entry",
   "address.header" : "{type} address",
   "entry.contactName" : "Contact name",

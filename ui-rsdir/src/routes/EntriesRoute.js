@@ -18,7 +18,7 @@ const EntriesRoute = ({ children }) => {
   const urlParams = queryString.parse(location.search);
   const queryParams = {
     query: urlParams.query || '',
-    // Use our contains-search templates rather than makeQueryFunction's index shortcut.
+    // Use our index-specific templates rather than makeQueryFunction's index shortcut.
     qindex: '',
     filters: '',
     sort: ''
@@ -26,8 +26,10 @@ const EntriesRoute = ({ children }) => {
 
   const queryTemplates = {
     // When qindex is empty string (All fields)
-    '': '(name="*%{query.query}*" or description="*%{query.query}*")',
+    '': 'cql.serverChoice="%{query.query}"',
     'name': 'name="*%{query.query}*"',
+    'description': 'description="*%{query.query}*"',
+    'symbol': 'symbol="%{query.query}"',
   };
 
   const selectedTemplate = queryTemplates[urlParams.qindex] || queryTemplates[''];

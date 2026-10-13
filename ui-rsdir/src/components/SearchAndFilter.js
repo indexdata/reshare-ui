@@ -5,6 +5,8 @@ import { Button, Icon, SearchField } from '@folio/stripes/components';
 const defaultSearchableIndexes = [
   { label: 'allFields', value: '' },
   { label: 'name', value: 'name' },
+  { label: 'description', value: 'description' },
+  { label: 'symbol', value: 'symbol' },
 ];
 
 const SearchAndFilter = ({
