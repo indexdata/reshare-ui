@@ -302,6 +302,8 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
     isLoading: placeholdersLoading,
     isError: placeholdersError,
   } = useOkapiQuery('broker/templates/placeholders', {
+    staleTime: 30 * 60 * 1000,
+    cacheTime: 8 * 60 * 60 * 1000,
     useErrorBoundary: false,
   });
   const labelSources = [...(presets ?? []), ...(templates?.items ?? [])];
