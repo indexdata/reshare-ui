@@ -2,7 +2,7 @@ import React from 'react';
 import { Form, Field } from 'react-final-form';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useIsActionPending } from '@projectreshare/stripes-reshare';
-import { Button, Col, Row, TextField } from '@folio/stripes/components';
+import { Button, Layout, TextField } from '@folio/stripes/components';
 import { required } from '@folio/stripes/util';
 import { noteParam } from '../../AddNoteField';
 import OptionalParams from '../OptionalParams';
@@ -34,23 +34,21 @@ const SupplyDocument = ({ performAction, request, withNote = false }) => {
       render={({ handleSubmit, submitting, invalid }) => (
         <form onSubmit={handleSubmit} autoComplete="off">
           <FormattedMessage id="ui-rs.actions.supply-document.prompt" />
-          <Row>
-            <Col xs={11}>
-              <Field
-                name="deliveryUrl"
-                aria-label={intl.formatMessage({ id: 'ui-rs.actions.supply-document.deliveryUrl' })}
-                component={TextField}
-                type="url"
-                required
-                autoFocus
-              />
-            </Col>
-            <Col xs={1}>
+          <Layout className="display-flex flex-align-items-start">
+            <Field
+              name="deliveryUrl"
+              aria-label={intl.formatMessage({ id: 'ui-rs.actions.supply-document.deliveryUrl' })}
+              component={TextField}
+              type="url"
+              required
+              autoFocus
+            />
+            <Layout className="margin-start-gutter">
               <Button buttonStyle="primary mega" type="submit" disabled={submitting || invalid || actionPending}>
                 <FormattedMessage id="stripes-reshare.actions.supply-document" />
               </Button>
-            </Col>
-          </Row>
+            </Layout>
+          </Layout>
           {withNote && <OptionalParams params={[noteParam]} />}
         </form>
       )}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { FormattedMessage } from 'react-intl';
 import { Form, Field } from 'react-final-form';
-import { Button, Row, Col, TextField } from '@folio/stripes/components';
+import { Button, Layout, TextField } from '@folio/stripes/components';
 import { useIntlCallout, useIsActionPending } from '@projectreshare/stripes-reshare';
 import { noteParam } from '../AddNoteField';
 import OptionalParams from './OptionalParams';
@@ -45,16 +45,14 @@ const ScanConfirmAction = ({
               {dispAction => <FormattedMessage id="ui-rs.actions.generic.prompt" values={{ action: dispAction }} />}
             </FormattedMessage>
           }
-          <Row>
-            <Col xs={11}>
-              <Field name="reqId" component={TextField} autoFocus />
-            </Col>
-            <Col xs={1}>
+          <Layout className="display-flex flex-align-items-start">
+            <Field name="reqId" component={TextField} autoFocus />
+            <Layout className="margin-start-gutter">
               <Button buttonStyle="primary mega" type="submit" disabled={submitting || invalid || actionPending}>
                 <FormattedMessage id="ui-rs.button.scan" />
               </Button>
-            </Col>
-          </Row>
+            </Layout>
+          </Layout>
           {optionalParams.length > 0 && <OptionalParams params={optionalParams} />}
         </form>
       )}

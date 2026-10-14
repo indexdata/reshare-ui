@@ -1,0 +1,25 @@
+.renewal {
+  display: grid;
+  /* The date's column has a fixed width because the datepicker adds a clear control once
+     it holds a value, which would otherwise widen the field and push the button along. */
+  grid-template-columns: auto 15rem auto;
+  justify-content: start;
+  /* The help spans the button's column too, so a long translation can run past the
+     date's width; the button stays at the start of its cell if that widens it. */
+  grid-template-areas:
+    "current dueDate submit"
+    ".       help    help";
+  column-gap: var(--gutter);
+  align-items: start;
+}
+
+.current { grid-area: current; }
+.dueDate { grid-area: dueDate; }
+.help { grid-area: help; }
+
+/* The date field sets the first row's height and ends with the same bottom margin as
+   the button, so aligning to the end puts the button beside the input, not its label. */
+.submit {
+  grid-area: submit;
+  align-self: end;
+}

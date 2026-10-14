@@ -2,12 +2,13 @@ import React from 'react';
 import { Form } from 'react-final-form';
 import { FormattedMessage } from 'react-intl';
 import { useIsActionPending } from '@projectreshare/stripes-reshare';
-import { Button, Col, KeyValue, Row } from '@folio/stripes/components';
+import { Button, KeyValue } from '@folio/stripes/components';
 import { noteParam } from '../../AddNoteField';
 import OptionalParams from '../OptionalParams';
 import DueDateField from '../../DueDateField';
 import DueDate from '../../DueDate';
 import { compactParams } from '../ScanConfirmAction';
+import css from './AcceptRenewal.css';
 
 const AcceptRenewal = ({ performAction, request, withNote = false }) => {
   const actionPending = !!useIsActionPending(request.id);
@@ -29,25 +30,27 @@ const AcceptRenewal = ({ performAction, request, withNote = false }) => {
       onSubmit={onSubmit}
       render={({ handleSubmit, submitting, invalid, values }) => (
         <form onSubmit={handleSubmit} autoComplete="off">
-          <Row>
-            <Col xs={3}>
+          <div className={css.renewal}>
+            <div className={css.current}>
               <KeyValue
                 label={<FormattedMessage id="ui-rs.flow.info.dueDate.current" />}
                 value={<DueDate value={request.dueDate} />}
               />
-            </Col>
-            <Col xs={8}>
-              <DueDateField
-                label={<FormattedMessage id="ui-rs.actions.accept-renewal.newDueDate" />}
-                help={values.dueDate ? undefined : <FormattedMessage id="ui-rs.actions.accept-renewal.openEnded" />}
-              />
-            </Col>
-            <Col xs={1}>
+            </div>
+            <div className={css.dueDate}>
+              <DueDateField label={<FormattedMessage id="ui-rs.actions.accept-renewal.newDueDate" />} />
+            </div>
+            <div className={css.submit}>
               <Button buttonStyle="primary mega" type="submit" disabled={submitting || invalid || actionPending}>
                 <FormattedMessage id="stripes-reshare.actions.accept-renewal" />
               </Button>
-            </Col>
-          </Row>
+            </div>
+            {!values.dueDate &&
+              <div className={css.help}>
+                <FormattedMessage id="ui-rs.actions.accept-renewal.openEnded" />
+              </div>
+            }
+          </div>
           {withNote && <OptionalParams params={[noteParam]} />}
         </form>
       )}
