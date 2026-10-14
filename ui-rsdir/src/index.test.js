@@ -671,12 +671,13 @@ describe('directory entries', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'ui-rsdir.new' }));
     expect(at(history)).toBe('/directory/entries/create?query=fix');
-    expect(await screen.findByRole('heading', { name: 'ui-rsdir.createEntry' })).toBeInTheDocument();
+    const createHeading = await screen.findByRole('heading', { name: 'ui-rsdir.createEntry' });
+    const createPane = within(createHeading.closest('section'));
     expect(querySectionLink('entry')).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/ui-rsdir\.entry\.name/), { target: { value: 'fixture-new' } });
-    fireEvent.change(screen.getByLabelText(/ui-rsdir\.entry\.type/), { target: { value: 'Institution' } });
-    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.create' }));
+    fireEvent.change(createPane.getByLabelText(/ui-rsdir\.entry\.name/), { target: { value: 'fixture-new' } });
+    fireEvent.change(createPane.getByLabelText(/ui-rsdir\.entry\.type/), { target: { value: 'Institution' } });
+    fireEvent.click(createPane.getByRole('button', { name: 'ui-rsdir.create' }));
 
     await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledWith(
       'directory/entries',
