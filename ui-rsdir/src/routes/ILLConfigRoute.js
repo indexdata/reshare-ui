@@ -81,10 +81,6 @@ const fieldMap = [
     valueType: 'integer',
     minValue: 0,
   },
-  {
-    fieldName: 'defaultLoanPeriod',
-    valueType: 'integer',
-  },
 ];
 
 const ILLConfigRoute = () => {

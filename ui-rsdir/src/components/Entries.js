@@ -18,8 +18,9 @@ const Entries = ({
   searchValue,
   getSearchHandlers,
   onSubmitSearch,
+  activeFilters,
+  getFilterHandlers,
   resetAll,
-  searchChanged,
   perPage,
   children,
 }) => {
@@ -73,8 +74,9 @@ const Entries = ({
           <SearchAndFilter
             searchHandlers={getSearchHandlers()}
             searchValue={searchValue}
+            activeFilters={activeFilters.state}
+            filterHandlers={getFilterHandlers()}
             resetAll={resetAll}
-            searchChanged={searchChanged}
           />
         </form>
       </Pane>

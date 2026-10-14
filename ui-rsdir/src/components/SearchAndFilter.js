@@ -1,17 +1,27 @@
 import React from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { Button, Icon, SearchField } from '@folio/stripes/components';
+import { Button, Checkbox, Icon, SearchField, Select } from '@folio/stripes/components';
 
 const defaultSearchableIndexes = [
   { label: 'allFields', value: '' },
   { label: 'name', value: 'name' },
+  { label: 'description', value: 'description' },
+  { label: 'symbol', value: 'symbol' },
+];
+
+const entryTypeOptions = [
+  { label: '', value: '' },
+  { label: 'Consortium', value: 'Consortium' },
+  { label: 'Institution', value: 'Institution' },
+  { label: 'Branch', value: 'Branch' },
 ];
 
 const SearchAndFilter = ({
   resetAll,
   searchHandlers,
   searchValue,
-  searchChanged,
+  activeFilters,
+  filterHandlers,
   searchableIndexes = defaultSearchableIndexes,
 }) => {
   const intl = useIntl();
@@ -20,6 +30,18 @@ const SearchAndFilter = ({
     label: intl.formatMessage({ id: `ui-rsdir.index.${x.label}` }),
     value: x.value,
   }));
+  const hasActiveFilters = Object.values(activeFilters).some(values => values.some(Boolean));
+  const canReset = Boolean(searchValue.query || searchValue.qindex || hasActiveFilters);
+
+  const onChangeType = (event) => {
+    const nextFilters = { ...activeFilters };
+    if (event.target.value) {
+      nextFilters.type = [event.target.value];
+    } else {
+      delete nextFilters.type;
+    }
+    filterHandlers.state(nextFilters);
+  };
 
   return (
     <>
@@ -38,6 +60,19 @@ const SearchAndFilter = ({
         onChangeIndex={searchHandlers.query}
         value={searchValue.query || ''}
       />
+      <Checkbox
+        name="isPickupLocation.true"
+        label={<FormattedMessage id="ui-rsdir.filter.pickupLocation" />}
+        checked={activeFilters.isPickupLocation?.includes('true') || false}
+        onChange={filterHandlers.checkbox}
+      />
+      <Select
+        name="type"
+        label={<FormattedMessage id="ui-rsdir.entry.type" />}
+        dataOptions={entryTypeOptions}
+        value={activeFilters.type?.[0] || ''}
+        onChange={onChangeType}
+      />
       <Button
         buttonStyle="primary"
         disabled={!searchValue.query || searchValue.query === ''}
@@ -48,7 +83,7 @@ const SearchAndFilter = ({
       </Button>
       <Button
         buttonStyle="none"
-        disabled={!searchChanged}
+        disabled={!canReset}
         id="clickable-reset-all"
         fullWidth
         onClick={resetAll}
