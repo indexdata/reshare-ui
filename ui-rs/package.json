@@ -19,6 +19,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@folio/stripes-data-transfer-components": "~7.1.0",
     "@projectreshare/stripes-reshare": "~3.0.0",
     "classnames": "^2.2.6",
     "final-form": "^4.2.0",
@@ -60,6 +61,9 @@
       "crosslink-broker": "1.0",
       "entries": "1.0",
       "tags": "1.0"
+    },
+    "optionalOkapiInterfaces": {
+      "dms": "0.0"
     },
     "permissionSets": [
       {

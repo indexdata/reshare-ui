@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Form, Field } from 'react-final-form';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useIsActionPending } from '@projectreshare/stripes-reshare';
 import { Button, Layout, TextField } from '@folio/stripes/components';
 import { required } from '@folio/stripes/util';
 import { noteParam } from '../../AddNoteField';
+import DocumentUpload from '../DocumentUpload';
 import OptionalParams from '../OptionalParams';
 
 const SupplyDocument = ({ performAction, request, withNote = false }) => {
   const intl = useIntl();
   const actionPending = !!useIsActionPending(request.id);
+  const [uploading, setUploading] = useState(false);
 
   const onSubmit = async values => {
     try {
@@ -44,11 +46,12 @@ const SupplyDocument = ({ performAction, request, withNote = false }) => {
               autoFocus
             />
             <Layout className="margin-start-gutter">
-              <Button buttonStyle="primary mega" type="submit" disabled={submitting || invalid || actionPending}>
+              <Button buttonStyle="primary mega" type="submit" disabled={submitting || invalid || actionPending || uploading}>
                 <FormattedMessage id="stripes-reshare.actions.supply-document" />
               </Button>
             </Layout>
           </Layout>
+          <DocumentUpload name="deliveryUrl" disabled={submitting || actionPending} onUploadingChange={setUploading} />
           {withNote && <OptionalParams params={[noteParam]} />}
         </form>
       )}
