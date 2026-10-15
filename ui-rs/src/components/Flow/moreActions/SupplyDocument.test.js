@@ -86,4 +86,29 @@ describe('secondary SupplyDocument action', () => {
       },
     ));
   });
+
+  it('abandons a pending upload when the modal closes', async () => {
+    let signal;
+    mockOkapi.post.mockImplementationOnce((_path, options) => new Promise((_resolve, reject) => {
+      signal = options.signal;
+      signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+    }));
+    renderWithRs(<SupplyDocument request={request} performAction={jest.fn()} actions={actionsWithNote} />);
+
+    fireEvent.click(actionButtons()[0]);
+    fireEvent.change(document.querySelector('input[type="file"]'), {
+      target: { files: [new File(['%PDF'], 'article.pdf', { type: 'application/pdf' })] },
+    });
+    await waitFor(() => expect(mockOkapi.post).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByText('ui-rs.button.goBack'));
+    await waitFor(() => expect(screen.queryByText('ui-rs.actions.supply-document.prompt')).not.toBeInTheDocument());
+    expect(signal.aborted).toBe(true);
+
+    fireEvent.click(actionButtons()[0]);
+    fireEvent.change(screen.getByLabelText(/ui-rs.actions.supply-document.deliveryUrl/), {
+      target: { value: 'https://documents.example.org/copy/2' },
+    });
+    await waitFor(() => expect(actionButtons().slice(-1)[0]).toBeEnabled());
+  });
 });

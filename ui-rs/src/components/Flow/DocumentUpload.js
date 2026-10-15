@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useField } from 'react-final-form';
 import { FormattedMessage } from 'react-intl';
 // Imported by path: the package index loads every data-transfer component
@@ -16,6 +16,11 @@ const Uploader = ({ name, disabled, onUploadingChange }) => {
   const maxUpload = useStripes().config?.reshare?.maxDMSUpload;
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState();
+  const abortRef = useRef();
+
+  // An upload that outlives the form has nowhere to put its URL, and its
+  // completion would clear the parent's uploading flag under a newer upload.
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const setBusy = busy => {
     setUploading(busy);
@@ -25,14 +30,16 @@ const Uploader = ({ name, disabled, onUploadingChange }) => {
   const upload = async file => {
     const formData = new FormData();
     formData.set('file', file);
+    const controller = new AbortController();
+    abortRef.current = controller;
     setBusy(true);
     try {
-      const res = await okapiKy.post('dms/upload', { body: formData });
+      const res = await okapiKy.post('dms/upload', { body: formData, signal: controller.signal });
       const { url } = await res.json();
       setUploaded({ url, fileName: file.name });
       input.onChange(url);
     } catch (e) {
-      sendCallout('ui-rs.upload.error', 'error', { errMsg: e.message });
+      if (!controller.signal.aborted) sendCallout('ui-rs.upload.error', 'error', { errMsg: e.message });
     } finally {
       setBusy(false);
     }

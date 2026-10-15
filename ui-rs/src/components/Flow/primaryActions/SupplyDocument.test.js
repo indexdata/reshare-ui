@@ -119,7 +119,7 @@ describe('SupplyDocument', () => {
     chooseFile(file);
 
     await waitFor(() => expect(screen.getByLabelText('ui-rs.actions.supply-document.deliveryUrl')).toHaveValue(storedUrl));
-    expect(mockOkapi.post).toHaveBeenCalledWith('dms/upload', { body: expect.any(FormData) });
+    expect(mockOkapi.post).toHaveBeenCalledWith('dms/upload', { body: expect.any(FormData), signal: expect.any(AbortSignal) });
     expect(mockOkapi.post.mock.calls[0][1].body.get('file').name).toBe('article.pdf');
     expect(screen.getByText('ui-rs.upload.uploaded')).toBeInTheDocument();
     expect(performAction).not.toHaveBeenCalled();
