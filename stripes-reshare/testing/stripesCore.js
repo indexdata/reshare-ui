@@ -22,6 +22,8 @@ const makeStripesCoreMock = (getOkapiKy, getReshareConfig = () => ({})) => ({
   withStripes: (Component) => Component,
   // Permission gate → always render children (test grants all perms).
   IfPermission: ({ children }) => children,
+  // Interface gate → always render children, as for a tenant with every interface.
+  IfInterface: ({ children }) => children,
   // AppIcon reaches a webpack asset registry that jest doesn't provide; stub it out.
   AppIcon: () => null,
   // Pluggable renders registered UI plugins via a webpack-time module registry the

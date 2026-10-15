@@ -6,9 +6,11 @@ import { Button, Col, Icon, Label, Layout, Modal, ModalFooter, Row, TextArea, Te
 import { required } from '@folio/stripes/util';
 
 import actionMeta from '../actionMeta';
+import DocumentUpload from '../DocumentUpload';
 
 const SupplyDocument = ({ request, performAction, actions = [] }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const actionPending = !!useIsActionPending(request.id);
   const icon = actionMeta['supply-document']?.icon;
   const withNote = actions.find(action => action.name === 'supply-document')?.parameters?.includes('note');
@@ -47,7 +49,7 @@ const SupplyDocument = ({ request, performAction, actions = [] }) => {
         <Form
           onSubmit={onSubmit}
           validate={validate}
-          render={({ handleSubmit, submitting, invalid, form }) => (
+          render={({ handleSubmit, submitting, invalid }) => (
             <form onSubmit={handleSubmit}>
               <FormattedMessage id="ui-rs.actions.supply-document.prompt" />
               <Layout className="padding-top-gutter">
@@ -60,6 +62,7 @@ const SupplyDocument = ({ request, performAction, actions = [] }) => {
                   autoFocus
                 />
               </Layout>
+              <DocumentUpload name="deliveryUrl" disabled={submitting || actionPending} onUploadingChange={setUploading} />
               {withNote &&
                 <>
                   <Layout className="padding-top-gutter">
@@ -75,8 +78,8 @@ const SupplyDocument = ({ request, performAction, actions = [] }) => {
               <ModalFooter>
                 <Button
                   buttonStyle="primary"
-                  onClick={form.submit}
-                  disabled={submitting || invalid || actionPending}
+                  type="submit"
+                  disabled={submitting || invalid || actionPending || uploading}
                 >
                   <FormattedMessage id="stripes-reshare.actions.supply-document" />
                 </Button>

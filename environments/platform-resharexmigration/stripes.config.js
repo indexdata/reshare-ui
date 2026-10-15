@@ -10,7 +10,7 @@ module.exports = {
     disableStrictMode: true,
     staleBundleWarning: { path: '/bundle.js', header: 'etag', interval: 2 },
     reshare: {
-      maxDMSUpload: 250,
+      maxDMSUpload: 100,
       showCost: true,
       showRefresh: true,
       showConditions: true,
