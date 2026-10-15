@@ -97,7 +97,7 @@ it.each(['clear', 'reset'])('%s removes the default type and browser navigation 
   }
   await waitFor(() => expect(lastParams().has('cql')).toBe(false));
   expect(typeInput().value).toBe('');
-  expect(new URLSearchParams(history.location.search).has('filters')).toBe(false);
+  expect(new URLSearchParams(history.location.search).get('filters')).toBe('');
   expect(document.getElementById('clickable-reset-all')).toBeDisabled();
 
   act(() => history.goBack());
@@ -112,6 +112,42 @@ it('respects an explicitly empty filter parameter on entry', async () => {
   await screen.findByText('University Central Library');
   expect(typeInput().value).toBe('');
   expect(lastParams().has('cql')).toBe(false);
+});
+
+it.each(['explicit', 'clear', 'reset'])('%s all-types choice survives remounting from the resulting URL', async action => {
+  const { history, unmount, queryClient } = renderList(action === 'explicit' ? '?filters=' : '');
+  await screen.findByText('University Central Library');
+  if (action === 'clear') {
+    fireEvent.change(typeInput(), { target: { value: '' } });
+  } else if (action === 'reset') {
+    fireEvent.click(document.getElementById('clickable-reset-all'));
+  }
+  await waitFor(() => expect(lastParams().has('cql')).toBe(false));
+  const search = history.location.search;
+  expect(new URLSearchParams(search).get('filters')).toBe('');
+  unmount();
+  queryClient.clear();
+  mockOkapi.mockClear();
+
+  const remounted = renderList(search);
+  await screen.findByText('University Central Library');
+  expect(typeInput().value).toBe('');
+  expect(pickupCheckbox()).not.toBeChecked();
+  expect(document.getElementById('clickable-reset-all')).toBeDisabled();
+  expect(mockOkapi.calledUrls()).toHaveLength(1);
+  expect(lastParams().has('cql')).toBe(false);
+  expect(new URLSearchParams(remounted.history.location.search).get('filters')).toBe('');
+});
+
+it('preserves the all-types marker and unrelated parameters when searching after clearing Type', async () => {
+  const { history } = renderList('?filters=type.Institution&extra=kept');
+  await screen.findByText('University Central Library');
+  fireEvent.change(typeInput(), { target: { value: '' } });
+  await waitFor(() => expect(lastParams().has('cql')).toBe(false));
+  submitSearch('Central', 'name');
+  await waitFor(() => expect(lastParams().get('cql')).toBe('name="*Central*"'));
+  expect(new URLSearchParams(history.location.search).get('filters')).toBe('');
+  expect(new URLSearchParams(history.location.search).get('extra')).toBe('kept');
 });
 
 it('submits a contains search for Name and retains the selected index', async () => {
@@ -170,7 +206,7 @@ it.each(['Consortium', 'Institution', 'Branch'])('immediately filters by %s with
   expect(document.getElementById('clickable-reset-all')).toBeEnabled();
 
   fireEvent.change(typeInput(), { target: { value: '' } });
-  await waitFor(() => expect(new URLSearchParams(history.location.search).has('filters')).toBe(false));
+  await waitFor(() => expect(new URLSearchParams(history.location.search).get('filters')).toBe(''));
   expect(typeInput().value).toBe('');
   expect(screen.getByText('University Central Library')).toBeInTheDocument();
 });
@@ -194,7 +230,7 @@ it.each([
   const { history } = renderList(`?filters=${filters}`);
   await screen.findByText('University Central Library');
   fireEvent.click(document.getElementById('clickable-reset-all'));
-  await waitFor(() => expect(new URLSearchParams(history.location.search).has('filters')).toBe(false));
+  await waitFor(() => expect(new URLSearchParams(history.location.search).get('filters')).toBe(''));
   expect(document.getElementById('clickable-reset-all')).toBeDisabled();
 
   act(() => history.goBack());
@@ -208,7 +244,7 @@ it.each([
   act(() => history.goBack());
   await waitFor(() => expect(document.getElementById('clickable-reset-all')).toBeEnabled());
   fireEvent.click(document.getElementById('clickable-reset-all'));
-  await waitFor(() => expect(new URLSearchParams(history.location.search).has('filters')).toBe(false));
+  await waitFor(() => expect(new URLSearchParams(history.location.search).get('filters')).toBe(''));
   expect(typeInput().value).toBe('');
   expect(pickupCheckbox()).not.toBeChecked();
   expect(document.getElementById('clickable-reset-all')).toBeDisabled();
@@ -252,7 +288,7 @@ it('preserves type when changing pickup or submitting and clearing text, then re
   await waitFor(() => expect(lastParams().has('cql')).toBe(false));
   expect(typeInput().value).toBe('');
   expect(pickupCheckbox()).not.toBeChecked();
-  expect(new URLSearchParams(history.location.search).has('filters')).toBe(false);
+  expect(new URLSearchParams(history.location.search).get('filters')).toBe('');
 });
 
 it('returns to page one when changing type, including cached results', async () => {
@@ -289,7 +325,7 @@ it('immediately applies and removes the pickup filter without a text query', asy
   expect(document.getElementById('clickable-reset-all')).toBeEnabled();
 
   fireEvent.click(pickupCheckbox());
-  await waitFor(() => expect(new URLSearchParams(history.location.search).has('filters')).toBe(false));
+  await waitFor(() => expect(new URLSearchParams(history.location.search).get('filters')).toBe(''));
   expect(pickupCheckbox()).not.toBeChecked();
   expect(document.querySelector('button[type="submit"]')).toBeDisabled();
   expect(screen.getByText('University Central Library')).toBeInTheDocument();
@@ -332,7 +368,7 @@ it('Reset all clears a pickup-only filter', async () => {
   fireEvent.click(document.getElementById('clickable-reset-all'));
   await waitFor(() => expect(lastParams().has('cql')).toBe(false));
   expect(pickupCheckbox()).not.toBeChecked();
-  expect(new URLSearchParams(history.location.search).has('filters')).toBe(false);
+  expect(new URLSearchParams(history.location.search).get('filters')).toBe('');
 });
 
 it.each(['clear', 'reset'])('%s handles a combined text search and pickup filter', async action => {
@@ -346,7 +382,7 @@ it.each(['clear', 'reset'])('%s handles a combined text search and pickup filter
     fireEvent.click(document.getElementById('clickable-reset-all'));
     await waitFor(() => expect(lastParams().has('cql')).toBe(false));
     expect(pickupCheckbox()).not.toBeChecked();
-    expect(new URLSearchParams(history.location.search).has('filters')).toBe(false);
+    expect(new URLSearchParams(history.location.search).get('filters')).toBe('');
   }
   expect(queryInput().value).toBe('');
   expect(indexInput().value).toBe('');

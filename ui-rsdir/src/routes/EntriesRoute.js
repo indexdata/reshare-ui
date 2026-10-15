@@ -9,6 +9,27 @@ import { SearchAndSortQuery, makeQueryFunction } from '@folio/stripes/smart-comp
 import Entries from '../components/Entries';
 
 const PER_PAGE = 100;
+const FILTER_PARAMS_MAPPING = {
+  filters: (value) => (value || '').split(',').filter(Boolean).reduce((filters, token) => {
+    const [name, ...parts] = token.split('.');
+    if (name) filters[name] = [...(filters[name] || []), parts.join('.')];
+    return filters;
+  }, {}),
+};
+
+const setDirectoryQuery = ({ location, history, nsValues }) => {
+  const params = { filters: '', ...queryString.parse(location.search), ...nsValues };
+  const pathname = params._path || location.pathname;
+  delete params._path;
+  // Keep the explicit all-types marker while clearing other empty parameters.
+  params.filters = params.filters || '';
+  Object.keys(params).forEach(key => {
+    if (key !== 'filters' && !params[key]) delete params[key];
+  });
+  const url = `${pathname}?${queryString.stringify(params)}`;
+  if (`${location.pathname}${location.search}` !== url) history.push(url);
+};
+
 const FILTER_CONFIG = [{
   name: 'type',
   cql: 'type',
@@ -29,19 +50,13 @@ const EntriesRoute = ({ children }) => {
   const history = useHistory();
   const location = useLocation();
   const [initializingFilters, setInitializingFilters] = useState(
-    () => !queryString.parse(location.search).filters
+    () => !Object.prototype.hasOwnProperty.call(queryString.parse(location.search), 'filters')
   );
 
   useEffect(() => {
     if (initializingFilters) {
       const params = queryString.parse(location.search);
-      if (Object.prototype.hasOwnProperty.call(params, 'filters')) {
-        // An explicit empty value means all types. Remove it before the filter
-        // parser can turn it into an empty-name filter.
-        delete params.filters;
-      } else {
-        params.filters = 'type.Institution';
-      }
+      params.filters = 'type.Institution';
       history.replace({
         ...location,
         search: queryString.stringify(params),
@@ -105,6 +120,8 @@ const EntriesRoute = ({ children }) => {
 
   return (
     <SearchAndSortQuery
+      filterParamsMapping={FILTER_PARAMS_MAPPING}
+      querySetter={setDirectoryQuery}
       initialSearchState={{ query: '', qindex: '' }}
       searchParamsMapping={{
         query: value => ({ query: value }),
