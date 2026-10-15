@@ -89,13 +89,13 @@ describe('directory entries', () => {
     const { history } = renderDirectory(['/directory/entries?query=fix']);
 
     fireEvent.click(await screen.findByText('fixture-entry'));
-    expect(at(history)).toBe('/directory/entries/e1?query=fix');
+    expect(at(history)).toBe('/directory/entries/e1?filters=type.Institution&query=fix');
 
     expect((await findEntryPane()).getByText('ISIL:FIX-1')).toBeInTheDocument();
     expect(sectionLink('entry')).not.toHaveFocus();
-    expect(sectionLink('entry')).toHaveAttribute('href', '/directory/entries/e1?query=fix');
-    expect(sectionLink('lmsConfig')).toHaveAttribute('href', '/directory/entries/e1/lmsconfig?query=fix');
-    expect(sectionLink('networks')).toHaveAttribute('href', '/directory/entries/e1/networks?query=fix');
+    expect(sectionLink('entry')).toHaveAttribute('href', '/directory/entries/e1?filters=type.Institution&query=fix');
+    expect(sectionLink('lmsConfig')).toHaveAttribute('href', '/directory/entries/e1/lmsconfig?filters=type.Institution&query=fix');
+    expect(sectionLink('networks')).toHaveAttribute('href', '/directory/entries/e1/networks?filters=type.Institution&query=fix');
   });
 
   it('switches sections and closes the whole entry back to the list', async () => {
@@ -104,7 +104,7 @@ describe('directory entries', () => {
     const lmsLink = await findSectionLink('lmsConfig');
     lmsLink.focus();
     fireEvent.click(lmsLink);
-    expect(at(history)).toBe('/directory/entries/e1/lmsconfig?query=fix');
+    expect(at(history)).toBe('/directory/entries/e1/lmsconfig?filters=type.Institution&query=fix');
     expect(await screen.findByText('fixture-lms-address')).toBeInTheDocument();
     expect(sectionLink('lmsConfig')).toHaveAttribute('aria-current', 'page');
     expect(sectionLink('entry')).not.toHaveAttribute('aria-current');
@@ -112,7 +112,7 @@ describe('directory entries', () => {
     expect(entryRow()).toHaveClass('mclSelected');
 
     fireEvent.click(screen.getByRole('button', { name: 'stripes-components.closeItem' }));
-    expect(at(history)).toBe('/directory/entries?query=fix');
+    expect(at(history)).toBe('/directory/entries?filters=type.Institution&query=fix');
     expect(screen.queryByText('fixture-lms-address')).not.toBeInTheDocument();
     expect(querySectionLink('entry')).not.toBeInTheDocument();
     expect(entryRow()).not.toHaveClass('mclSelected');
@@ -122,7 +122,7 @@ describe('directory entries', () => {
     mockOkapi.setResponses(responses({ 'directory/entries/by-symbol/ISIL:FIX-1': entry }));
     const { history } = renderDirectory(['/directory/entries/by-symbol/ISIL:FIX-1?query=fix']);
 
-    await waitFor(() => expect(at(history)).toBe('/directory/entries/e1?query=fix'));
+    await waitFor(() => expect(at(history)).toBe('/directory/entries/e1?filters=type.Institution&query=fix'));
     expect((await findEntryPane()).getByText('ISIL:FIX-1')).toBeInTheDocument();
     expect(entryRow()).toHaveClass('mclSelected');
   });
@@ -137,25 +137,25 @@ describe('directory entries', () => {
 
     expect(await screen.findByText('ui-rsdir.entry.symbolNotFound')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'stripes-components.closeItem' }));
-    expect(at(history)).toBe('/directory/entries?query=fix');
+    expect(at(history)).toBe('/directory/entries?filters=type.Institution&query=fix');
   });
 
   it('edits the entry in a pane of its own and cancels or closes back to the view', async () => {
     const { history } = renderDirectory(['/directory/entries/e1?query=fix']);
 
     fireEvent.click(await screen.findByRole('button', { name: 'ui-rsdir.edit' }));
-    expect(at(history)).toBe('/directory/entries/e1/edit?query=fix');
+    expect(at(history)).toBe('/directory/entries/e1/edit?filters=type.Institution&query=fix');
     expect(await screen.findByRole('button', { name: 'ui-rsdir.edit.submit' })).toBeInTheDocument();
     expect(querySectionLink('entry')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.cancel' }));
-    await waitFor(() => expect(at(history)).toBe('/directory/entries/e1?query=fix'));
+    await waitFor(() => expect(at(history)).toBe('/directory/entries/e1?filters=type.Institution&query=fix'));
     expect((await findEntryPane()).getByText('ISIL:FIX-1')).toBeInTheDocument();
     expect(sectionLink('entry')).toHaveAttribute('aria-current', 'page');
 
     fireEvent.click(await screen.findByRole('button', { name: 'ui-rsdir.edit' }));
     fireEvent.click(screen.getByRole('button', { name: 'stripes-components.closeItem' }));
-    await waitFor(() => expect(at(history)).toBe('/directory/entries/e1?query=fix'));
+    await waitFor(() => expect(at(history)).toBe('/directory/entries/e1?filters=type.Institution&query=fix'));
   });
 
   it('manages tiers for a consortium and picks them for any other entry', async () => {
@@ -670,7 +670,7 @@ describe('directory entries', () => {
     const { history } = renderDirectory(['/directory/entries?query=fix']);
 
     fireEvent.click(await screen.findByRole('button', { name: 'ui-rsdir.new' }));
-    expect(at(history)).toBe('/directory/entries/create?query=fix');
+    expect(at(history)).toBe('/directory/entries/create?filters=type.Institution&query=fix');
     const createHeading = await screen.findByRole('heading', { name: 'ui-rsdir.createEntry' });
     const createPane = within(createHeading.closest('section'));
     expect(querySectionLink('entry')).not.toBeInTheDocument();
@@ -683,8 +683,8 @@ describe('directory entries', () => {
       'directory/entries',
       { json: expect.objectContaining({ name: 'fixture-new', type: 'Institution' }) }
     ));
-    await waitFor(() => expect(at(history)).toBe('/directory/entries/new-1?query=fix'));
-    expect(await findSectionLink('entry')).toHaveAttribute('href', '/directory/entries/new-1?query=fix');
+    await waitFor(() => expect(at(history)).toBe('/directory/entries/new-1?filters=type.Institution&query=fix'));
+    expect(await findSectionLink('entry')).toHaveAttribute('href', '/directory/entries/new-1?filters=type.Institution&query=fix');
   });
 });
 
