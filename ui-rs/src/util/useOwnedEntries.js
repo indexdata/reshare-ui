@@ -19,6 +19,13 @@ const useOwnedEntries = ({ enabled = true } = {}) => {
   return { entries, byId, isSettled: query.isSuccess || query.isError };
 };
 
+const useTenantInstitution = () => {
+  const { entries, isSettled } = useOwnedEntries();
+  const institution = useMemo(() => entries.find(entry => entry.type === 'Institution'), [entries]);
+
+  return { institution, isSettled };
+};
+
 // Candidates for a request's requesterPickupLocationId, which the broker accepts
 // as the requesting institution itself or one of its descendants.
 const usePickupLocations = () => {
@@ -45,4 +52,4 @@ const useTiers = () => {
   return { tiers, isSettled };
 };
 
-export { useOwnedEntries, usePickupLocations, useTiers };
+export { useOwnedEntries, usePickupLocations, useTenantInstitution, useTiers };

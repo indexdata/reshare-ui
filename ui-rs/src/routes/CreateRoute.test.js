@@ -27,6 +27,8 @@ const institution = { id: 'inst-1', name: 'Our Library', type: 'Institution' };
 const westBranch = { id: 'branch-w', name: 'West Branch', type: 'Branch', parent: 'inst-1', illConfig: { isPickupLocation: true } };
 const eastBranch = { id: 'branch-e', name: 'East Branch', type: 'Branch', parent: 'inst-1', illConfig: { isPickupLocation: true } };
 const ownedEntries = { items: [institution, westBranch, eastBranch] };
+// An LMS address is what turns on the broker's NCIP patron lookup.
+const lookupEntries = { items: [{ ...institution, lmsConfig: { address: 'https://lms.example/ncip' } }, westBranch, eastBranch] };
 
 // Not in cost order, so we can assert that behaviour.
 const tiers = [
@@ -93,6 +95,7 @@ describe('CreateRoute', () => {
     // Submit is disabled while pristine; fill the required fields plus an ISBN
     // to exercise the identifier transform.
     fillRequiredFields();
+    setField('patronEmail', 'ada@example.org');
     setField('identifiers.ISBN', '9781234567890');
     setField('internalNote', 'Staff only note');
     setField('requesterPickupLocationId', 'branch-e');
@@ -129,12 +132,64 @@ describe('CreateRoute', () => {
     expect(opts.json.internalNote).toBe('Staff only note');
     expect(illRequest.internalNote).toBeUndefined();
 
+    // The email field becomes the patron's Email-typed ISO address.
+    expect(illRequest.patronInfo.address).toEqual([{
+      electronicAddress: { electronicAddressType: { '#text': 'Email' }, electronicAddressData: 'ada@example.org' },
+    }]);
+
     // So is the pickup location, as the directory entry id.
     expect(opts.json.requesterPickupLocationId).toBe('branch-e');
     expect(illRequest.requesterPickupLocationId).toBeUndefined();
 
     // No error callout on the happy path.
     expect(sendCallout).not.toHaveBeenCalled();
+  });
+
+  it('asks for the patron by name by default, with the id and email optional', async () => {
+    renderCreate();
+    await formRendered();
+
+    expect(fieldByName('patronInfo.givenName')).toBeRequired();
+    expect(fieldByName('patronInfo.surname')).toBeRequired();
+    expect(fieldByName('patronEmail')).not.toBeRequired();
+    expect(fieldByName('patronInfo.patronId')).not.toBeRequired();
+
+    fillRequiredFields();
+    setField('requesterPickupLocationId', 'branch-e');
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+    await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(document.querySelector('button[type="submit"]')).toBeNull());
+    expect(mockOkapi.post.mock.calls[0][1].json.illRequest.patronInfo).toEqual({ givenName: 'Ada', surname: 'Lovelace' });
+  });
+
+  it('asks only for a required patron id under an NCIP lookup', async () => {
+    renderCreate({ owned: lookupEntries });
+    await formRendered();
+
+    expect(fieldByName('patronInfo.givenName')).toBeUndefined();
+    expect(fieldByName('patronInfo.surname')).toBeUndefined();
+    expect(fieldByName('patronEmail')).toBeUndefined();
+
+    setField('bibliographicInfo.title', 'Test Title');
+    setField('bibliographicInfo.author', 'Some Author');
+    setField('requesterPickupLocationId', 'branch-e');
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+    await waitFor(() => expect(fieldByName('patronInfo.patronId')).toHaveAttribute('aria-invalid', 'true'));
+    expect(mockOkapi.post).not.toHaveBeenCalled();
+
+    setField('patronInfo.patronId', 'p1');
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+    await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(document.querySelector('button[type="submit"]')).toBeNull());
+    expect(mockOkapi.post.mock.calls[0][1].json.illRequest.patronInfo).toEqual({ patronId: 'p1' });
+  });
+
+  it('asks for the patron by name when the LMS has user lookup switched off', async () => {
+    const lookupOff = { ...institution, lmsConfig: { address: 'https://lms.example/ncip', lookupUserEnabled: false } };
+    renderCreate({ owned: { items: [lookupOff, westBranch] } });
+    await formRendered();
+
+    expect(fieldByName('patronInfo.givenName')).toBeDefined();
   });
 
   it('surfaces an HTTP failure as an error callout and keeps the form mounted', async () => {

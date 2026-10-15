@@ -135,6 +135,23 @@ describe('EditRoute', () => {
     expect(sendCallout).not.toHaveBeenCalled();
   });
 
+  it('replaces the patron email', async () => {
+    const request = editableRequest();
+    request.illRequest.patronInfo.address = [
+      { electronicAddress: { electronicAddressType: { '#text': 'Email' }, electronicAddressData: 'ada@example.org' } },
+    ];
+    renderEdit({ request });
+
+    await waitFor(() => expect(fieldByName('patronEmail')?.value).toBe('ada@example.org'));
+    setField('patronEmail', 'ada@new.example');
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+
+    await waitFor(() => expect(mockOkapi.put).toHaveBeenCalledTimes(1));
+    expect(mockOkapi.put.mock.calls[0][1].json.illRequest.patronInfo.address).toEqual([
+      { electronicAddress: { electronicAddressType: { '#text': 'Email' }, electronicAddressData: 'ada@new.example' } },
+    ]);
+  });
+
   it('clearing a form identifier drops only that code, keeping the rest', async () => {
     renderEdit();
     await waitFor(() => expect(fieldByName('identifiers.ISBN')?.value).toBe('9781234567890'));
