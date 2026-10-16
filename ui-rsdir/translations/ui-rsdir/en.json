@@ -307,6 +307,7 @@
   "confirmDirtyNavigate" : "There are unsaved changes. Are you sure you want to leave?",
   "symbol.index" : "Symbol #{index}",
   "symbol.authority" : "Authority",
+  "symbol.authority.duplicate" : "A single Entry may not be associated with two Symbols that share the same Authority value",
   "symbol.symbol" : "Symbol",
   "symbol.add" : "Add symbol",
   "settingsConfig.vendorBadge": "[{name}]",
