@@ -9,12 +9,15 @@ const patronEmail = (patronInfo) => (patronInfo?.address ?? [])
   .find(a => isEmailAddress(a) && a.electronicAddress.electronicAddressData)
   ?.electronicAddress.electronicAddressData;
 
-// Replaces every Email-typed address with this one, or removes them all when it
-// is empty; other addresses are kept.
-const withPatronEmail = (addresses, email) => [
-  ...(addresses ?? []).filter(a => !isEmailAddress(a)),
-  ...(email ? [{ electronicAddress: { electronicAddressType: { '#text': 'Email' }, electronicAddressData: email } }] : []),
-];
+// If the email field is unchanged, preserve the original address list so saving
+// unrelated edits does not discard additional email addresses or their metadata.
+const withPatronEmail = (addresses, email) => {
+  if (email === patronEmail({ address: addresses })) return addresses ?? [];
+  return [
+    ...(addresses ?? []).filter(a => !isEmailAddress(a)),
+    ...(email ? [{ electronicAddress: { electronicAddressType: { '#text': 'Email' }, electronicAddressData: email } }] : []),
+  ];
+};
 
 export default patronEmail;
 export { withPatronEmail };
