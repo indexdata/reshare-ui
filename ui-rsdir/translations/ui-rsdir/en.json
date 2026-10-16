@@ -15,6 +15,7 @@
   "entry.parent" : "Parent",
   "entry.parent.select" : "Select a parent",
   "entry.branches" : "Branches",
+  "entry.members" : "Members",
   "entry.phoneNumber" : "Phone number",
   "entry.tenant" : "Tenant",
   "entry.lendToBorrowRatio" : "Desired lending-to-borrowing ratio",
