@@ -30,6 +30,7 @@ jest.mock('@projectreshare/stripes-reshare', () => ({
 }));
 
 jest.mock('react-query', () => ({
+  useQuery: () => ({ data: [] }),
   useMutation: ({ mutationFn }) => ({ mutateAsync: mutationFn }),
   useQueryClient: () => ({ invalidateQueries: jest.fn() }),
 }));

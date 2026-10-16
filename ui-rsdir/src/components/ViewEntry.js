@@ -12,6 +12,7 @@ import { DirectLink, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import { apiAddressToDisplayComponents } from '../util/addressAdapter';
 import { getAddressPlugin } from '../util/addressPlugin';
 import { normalizeLendToBorrowRatio } from '../util/lendToBorrowRatio';
+import useEntryChildren from '../hooks/useEntryChildren';
 
 const normalizeList = data => (Array.isArray(data) ? data : data?.items || []);
 
@@ -22,14 +23,8 @@ const ViewEntry = ({ entry }) => {
     staleTime: 2 * 60 * 1000,
     enabled: !!entry.parent,
   });
-  const branchesQuery = useOkapiQuery('directory/entries', {
-    enabled: entry.type === 'Institution' && !!entry.id,
-    staleTime: 2 * 60 * 1000,
-    searchParams: {
-      cql: `type=Branch and parent=${entry.id}`,
-      limit: '1000',
-    },
-  });
+  const branchesQuery = useEntryChildren(entry, 'Branch');
+  const membersQuery = useEntryChildren(entry, 'Institution');
   const parentValue = parentQuery.data?.name || parentQuery.data?.id || entry.parent;
   const parentDisplay = ['Branch', 'Institution'].includes(entry.type)
     ? (
@@ -43,6 +38,9 @@ const ViewEntry = ({ entry }) => {
     : parentValue;
   const branches = normalizeList(branchesQuery.data)
     .filter(branch => branch.type === 'Branch' && branch.id);
+  const members = normalizeList(membersQuery.data)
+    .filter(member => member.type === 'Institution' && member.id)
+    .sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id, undefined, { sensitivity: 'base' }));
 
   const formatSymbols = (symbols) => {
     if (!symbols || symbols.length === 0) return '';
@@ -201,6 +199,25 @@ const ViewEntry = ({ entry }) => {
                     preserveSearch
                   >
                     {branch.name || branch.id}
+                  </DirectLink>
+                </div>
+              ))}
+            />
+          </Col>
+        </Row>
+      }
+      { entry.type === 'Consortium' && members.length > 0 &&
+        <Row>
+          <Col xs={12}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rsdir.entry.members" />}
+              value={members.map(member => (
+                <div key={member.id}>
+                  <DirectLink
+                    to={`/directory/entries/${member.id}`}
+                    preserveSearch
+                  >
+                    {member.name || member.id}
                   </DirectLink>
                 </div>
               ))}
