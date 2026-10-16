@@ -49,12 +49,12 @@ const EntriesRoute = ({ children }) => {
   const ky = useOkapiKy();
   const history = useHistory();
   const location = useLocation();
-  const [initializingFilters, setInitializingFilters] = useState(
-    () => !Object.prototype.hasOwnProperty.call(queryString.parse(location.search), 'filters')
-  );
+  const urlParams = queryString.parse(location.search);
+  const needsFilterNormalization = !Object.prototype.hasOwnProperty.call(urlParams, 'filters');
+  const [initializingFilters, setInitializingFilters] = useState(needsFilterNormalization);
 
   useEffect(() => {
-    if (initializingFilters) {
+    if (needsFilterNormalization) {
       const params = queryString.parse(location.search);
       params.filters = 'type.Institution';
       history.replace({
@@ -63,15 +63,14 @@ const EntriesRoute = ({ children }) => {
       });
       setInitializingFilters(false);
     }
-  }, [history, location, initializingFilters]);
+  }, [history, location, needsFilterNormalization]);
 
   // Read query params from URL (SearchAndSortQuery manages the URL, we just read it)
-  const urlParams = queryString.parse(location.search);
   const queryParams = {
     query: urlParams.query || '',
     // Use our index-specific templates rather than makeQueryFunction's index shortcut.
     qindex: '',
-    filters: urlParams.filters || '',
+    filters: needsFilterNormalization ? 'type.Institution' : (urlParams.filters || ''),
     sort: ''
   };
 
@@ -100,7 +99,7 @@ const EntriesRoute = ({ children }) => {
   const entriesQuery = useInfiniteQuery(
     {
       queryKey: ['directory/entries', cql, '@projectreshare/rsdir'],
-      enabled: !initializingFilters,
+      enabled: !needsFilterNormalization,
       queryFn: ({ pageParam = 0 }) => {
         const params = new URLSearchParams();
         if (cql) params.append('cql', cql);
@@ -115,7 +114,7 @@ const EntriesRoute = ({ children }) => {
     }
   );
 
-  // Mount the controls after the URL default is available to SearchAndSortQuery.
+  // Wait only on initial entry; later normalization must preserve nested drafts.
   if (initializingFilters) return null;
 
   return (
@@ -138,7 +137,10 @@ const EntriesRoute = ({ children }) => {
       }) => (
         <Entries
           searchQuery={cql || ''}
-          entriesQuery={entriesQuery}
+          entriesQuery={{
+            ...entriesQuery,
+            fetchNextPage: (...args) => (needsFilterNormalization ? undefined : entriesQuery.fetchNextPage(...args)),
+          }}
           searchValue={searchValue}
           getSearchHandlers={getSearchHandlers}
           onSubmitSearch={onSubmitSearch}

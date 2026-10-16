@@ -694,6 +694,8 @@ it('retains an active settings draft between cached list searches', async () => 
   const { history } = renderDirectory(['/directory/entries/e1/lmsconfig?query=first']);
   await screen.findByText('fixture-lms-address');
   act(() => history.push('/directory/entries/e1/lmsconfig?query=second'));
+  await waitFor(() => expect(at(history)).toBe('/directory/entries/e1/lmsconfig?filters=type.Institution&query=second'));
+  await waitFor(() => expect(mockOkapi.calledUrls().filter(url => url.startsWith('directory/entries?'))).toHaveLength(2));
   await screen.findByText('fixture-lms-address');
   act(() => history.goBack());
   await screen.findByText('fixture-lms-address');
@@ -701,6 +703,10 @@ it('retains an active settings draft between cached list searches', async () => 
   fireEvent.change(document.getElementById('lms-config-address'), { target: { value: 'draft-address' } });
   act(() => history.goForward());
   await waitFor(() => expect(document.getElementById('lms-config-address')).toHaveValue('draft-address'));
+  expect(at(history)).toBe('/directory/entries/e1/lmsconfig?filters=type.Institution&query=second');
+  const listRequests = mockOkapi.calledUrls().filter(url => url.startsWith('directory/entries?'));
+  expect(listRequests).toHaveLength(2);
+  listRequests.forEach(url => expect(new URLSearchParams(url.split('?')[1]).get('cql')).toContain('type=="Institution"'));
 });
 
 it('retains an active settings draft while an uncached list search loads', async () => {
@@ -716,6 +722,10 @@ it('retains an active settings draft while an uncached list search loads', async
   fireEvent.change(document.getElementById('lms-config-address'), { target: { value: 'draft-address' } });
   act(() => history.push('/directory/entries/e1/lmsconfig?query=pending'));
   await waitFor(() => expect(finishSearch).toEqual(expect.any(Function)));
+  expect(at(history)).toBe('/directory/entries/e1/lmsconfig?filters=type.Institution&query=pending');
+  const listRequests = mockOkapi.calledUrls().filter(url => url.startsWith('directory/entries?'));
+  expect(listRequests).toHaveLength(2);
+  listRequests.forEach(url => expect(new URLSearchParams(url.split('?')[1]).get('cql')).toContain('type=="Institution"'));
   expect(document.getElementById('lms-config-address')).toHaveValue('draft-address');
   await act(async () => finishSearch(responses()['directory/entries']));
   expect(document.getElementById('lms-config-address')).toHaveValue('draft-address');

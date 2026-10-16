@@ -38,8 +38,8 @@ const pickupCheckbox = () => screen.getByRole('checkbox', { name: 'ui-rsdir.filt
 const typeInput = () => screen.getByRole('combobox', { name: 'ui-rsdir.entry.type' });
 const lastParams = () => new URLSearchParams(mockOkapi.calledUrls().at(-1).split('?')[1]);
 
-const renderList = (search = '') => {
-  const history = createMemoryHistory({ initialEntries: [`/directory/entries${search}`] });
+const renderList = (search = '', historyOptions = {}) => {
+  const history = createMemoryHistory({ initialEntries: [`/directory/entries${search}`], ...historyOptions });
   return {
     history,
     ...renderWithRs(<Route path="/directory/entries"><EntriesRoute /></Route>, { history }),
@@ -74,6 +74,48 @@ it('defaults to Institution before the first request without adding a history en
   expect(history.length).toBe(1);
   expect(mockOkapi.calledUrls()).toHaveLength(1);
   expect(lastParams().get('cql')).toBe('type=="Institution"');
+});
+
+it.each(['push', 'back'])('normalizes a filterless URL reached by %s without an unrestricted request', async navigation => {
+  const target = '/directory/entries?qindex=name&query=Central&extra=kept#results';
+  const { history } = renderList('?filters=type.Branch', navigation === 'back' ? {
+    initialEntries: [target, '/directory/entries?filters=type.Branch'],
+    initialIndex: 1,
+  } : {});
+  await screen.findByText('University Central Library');
+  mockOkapi.mockClear();
+  const state = { direct: true };
+  act(() => {
+    if (navigation === 'back') history.goBack();
+    else history.push(target, state);
+  });
+  await waitFor(() => expect(new URLSearchParams(history.location.search).get('filters')).toBe('type.Institution'));
+  await waitFor(() => expect(typeInput().value).toBe('Institution'));
+  await waitFor(() => expect(mockOkapi.calledUrls()).toHaveLength(1));
+  expect(lastParams().get('cql')).toBe('(name="*Central*") and type=="Institution"');
+  expect(history.length).toBe(2);
+  expect(history.index).toBe(navigation === 'back' ? 0 : 1);
+  expect(history.location.pathname).toBe('/directory/entries');
+  expect(history.location.hash).toBe('#results');
+  expect(new URLSearchParams(history.location.search).get('extra')).toBe('kept');
+  expect(queryInput().value).toBe('Central');
+  expect(indexInput().value).toBe('name');
+  if (navigation === 'push') expect(history.location.state).toEqual(state);
+});
+
+it.each([
+  ['', '', null],
+  ['type.Branch', 'Branch', 'type=="Branch"'],
+])('preserves explicit filters=%s on navigation', async (filters, type, cql) => {
+  const { history } = renderList();
+  await screen.findByText('University Central Library');
+  mockOkapi.mockClear();
+  act(() => history.push(`/directory/entries?filters=${filters}`));
+  await waitFor(() => expect(typeInput().value).toBe(type));
+  await waitFor(() => expect(mockOkapi.calledUrls()).toHaveLength(1));
+  expect(new URLSearchParams(history.location.search).get('filters')).toBe(filters);
+  expect(lastParams().get('cql')).toBe(cql);
+  expect(history.length).toBe(2);
 });
 
 it('preserves URL parameters and combines the default type with searches', async () => {
