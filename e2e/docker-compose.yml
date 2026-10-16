@@ -47,7 +47,7 @@ services:
       # symbols come from the entries whose tenant field names the tenant
       TENANT_TO_SYMBOL: directory
     ports:
-      - "8080:8080"
+      - "${E2E_BIND:-127.0.0.1}:8080:8080"
 
   # No healthcheck: the image is FROM scratch, with no shell or wget to run
   # one. stack-up.sh waits for it before importing the seed.
@@ -62,7 +62,7 @@ services:
       HTTP_PORT: 8086
       DATABASE_URL: postgresql://crosslink:crosslink@postgres:5432/directory
     ports:
-      - "8086:8086"
+      - "${E2E_BIND:-127.0.0.1}:8086:8086"
 
   illmock:
     image: ghcr.io/indexdata/crosslink-illmock:main
@@ -73,7 +73,7 @@ services:
       # where illmock sends its own ISO18626 messages; the default is itself
       PEER_URL: http://broker:8080/iso18626
     ports:
-      - "8081:8081"
+      - "${E2E_BIND:-127.0.0.1}:8081:8081"
 
   nginx:
     image: nginx:alpine
@@ -89,10 +89,10 @@ services:
       - ./mock-okapi/load-njs.sh:/docker-entrypoint.d/05-load-njs.sh:ro
       - ./bundle:/usr/share/nginx/bundle:ro
     ports:
-      - "9130:9130"
-      - "3000:3000"
-      - "9131:9131"
-      - "3002:3002"
+      - "${E2E_BIND:-127.0.0.1}:9130:9130"
+      - "${E2E_BIND:-127.0.0.1}:3000:3000"
+      - "${E2E_BIND:-127.0.0.1}:9131:9131"
+      - "${E2E_BIND:-127.0.0.1}:3002:3002"
     healthcheck:
       # 127.0.0.1, not localhost: nginx listens on IPv4 only
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9130/saml/check"]

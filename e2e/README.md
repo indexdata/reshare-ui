@@ -237,7 +237,9 @@ Captive tooling also accepts `E2E_OKAPI_URL` (default `http://localhost:9130`),
 `E2E_BROKER_URL` (`http://localhost:8080`), `E2E_ILLMOCK_URL`
 (`http://localhost:8081`), `E2E_TENANT` / `E2E_PEER_TENANT` (`test1` / `test2`),
 and `E2E_ILLMOCK_SYMBOL` (`ISIL:US-MOCK`). These do not reconfigure Compose's
-ports or compiled bundle settings. `PLAYWRIGHT_CHROMIUM_EXECUTABLE` chooses
+ports or compiled bundle settings. Compose publishes the stack's ports on
+`E2E_BIND` (default `127.0.0.1`); set `E2E_BIND=0.0.0.0` to reach the stack
+from other machines. `PLAYWRIGHT_CHROMIUM_EXECUTABLE` chooses
 the browser (see Quick start).
 
 ## Troubleshooting

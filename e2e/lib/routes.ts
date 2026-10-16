@@ -1,19 +1,23 @@
 import type { Locator, Page } from '@playwright/test';
 
-// Assert route-owned landmarks, independent of existing records.
+// Each landmark renders only once the route's data has loaded, so a failed
+// query fails the visibility check instead of racing the error assertions.
+// None depends on existing records.
 export interface SmokeRoute {
   name: string; // used in test titles
   path: string;
   landmark: (page: Page) => Locator;
 }
 
+// The results pane's "N records found" subtitle, shown only on query success.
+// #requests is the PersistedPaneset (PatronRequests.js), same id on both sides.
+const requestsLoaded = (p: Page) => p.locator('#requests').getByText(/records found$/);
+
 export const smokeRoutes: SmokeRoute[] = [
   {
-    // #requests is the PersistedPaneset holding the search/filter pane and
-    // the results MCL (PatronRequests.js) — same id on both sides
     name: 'requests list (borrowing)',
     path: '/request/requests',
-    landmark: (p) => p.locator('#requests'),
+    landmark: requestsLoaded,
   },
   {
     name: 'create request form',
@@ -23,12 +27,13 @@ export const smokeRoutes: SmokeRoute[] = [
   {
     name: 'requests list (lending)',
     path: '/supply/requests',
-    landmark: (p) => p.locator('#requests'),
+    landmark: requestsLoaded,
   },
   {
     name: 'scheduled actions settings',
     // settings mount comes from the module name (@projectreshare/rs → /settings/rs)
     path: '/settings/rs/scheduled-actions',
-    landmark: (p) => p.locator('#clickable-new-scheduled-action'),
+    // a data row, or the empty message, which is blank until the query succeeds
+    landmark: (p) => p.locator('[data-row-inner]').or(p.getByText('No scheduled actions')).first(),
   },
 ];
