@@ -135,6 +135,41 @@ describe('EditRoute', () => {
     expect(sendCallout).not.toHaveBeenCalled();
   });
 
+  it('replaces the patron email', async () => {
+    const request = editableRequest();
+    request.illRequest.patronInfo.address = [
+      { electronicAddress: { electronicAddressType: { '#text': 'Email' }, electronicAddressData: 'ada@example.org' } },
+    ];
+    renderEdit({ request });
+
+    await waitFor(() => expect(fieldByName('patronEmail')?.value).toBe('ada@example.org'));
+    setField('patronEmail', 'ada@new.example');
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+
+    await waitFor(() => expect(mockOkapi.put).toHaveBeenCalledTimes(1));
+    expect(mockOkapi.put.mock.calls[0][1].json.illRequest.patronInfo.address).toEqual([
+      { electronicAddress: { electronicAddressType: { '#text': 'Email' }, electronicAddressData: 'ada@new.example' } },
+    ]);
+  });
+
+  it('keeps every patron address as it was when the email is not edited', async () => {
+    const address = [
+      { electronicAddress: { electronicAddressType: { '#text': 'email' }, electronicAddressData: 'ada@example.org' } },
+      { electronicAddress: { electronicAddressType: { '#text': 'Chat' }, electronicAddressData: 'ada-chat' } },
+      { electronicAddress: { electronicAddressType: { '#text': 'Email' }, electronicAddressData: 'ada@other.example' } },
+    ];
+    const request = editableRequest();
+    request.illRequest.patronInfo.address = address;
+    renderEdit({ request });
+
+    await waitFor(() => expect(fieldByName('patronEmail')?.value).toBe('ada@example.org'));
+    setField('bibliographicInfo.title', 'Edited Title');
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+
+    await waitFor(() => expect(mockOkapi.put).toHaveBeenCalledTimes(1));
+    expect(mockOkapi.put.mock.calls[0][1].json.illRequest.patronInfo.address).toEqual(address);
+  });
+
   it('clearing a form identifier drops only that code, keeping the rest', async () => {
     renderEdit();
     await waitFor(() => expect(fieldByName('identifiers.ISBN')?.value).toBe('9781234567890'));

@@ -18,7 +18,7 @@ import { Pluggable, useStripes } from '@folio/stripes/core';
 import { formatTierOption, tiersOfType } from '#/util/tiers';
 
 const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect, requireTier = false }) => {
-  const { copyrightTypes, publicationTypes, locations, tiers = [] } = selectOptions;
+  const { copyrightTypes, publicationTypes, locations, tiers = [], patronLookup } = selectOptions;
   const { values } = useFormState();
   const form = useForm();
   const intl = useIntl();
@@ -48,11 +48,6 @@ const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect, requireTie
     });
   }, [serviceType, form]);
 
-  // TODO: Broker API; stubbed until it can supply hostLMSIntegration's borrower_check
-  const ncipBorrowerCheck = { value: 'none', isSuccess: true };
-
-  if (ncipBorrowerCheck.isSuccess !== true) return null;
-
   return (
     <AccordionSet>
       <Row>
@@ -61,8 +56,8 @@ const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect, requireTie
             name="patronInfo.patronId"
             label={<FormattedMessage id="ui-rs.information.requestingUser" />}
             component={TextField}
-            required={(ncipBorrowerCheck?.value && ncipBorrowerCheck?.value !== 'none')}
-            validate={(ncipBorrowerCheck?.value && ncipBorrowerCheck?.value !== 'none') && required}
+            required={patronLookup}
+            validate={patronLookup && required}
           />
         </Col>
         <Col xs={2}>
@@ -104,7 +99,8 @@ const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect, requireTie
           />
         </Col>
       </Row>
-      { (ncipBorrowerCheck?.value === 'none' || !ncipBorrowerCheck?.value) && (
+      {/* An NCIP lookup supplies the patron's name and email from the id. */}
+      { !patronLookup && (
       <Row>
         <Col xs={4}>
           <Field
@@ -124,17 +120,13 @@ const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect, requireTie
             validate={required}
           />
         </Col>
-        {/* TODO: Broker API - patronEmail previously readOnly and populated from institution */}
-        {/* <Col xs={4}>
+        <Col xs={4}>
           <Field
-            name="patronInfo.patronEmail"
-            label={<FormattedMessage id="ui-rs.information.patronEmail" />}
+            name="patronEmail"
+            label={<FormattedMessage id="ui-rs.information.emailAddress" />}
             component={TextField}
-            required
-            validate={required}
-            readOnly
           />
-        </Col> */}
+        </Col>
       </Row>
       )}
       <Row>

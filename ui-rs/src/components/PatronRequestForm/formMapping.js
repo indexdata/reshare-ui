@@ -1,5 +1,6 @@
 import omit from 'lodash/omit';
 import { ID_ARRAYS, extractIdentifiers } from '#/util/bibIdentifiers';
+import patronEmail, { withPatronEmail } from '#/util/patronEmail';
 import { findMatchingTier, tierMaximumCosts, tierToServiceLevel } from '#/util/tiers';
 import { CREATE, EDIT } from './operations';
 
@@ -21,12 +22,14 @@ const brokerToForm = (request, { tiers = [] } = {}) => {
 
   const identifiers = extractIdentifiers(bibliographicInfo);
   const tier = findMatchingTier(illRequest, tiers);
+  const email = patronEmail(illRequest.patronInfo);
 
   return {
     ...illRequest,
     bibliographicInfo,
     identifiers,
     ...(tier && { tier: tier.id }),
+    ...(email && { patronEmail: email }),
     ...(supplierUniqueRecordId && { systemInstanceIdentifier: supplierUniqueRecordId }),
     ...(request?.internalNote && { internalNote: request.internalNote }),
     ...(request?.requesterPickupLocationId && { requesterPickupLocationId: request.requesterPickupLocationId }),
@@ -40,6 +43,7 @@ const formToBroker = (submittedRecord, { operation = CREATE, tiers = [] } = {}) 
     identifiers = {},
     systemInstanceIdentifier,
     tier: tierId,
+    patronEmail: email,
     ...illRequestFields
   } = submittedRecord;
 
@@ -66,6 +70,9 @@ const formToBroker = (submittedRecord, { operation = CREATE, tiers = [] } = {}) 
   // Without a tier, an edit keeps the level and cost the request already had.
   const tier = tierId && tiers.find(t => t.id === tierId);
   const illRequest = { ...illRequestFields, bibliographicInfo };
+  const address = withPatronEmail(illRequest.patronInfo?.address, email);
+  if (address.length > 0) illRequest.patronInfo = { ...illRequest.patronInfo, address };
+  else if (illRequest.patronInfo) illRequest.patronInfo = omit(illRequest.patronInfo, 'address');
   if (tier) {
     const maximumCosts = tierMaximumCosts(tier);
     const billingInfo = { ...omit(illRequest.billingInfo, 'maximumCosts'), ...(maximumCosts && { maximumCosts }) };
