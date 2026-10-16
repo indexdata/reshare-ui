@@ -38,8 +38,8 @@ const pickupCheckbox = () => screen.getByRole('checkbox', { name: 'ui-rsdir.filt
 const typeInput = () => screen.getByRole('combobox', { name: 'ui-rsdir.entry.type' });
 const lastParams = () => new URLSearchParams(mockOkapi.calledUrls().at(-1).split('?')[1]);
 
-const renderList = (search = '') => {
-  const history = createMemoryHistory({ initialEntries: [`/directory/entries${search}`] });
+const renderList = (search = '', historyOptions = {}) => {
+  const history = createMemoryHistory({ initialEntries: [`/directory/entries${search}`], ...historyOptions });
   return {
     history,
     ...renderWithRs(<Route path="/directory/entries"><EntriesRoute /></Route>, { history }),
@@ -66,8 +66,134 @@ beforeEach(() => {
   });
 });
 
-it('submits a contains search for Name and retains the selected index', async () => {
+it('defaults to Institution before the first request without adding a history entry', async () => {
   const { history } = renderList();
+  await screen.findByText('University Central Library');
+  expect(typeInput().value).toBe('Institution');
+  expect(new URLSearchParams(history.location.search).get('filters')).toBe('type.Institution');
+  expect(history.length).toBe(1);
+  expect(mockOkapi.calledUrls()).toHaveLength(1);
+  expect(lastParams().get('cql')).toBe('type=="Institution"');
+});
+
+it.each(['push', 'back'])('normalizes a filterless URL reached by %s without an unrestricted request', async navigation => {
+  const target = '/directory/entries?qindex=name&query=Central&extra=kept#results';
+  const { history } = renderList('?filters=type.Branch', navigation === 'back' ? {
+    initialEntries: [target, '/directory/entries?filters=type.Branch'],
+    initialIndex: 1,
+  } : {});
+  await screen.findByText('University Central Library');
+  mockOkapi.mockClear();
+  const state = { direct: true };
+  act(() => {
+    if (navigation === 'back') history.goBack();
+    else history.push(target, state);
+  });
+  await waitFor(() => expect(new URLSearchParams(history.location.search).get('filters')).toBe('type.Institution'));
+  await waitFor(() => expect(typeInput().value).toBe('Institution'));
+  await waitFor(() => expect(mockOkapi.calledUrls()).toHaveLength(1));
+  expect(lastParams().get('cql')).toBe('(name="*Central*") and type=="Institution"');
+  expect(history.length).toBe(2);
+  expect(history.index).toBe(navigation === 'back' ? 0 : 1);
+  expect(history.location.pathname).toBe('/directory/entries');
+  expect(history.location.hash).toBe('#results');
+  expect(new URLSearchParams(history.location.search).get('extra')).toBe('kept');
+  expect(queryInput().value).toBe('Central');
+  expect(indexInput().value).toBe('name');
+  if (navigation === 'push') expect(history.location.state).toEqual(state);
+});
+
+it.each([
+  ['', '', null],
+  ['type.Branch', 'Branch', 'type=="Branch"'],
+])('preserves explicit filters=%s on navigation', async (filters, type, cql) => {
+  const { history } = renderList();
+  await screen.findByText('University Central Library');
+  mockOkapi.mockClear();
+  act(() => history.push(`/directory/entries?filters=${filters}`));
+  await waitFor(() => expect(typeInput().value).toBe(type));
+  await waitFor(() => expect(mockOkapi.calledUrls()).toHaveLength(1));
+  expect(new URLSearchParams(history.location.search).get('filters')).toBe(filters);
+  expect(lastParams().get('cql')).toBe(cql);
+  expect(history.length).toBe(2);
+});
+
+it('preserves URL parameters and combines the default type with searches', async () => {
+  const { history } = renderList('?qindex=name&query=Central&extra=kept');
+  await screen.findByText('University Central Library');
+  expect(lastParams().get('cql')).toBe('(name="*Central*") and type=="Institution"');
+  expect(new URLSearchParams(history.location.search).get('extra')).toBe('kept');
+  expect(indexInput().value).toBe('name');
+  expect(queryInput().value).toBe('Central');
+  submitSearch('Library', 'name');
+  await waitFor(() => expect(lastParams().get('cql')).toBe('(name="*Library*") and type=="Institution"'));
+});
+
+it.each(['clear', 'reset'])('%s removes the default type and browser navigation keeps it cleared', async action => {
+  const { history } = renderList();
+  await screen.findByText('University Central Library');
+  if (action === 'clear') {
+    fireEvent.change(typeInput(), { target: { value: '' } });
+  } else {
+    fireEvent.click(document.getElementById('clickable-reset-all'));
+  }
+  await waitFor(() => expect(lastParams().has('cql')).toBe(false));
+  expect(typeInput().value).toBe('');
+  expect(new URLSearchParams(history.location.search).get('filters')).toBe('');
+  expect(document.getElementById('clickable-reset-all')).toBeDisabled();
+
+  act(() => history.goBack());
+  await waitFor(() => expect(typeInput().value).toBe('Institution'));
+  act(() => history.goForward());
+  await waitFor(() => expect(typeInput().value).toBe(''));
+  expect(document.getElementById('clickable-reset-all')).toBeDisabled();
+});
+
+it('respects an explicitly empty filter parameter on entry', async () => {
+  renderList('?filters=');
+  await screen.findByText('University Central Library');
+  expect(typeInput().value).toBe('');
+  expect(lastParams().has('cql')).toBe(false);
+});
+
+it.each(['explicit', 'clear', 'reset'])('%s all-types choice survives remounting from the resulting URL', async action => {
+  const { history, unmount, queryClient } = renderList(action === 'explicit' ? '?filters=' : '');
+  await screen.findByText('University Central Library');
+  if (action === 'clear') {
+    fireEvent.change(typeInput(), { target: { value: '' } });
+  } else if (action === 'reset') {
+    fireEvent.click(document.getElementById('clickable-reset-all'));
+  }
+  await waitFor(() => expect(lastParams().has('cql')).toBe(false));
+  const search = history.location.search;
+  expect(new URLSearchParams(search).get('filters')).toBe('');
+  unmount();
+  queryClient.clear();
+  mockOkapi.mockClear();
+
+  const remounted = renderList(search);
+  await screen.findByText('University Central Library');
+  expect(typeInput().value).toBe('');
+  expect(pickupCheckbox()).not.toBeChecked();
+  expect(document.getElementById('clickable-reset-all')).toBeDisabled();
+  expect(mockOkapi.calledUrls()).toHaveLength(1);
+  expect(lastParams().has('cql')).toBe(false);
+  expect(new URLSearchParams(remounted.history.location.search).get('filters')).toBe('');
+});
+
+it('preserves the all-types marker and unrelated parameters when searching after clearing Type', async () => {
+  const { history } = renderList('?filters=type.Institution&extra=kept');
+  await screen.findByText('University Central Library');
+  fireEvent.change(typeInput(), { target: { value: '' } });
+  await waitFor(() => expect(lastParams().has('cql')).toBe(false));
+  submitSearch('Central', 'name');
+  await waitFor(() => expect(lastParams().get('cql')).toBe('name="*Central*"'));
+  expect(new URLSearchParams(history.location.search).get('filters')).toBe('');
+  expect(new URLSearchParams(history.location.search).get('extra')).toBe('kept');
+});
+
+it('submits a contains search for Name and retains the selected index', async () => {
+  const { history } = renderList('?filters=');
   await screen.findByText('University Central Library');
   submitSearch('Central', 'name');
 
@@ -78,7 +204,7 @@ it('submits a contains search for Name and retains the selected index', async ()
 });
 
 it('submits All fields through the form using serverChoice without added wildcards', async () => {
-  renderList();
+  renderList('?filters=');
   await screen.findByText('University Central Library');
   fireEvent.change(queryInput(), { target: { name: 'query', value: 'Central Library' } });
   // Enter in the search input invokes the same native form submission.
@@ -94,7 +220,7 @@ it.each([
   ['symbol', 'ABC', 'symbol="ABC"'],
   ['symbol', 'ISIL:ABC', 'symbol="ISIL:ABC"'],
 ])('submits %s search for %s and retains the selected index', async (index, query, cql) => {
-  const { history } = renderList();
+  const { history } = renderList('?filters=');
   await screen.findByText('University Central Library');
   submitSearch(query, index);
 
@@ -105,14 +231,14 @@ it.each([
 });
 
 it('preserves a user-entered prefix wildcard in All fields', async () => {
-  renderList();
+  renderList('?filters=');
   await screen.findByText('University Central Library');
   submitSearch('Centr*');
   await waitFor(() => expect(lastParams().get('cql')).toBe('cql.serverChoice="Centr*"'));
 });
 
 it.each(['Consortium', 'Institution', 'Branch'])('immediately filters by %s without text and clears the type filter', async type => {
-  const { history } = renderList();
+  const { history } = renderList('?filters=');
   await screen.findByText('University Central Library');
   expect(Array.from(typeInput().options, option => option.value)).toEqual(['', 'Consortium', 'Institution', 'Branch']);
   expect(typeInput().value).toBe('');
@@ -122,7 +248,7 @@ it.each(['Consortium', 'Institution', 'Branch'])('immediately filters by %s with
   expect(document.getElementById('clickable-reset-all')).toBeEnabled();
 
   fireEvent.change(typeInput(), { target: { value: '' } });
-  await waitFor(() => expect(new URLSearchParams(history.location.search).has('filters')).toBe(false));
+  await waitFor(() => expect(new URLSearchParams(history.location.search).get('filters')).toBe(''));
   expect(typeInput().value).toBe('');
   expect(screen.getByText('University Central Library')).toBeInTheDocument();
 });
@@ -146,7 +272,7 @@ it.each([
   const { history } = renderList(`?filters=${filters}`);
   await screen.findByText('University Central Library');
   fireEvent.click(document.getElementById('clickable-reset-all'));
-  await waitFor(() => expect(new URLSearchParams(history.location.search).has('filters')).toBe(false));
+  await waitFor(() => expect(new URLSearchParams(history.location.search).get('filters')).toBe(''));
   expect(document.getElementById('clickable-reset-all')).toBeDisabled();
 
   act(() => history.goBack());
@@ -160,14 +286,14 @@ it.each([
   act(() => history.goBack());
   await waitFor(() => expect(document.getElementById('clickable-reset-all')).toBeEnabled());
   fireEvent.click(document.getElementById('clickable-reset-all'));
-  await waitFor(() => expect(new URLSearchParams(history.location.search).has('filters')).toBe(false));
+  await waitFor(() => expect(new URLSearchParams(history.location.search).get('filters')).toBe(''));
   expect(typeInput().value).toBe('');
   expect(pickupCheckbox()).not.toBeChecked();
   expect(document.getElementById('clickable-reset-all')).toBeDisabled();
 });
 
 it('enables Reset all when browser Back restores a text search', async () => {
-  const { history } = renderList('?qindex=name&query=Central');
+  const { history } = renderList('?qindex=name&query=Central&filters=');
   await screen.findByText('University Central Library');
   fireEvent.click(document.getElementById('clickable-reset-all'));
   await waitFor(() => expect(new URLSearchParams(history.location.search).has('query')).toBe(false));
@@ -204,7 +330,7 @@ it('preserves type when changing pickup or submitting and clearing text, then re
   await waitFor(() => expect(lastParams().has('cql')).toBe(false));
   expect(typeInput().value).toBe('');
   expect(pickupCheckbox()).not.toBeChecked();
-  expect(new URLSearchParams(history.location.search).has('filters')).toBe(false);
+  expect(new URLSearchParams(history.location.search).get('filters')).toBe('');
 });
 
 it('returns to page one when changing type, including cached results', async () => {
@@ -230,7 +356,7 @@ it('returns to page one when changing type, including cached results', async () 
 });
 
 it('immediately applies and removes the pickup filter without a text query', async () => {
-  const { history } = renderList();
+  const { history } = renderList('?filters=');
   await screen.findByText('University Central Library');
   expect(pickupCheckbox()).not.toBeChecked();
   expect(document.getElementById('clickable-reset-all')).toBeDisabled();
@@ -241,7 +367,7 @@ it('immediately applies and removes the pickup filter without a text query', asy
   expect(document.getElementById('clickable-reset-all')).toBeEnabled();
 
   fireEvent.click(pickupCheckbox());
-  await waitFor(() => expect(new URLSearchParams(history.location.search).has('filters')).toBe(false));
+  await waitFor(() => expect(new URLSearchParams(history.location.search).get('filters')).toBe(''));
   expect(pickupCheckbox()).not.toBeChecked();
   expect(document.querySelector('button[type="submit"]')).toBeDisabled();
   expect(screen.getByText('University Central Library')).toBeInTheDocument();
@@ -253,7 +379,7 @@ it.each([
   ['description', 'description="*Central*"'],
   ['symbol', 'symbol="Central"'],
 ])('combines the pickup filter with the %s index and preserves it on submission', async (index, cql) => {
-  renderList(`?qindex=${index}&query=Central`);
+  renderList(`?qindex=${index}&query=Central&filters=`);
   await screen.findByText('University Central Library');
   fireEvent.click(pickupCheckbox());
   await waitFor(() => expect(lastParams().get('cql')).toBe(`(${cql}) and isPickupLocation=true`));
@@ -284,7 +410,7 @@ it('Reset all clears a pickup-only filter', async () => {
   fireEvent.click(document.getElementById('clickable-reset-all'));
   await waitFor(() => expect(lastParams().has('cql')).toBe(false));
   expect(pickupCheckbox()).not.toBeChecked();
-  expect(new URLSearchParams(history.location.search).has('filters')).toBe(false);
+  expect(new URLSearchParams(history.location.search).get('filters')).toBe('');
 });
 
 it.each(['clear', 'reset'])('%s handles a combined text search and pickup filter', async action => {
@@ -298,7 +424,7 @@ it.each(['clear', 'reset'])('%s handles a combined text search and pickup filter
     fireEvent.click(document.getElementById('clickable-reset-all'));
     await waitFor(() => expect(lastParams().has('cql')).toBe(false));
     expect(pickupCheckbox()).not.toBeChecked();
-    expect(new URLSearchParams(history.location.search).has('filters')).toBe(false);
+    expect(new URLSearchParams(history.location.search).get('filters')).toBe('');
   }
   expect(queryInput().value).toBe('');
   expect(indexInput().value).toBe('');
@@ -306,7 +432,7 @@ it.each(['clear', 'reset'])('%s handles a combined text search and pickup filter
 });
 
 it('returns to page one when toggling the pickup filter, including cached results', async () => {
-  const { queryClient } = renderList();
+  const { queryClient } = renderList('?filters=');
   await screen.findByText('University Central Library');
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
   await screen.findByText('Second page entry');
@@ -331,7 +457,7 @@ it('returns to page one when toggling the pickup filter, including cached result
 });
 
 it.each(['name', 'description', 'symbol'])('restores %s on direct navigation and browser back/forward', async index => {
-  const { history } = renderList(`?qindex=${index}&query=Central`);
+  const { history } = renderList(`?qindex=${index}&query=Central&filters=`);
   await screen.findByText('University Central Library');
   expect(indexInput().value).toBe(index);
   expect(queryInput().value).toBe('Central');
@@ -353,7 +479,7 @@ it.each([
   ['clear', 'description'], ['reset', 'description'],
   ['clear', 'symbol'], ['reset', 'symbol'],
 ])('%s removes the applied query and %s index', async (action, index) => {
-  const { history } = renderList(`?qindex=${index}&query=Central`);
+  const { history } = renderList(`?qindex=${index}&query=Central&filters=`);
   await screen.findByText('University Central Library');
   if (action === 'clear') {
     fireEvent.click(screen.getByRole('button', { name: 'stripes-components.clearThisField' }));
@@ -374,14 +500,14 @@ it.each([
   ['symbol', 'symbol="A\\"B\\\\C"'],
   ['', 'cql.serverChoice="A\\"B\\\\C"'],
 ])('escapes quotes and backslashes for the %s index', async (index, cql) => {
-  renderList();
+  renderList('?filters=');
   await screen.findByText('University Central Library');
   submitSearch('A"B\\C', index);
   await waitFor(() => expect(lastParams().get('cql')).toBe(cql));
 });
 
 it('returns to page one when submitting a new search from a later page', async () => {
-  renderList();
+  renderList('?filters=');
   await screen.findByText('University Central Library');
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
   await screen.findByText('Second page entry');
@@ -393,7 +519,7 @@ it('returns to page one when submitting a new search from a later page', async (
 });
 
 it('returns to page one when switching to an already cached search', async () => {
-  const { history, queryClient } = renderList('?qindex=name&query=Central');
+  const { history, queryClient } = renderList('?qindex=name&query=Central&filters=');
   await screen.findByText('University Central Library');
   submitSearch('Library', 'name');
   await waitFor(() => expect(lastParams().get('cql')).toBe('name="*Library*"'));
@@ -417,7 +543,7 @@ it('reuses cached pages after revisiting a search and correctly loads subsequent
       return { items: [{ id: `entry-${offset}`, name: `Page ${offset}` }], about: { count: 301 } };
     },
   });
-  const { history, queryClient } = renderList('?qindex=name&query=Central');
+  const { history, queryClient } = renderList('?qindex=name&query=Central&filters=');
   await screen.findByText('Page 0');
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
   await screen.findByText('Page 100');
