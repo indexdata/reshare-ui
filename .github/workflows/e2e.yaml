@@ -1,0 +1,149 @@
+name: e2e
+
+# The browser suite against the captive stack (see e2e/README.md). Too heavy
+# for every PR, so it runs on demand: before a release, or to look at a
+# workflow on a branch. Video and trace are always recorded; the HTML report
+# holding them is the run's artifact and is published to the repo's GitHub
+# Pages site, which shows the latest run only. The repo is public, so the
+# report is too: traces carry every screenshot, DOM snapshot and request body
+# of the run. Fine for the captive stack, whose data is all fake; this job
+# must never point the suite at a real environment.
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: Which project to run
+        type: choice
+        options: [all, smoke, workflows]
+        default: all
+      specs:
+        description: Optional spec filter, file name fragments separated by spaces (e.g. "renewal copy")
+        type: string
+        default: ""
+      axe:
+        description: Run axe at each checkpoint
+        type: boolean
+        default: false
+      slowmo:
+        description: Delay before each browser action in ms, to improve video output (slows the run; 0 is off)
+        type: number
+        default: 0
+
+permissions:
+  contents: read
+
+# One Pages site, replaced on each deploy: never two deploys at once, and a
+# running one is not cancelled.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      report: ${{ steps.report.outputs.artifact-id }}
+    defaults:
+      run:
+        working-directory: e2e
+    env:
+      # The free-text filter reaches the shell through the environment, never
+      # interpolated into a script. Word splitting is intended.
+      PROJECT: ${{ inputs.scope != 'all' && format('--project={0}', inputs.scope) || '' }}
+      SPECS: ${{ inputs.specs }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Before setup-node: its yarn cache key comes from `yarn --version`, so
+      # yarn has to exist first, which only GitHub's own image guarantees.
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+          cache-dependency-path: |
+            yarn.lock
+            e2e/yarn.lock
+
+      - name: prepare
+        run: yarn config set @folio:registry https://repository.folio.org/repository/npm-folio/
+
+      # The bundle is built from this checkout's platform-rs-dev, so the
+      # workspace has to be installed as well as this package.
+      - name: Install the workspace
+        run: yarn install --frozen-lockfile
+        working-directory: .
+
+      - name: Install e2e
+        run: yarn install --frozen-lockfile
+
+      - name: Install the browser
+        run: npx playwright install --with-deps chromium
+
+      # Before the build, so a filter that matches nothing fails in seconds
+      # rather than after the stack is up. The listing is also how to find the
+      # names to type into the filter. The list reporter alone, so the listing
+      # writes no HTML report that a later failure could get published as.
+      - name: Show what will run
+        run: npx playwright test --list --reporter=list $PROJECT $SPECS
+
+      - name: Bring the stack up
+        run: yarn stack:up
+
+      - name: Run the suite
+        run: |
+          if [ "$AXE" = true ]; then export E2E_AXE=on; fi
+          yarn test $PROJECT $SPECS
+        env:
+          E2E_VIDEO: "on"
+          E2E_TRACE: "on"
+          E2E_SLOWMO: ${{ inputs.slowmo }}
+          AXE: ${{ inputs.axe }}
+
+      # The stack dies with the runner, so the logs the README's
+      # troubleshooting section says to read have to be dumped here.
+      - name: Stack logs
+        if: failure()
+        run: docker compose logs --no-color broker directory illmock nginx
+
+      # A run that failed before the suite has no report, and uploads nothing.
+      - uses: actions/upload-artifact@v4
+        id: report
+        if: always()
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # Its own job, so the github-pages environment's rules gate the deploy and
+  # not the run. Deploys a report from failed tests too, but only when there
+  # is one, so a run that never reached the suite leaves the last report up.
+  # Skipped under act, which has no Pages to deploy to and runs as that actor.
+  publish:
+    needs: e2e
+    if: always() && needs.e2e.result != 'cancelled' && needs.e2e.outputs.report != '' && github.actor != 'nektos/act'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: playwright-report
+      - uses: actions/deploy-pages@v4
+        id: deploy
+      - name: Link the report
+        run: |
+          echo "Report: ${{ steps.deploy.outputs.page_url }}" >> "$GITHUB_STEP_SUMMARY"

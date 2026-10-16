@@ -1,0 +1,615 @@
+[
+  {
+    "type": "entry",
+    "key": "e2e00000-0000-4000-8000-000000000001",
+    "data": {
+      "name": "E2E consortium",
+      "type": "Consortium",
+      "parent": null,
+      "description": null,
+      "organizationId": null,
+      "contactName": null,
+      "email": null,
+      "fromEmail": null,
+      "tenant": null,
+      "vendor": null,
+      "phoneNumber": null,
+      "lmsLocationCode": null,
+      "hrid": null,
+      "timeZone": null,
+      "symbols": [
+        {
+          "authority": "ISIL",
+          "symbol": "US-E2E"
+        }
+      ],
+      "endpoints": [],
+      "addresses": [],
+      "closures": [],
+      "lmsConfig": null,
+      "catalogConfig": null,
+      "illConfig": null,
+      "holdingsPolicy": null
+    }
+  },
+  {
+    "type": "entry",
+    "key": "e2e00000-0000-4000-8000-000000000101",
+    "data": {
+      "name": "test1",
+      "type": "Institution",
+      "parent": "e2e00000-0000-4000-8000-000000000001",
+      "description": "Requesting institution (the tenant the UI is built for)",
+      "organizationId": "001",
+      "contactName": null,
+      "email": "test@example.com",
+      "fromEmail": "from@example.com",
+      "tenant": "test1",
+      "vendor": "CrossLink",
+      "phoneNumber": null,
+      "lmsLocationCode": null,
+      "hrid": "TEST1",
+      "timeZone": "America/New_York",
+      "symbols": [
+        {
+          "authority": "ISIL",
+          "symbol": "US-TEST1"
+        }
+      ],
+      "endpoints": [],
+      "addresses": [],
+      "closures": [],
+      "lmsConfig": {
+        "vendor": null,
+        "ncipNamespaceEnabled": null,
+        "bibIdNormalization": null,
+        "address": "http://illmock:8081/ncip",
+        "fromAgency": "ReShare",
+        "fromAgencyAuthentication": "changeme",
+        "toAgency": "test1",
+        "lookupUserEnabled": true,
+        "acceptItemEnabled": false,
+        "checkInItemEnabled": true,
+        "checkOutItemEnabled": true,
+        "itemLocation": "KU/CC/DI/M",
+        "requestItemRequestType": "Page",
+        "requestItemRequestScopeType": "Item",
+        "requestItemBibIdCode": "SYSNUMBER",
+        "requestItemEnabled": null,
+        "requestItemPickupLocationEnabled": true,
+        "requesterPickupLocation": "cd1",
+        "supplierPickupLocation": "cd1",
+        "requesterPatronPattern": "INST-{requesterSymbol}",
+        "patronProfiles": null
+      },
+      "catalogConfig": null,
+      "illConfig": null,
+      "holdingsPolicy": null
+    }
+  },
+  {
+    "type": "entry",
+    "key": "e2e00000-0000-4000-8000-000000000201",
+    "data": {
+      "name": "test2",
+      "type": "Institution",
+      "parent": "e2e00000-0000-4000-8000-000000000001",
+      "description": "Second broker-local institution, driven through the API as test1's peer (the UI never logs in as it)",
+      "organizationId": "002",
+      "contactName": null,
+      "email": "test@example.com",
+      "fromEmail": "from@example.com",
+      "tenant": "test2",
+      "vendor": "CrossLink",
+      "phoneNumber": null,
+      "lmsLocationCode": null,
+      "hrid": "TEST2",
+      "timeZone": "America/New_York",
+      "symbols": [
+        {
+          "authority": "ISIL",
+          "symbol": "US-TEST2"
+        }
+      ],
+      "endpoints": [],
+      "addresses": [],
+      "closures": [],
+      "lmsConfig": {
+        "vendor": null,
+        "ncipNamespaceEnabled": null,
+        "bibIdNormalization": null,
+        "address": "http://illmock:8081/ncip",
+        "fromAgency": "ReShare",
+        "fromAgencyAuthentication": "changeme",
+        "toAgency": "test2",
+        "lookupUserEnabled": true,
+        "acceptItemEnabled": false,
+        "checkInItemEnabled": true,
+        "checkOutItemEnabled": true,
+        "itemLocation": "KU/CC/DI/M",
+        "requestItemRequestType": "Page",
+        "requestItemRequestScopeType": "Item",
+        "requestItemBibIdCode": "SYSNUMBER",
+        "requestItemEnabled": null,
+        "requestItemPickupLocationEnabled": true,
+        "requesterPickupLocation": "cd1",
+        "supplierPickupLocation": "cd1",
+        "requesterPatronPattern": "INST-{requesterSymbol}",
+        "patronProfiles": null
+      },
+      "catalogConfig": null,
+      "illConfig": null,
+      "holdingsPolicy": null
+    }
+  },
+  {
+    "type": "entry",
+    "key": "e2e00000-0000-4000-8000-000000000301",
+    "data": {
+      "name": "mock",
+      "type": "Institution",
+      "parent": "e2e00000-0000-4000-8000-000000000001",
+      "description": "External mock supplier: broker emits real ISO18626 to illmock, which picks its workflow from MOCK:<symbol>:<scenario> tokens in the request note or supplierUniqueRecordId",
+      "organizationId": "099",
+      "contactName": null,
+      "email": "mock@example.com",
+      "fromEmail": "from@example.com",
+      "tenant": null,
+      "vendor": "ReShare",
+      "phoneNumber": null,
+      "lmsLocationCode": null,
+      "hrid": "MOCK",
+      "timeZone": "America/New_York",
+      "symbols": [
+        {
+          "authority": "ISIL",
+          "symbol": "US-MOCK"
+        }
+      ],
+      "endpoints": [
+        {
+          "name": "illmock ISO18626 service",
+          "type": "ISO18626",
+          "address": "http://illmock:8081/iso18626"
+        }
+      ],
+      "addresses": [],
+      "closures": [],
+      "lmsConfig": null,
+      "catalogConfig": null,
+      "illConfig": null,
+      "holdingsPolicy": null
+    }
+  },
+  {
+    "type": "entry",
+    "key": "e2e00000-0000-4000-8000-000000000102",
+    "data": {
+      "name": "Test1 Main Library",
+      "type": "Branch",
+      "parent": "e2e00000-0000-4000-8000-000000000101",
+      "description": null,
+      "organizationId": null,
+      "contactName": null,
+      "email": null,
+      "fromEmail": null,
+      "tenant": "test1",
+      "vendor": null,
+      "phoneNumber": null,
+      "lmsLocationCode": null,
+      "hrid": null,
+      "timeZone": "America/New_York",
+      "symbols": [
+        {
+          "authority": "ISIL",
+          "symbol": "US-TEST1-MAIN"
+        }
+      ],
+      "endpoints": [],
+      "addresses": [
+        {
+          "type": "Shipping",
+          "addressComponents": [
+            {
+              "seq": 1,
+              "type": "Thoroughfare",
+              "value": "1 Main Street"
+            },
+            {
+              "seq": 2,
+              "type": "Locality",
+              "value": "Testville"
+            },
+            {
+              "seq": 3,
+              "type": "AdministrativeArea",
+              "value": "NY"
+            },
+            {
+              "seq": 4,
+              "type": "PostalCode",
+              "value": "10001"
+            },
+            {
+              "seq": 5,
+              "type": "CountryCode",
+              "value": "US"
+            }
+          ]
+        }
+      ],
+      "closures": [],
+      "lmsConfig": {
+        "vendor": null,
+        "ncipNamespaceEnabled": null,
+        "bibIdNormalization": null,
+        "address": "http://illmock:8081/ncip",
+        "fromAgency": "ReShare",
+        "fromAgencyAuthentication": "changeme",
+        "toAgency": "test1",
+        "lookupUserEnabled": true,
+        "acceptItemEnabled": false,
+        "checkInItemEnabled": true,
+        "checkOutItemEnabled": true,
+        "itemLocation": "KU/CC/DI/M",
+        "requestItemRequestType": "Page",
+        "requestItemRequestScopeType": "Item",
+        "requestItemBibIdCode": "SYSNUMBER",
+        "requestItemEnabled": null,
+        "requestItemPickupLocationEnabled": true,
+        "requesterPickupLocation": "main1",
+        "supplierPickupLocation": "cd1",
+        "requesterPatronPattern": "INST-{requesterSymbol}",
+        "patronProfiles": null
+      },
+      "catalogConfig": null,
+      "illConfig": {
+        "iso18626Url": null,
+        "iso18626Vendor": null,
+        "lendersOfLastResort": [],
+        "isPickupLocation": true,
+        "includeRequestingAgencyInfo": null,
+        "includeSupplierInfo": null,
+        "includeReturnInfo": null,
+        "includeVendorNote": null,
+        "useOfferedCosts": null,
+        "noteFieldSeparator": null,
+        "supplierPatronPattern": null,
+        "duplicateCheckWindowHours": null
+      },
+      "holdingsPolicy": null
+    }
+  },
+  {
+    "type": "entry",
+    "key": "e2e00000-0000-4000-8000-000000000103",
+    "data": {
+      "name": "Test1 Science Library",
+      "type": "Branch",
+      "parent": "e2e00000-0000-4000-8000-000000000101",
+      "description": null,
+      "organizationId": null,
+      "contactName": null,
+      "email": null,
+      "fromEmail": null,
+      "tenant": "test1",
+      "vendor": null,
+      "phoneNumber": null,
+      "lmsLocationCode": null,
+      "hrid": null,
+      "timeZone": "America/New_York",
+      "symbols": [
+        {
+          "authority": "ISIL",
+          "symbol": "US-TEST1-SCI"
+        }
+      ],
+      "endpoints": [],
+      "addresses": [
+        {
+          "type": "Shipping",
+          "addressComponents": [
+            {
+              "seq": 1,
+              "type": "Thoroughfare",
+              "value": "2 Lab Road"
+            },
+            {
+              "seq": 2,
+              "type": "Locality",
+              "value": "Testville"
+            },
+            {
+              "seq": 3,
+              "type": "AdministrativeArea",
+              "value": "NY"
+            },
+            {
+              "seq": 4,
+              "type": "PostalCode",
+              "value": "10001"
+            },
+            {
+              "seq": 5,
+              "type": "CountryCode",
+              "value": "US"
+            }
+          ]
+        }
+      ],
+      "closures": [],
+      "lmsConfig": {
+        "vendor": null,
+        "ncipNamespaceEnabled": null,
+        "bibIdNormalization": null,
+        "address": "http://illmock:8081/ncip",
+        "fromAgency": "ReShare",
+        "fromAgencyAuthentication": "changeme",
+        "toAgency": "test1",
+        "lookupUserEnabled": true,
+        "acceptItemEnabled": false,
+        "checkInItemEnabled": true,
+        "checkOutItemEnabled": true,
+        "itemLocation": "KU/CC/DI/M",
+        "requestItemRequestType": "Page",
+        "requestItemRequestScopeType": "Item",
+        "requestItemBibIdCode": "SYSNUMBER",
+        "requestItemEnabled": null,
+        "requestItemPickupLocationEnabled": true,
+        "requesterPickupLocation": "sci1",
+        "supplierPickupLocation": "cd1",
+        "requesterPatronPattern": "INST-{requesterSymbol}",
+        "patronProfiles": null
+      },
+      "catalogConfig": null,
+      "illConfig": {
+        "iso18626Url": null,
+        "iso18626Vendor": null,
+        "lendersOfLastResort": [],
+        "isPickupLocation": true,
+        "includeRequestingAgencyInfo": null,
+        "includeSupplierInfo": null,
+        "includeReturnInfo": null,
+        "includeVendorNote": null,
+        "useOfferedCosts": null,
+        "noteFieldSeparator": null,
+        "supplierPatronPattern": null,
+        "duplicateCheckWindowHours": null
+      },
+      "holdingsPolicy": null
+    }
+  },
+  {
+    "type": "entry",
+    "key": "e2e00000-0000-4000-8000-000000000104",
+    "data": {
+      "name": "Test1 Storage Annex",
+      "type": "Branch",
+      "parent": "e2e00000-0000-4000-8000-000000000101",
+      "description": null,
+      "organizationId": null,
+      "contactName": null,
+      "email": null,
+      "fromEmail": null,
+      "tenant": "test1",
+      "vendor": null,
+      "phoneNumber": null,
+      "lmsLocationCode": null,
+      "hrid": null,
+      "timeZone": "America/New_York",
+      "symbols": [
+        {
+          "authority": "ISIL",
+          "symbol": "US-TEST1-ANNEX"
+        }
+      ],
+      "endpoints": [],
+      "addresses": [
+        {
+          "type": "Shipping",
+          "addressComponents": [
+            {
+              "seq": 1,
+              "type": "Thoroughfare",
+              "value": "3 Depot Lane"
+            },
+            {
+              "seq": 2,
+              "type": "Locality",
+              "value": "Testville"
+            },
+            {
+              "seq": 3,
+              "type": "AdministrativeArea",
+              "value": "NY"
+            },
+            {
+              "seq": 4,
+              "type": "PostalCode",
+              "value": "10001"
+            },
+            {
+              "seq": 5,
+              "type": "CountryCode",
+              "value": "US"
+            }
+          ]
+        }
+      ],
+      "closures": [],
+      "lmsConfig": null,
+      "catalogConfig": null,
+      "illConfig": {
+        "iso18626Url": null,
+        "iso18626Vendor": null,
+        "lendersOfLastResort": [],
+        "isPickupLocation": true,
+        "includeRequestingAgencyInfo": null,
+        "includeSupplierInfo": null,
+        "includeReturnInfo": null,
+        "includeVendorNote": null,
+        "useOfferedCosts": null,
+        "noteFieldSeparator": null,
+        "supplierPatronPattern": null,
+        "duplicateCheckWindowHours": null
+      },
+      "holdingsPolicy": null
+    }
+  },
+  {
+    "type": "entry",
+    "key": "e2e00000-0000-4000-8000-000000000202",
+    "data": {
+      "name": "Test2 Main Library",
+      "type": "Branch",
+      "parent": "e2e00000-0000-4000-8000-000000000201",
+      "description": null,
+      "organizationId": null,
+      "contactName": null,
+      "email": null,
+      "fromEmail": null,
+      "tenant": "test2",
+      "vendor": null,
+      "phoneNumber": null,
+      "lmsLocationCode": null,
+      "hrid": null,
+      "timeZone": "America/New_York",
+      "symbols": [
+        {
+          "authority": "ISIL",
+          "symbol": "US-TEST2-MAIN"
+        }
+      ],
+      "endpoints": [],
+      "addresses": [
+        {
+          "type": "Shipping",
+          "addressComponents": [
+            {
+              "seq": 1,
+              "type": "Thoroughfare",
+              "value": "20 High Street"
+            },
+            {
+              "seq": 2,
+              "type": "Locality",
+              "value": "Peertown"
+            },
+            {
+              "seq": 3,
+              "type": "AdministrativeArea",
+              "value": "NY"
+            },
+            {
+              "seq": 4,
+              "type": "PostalCode",
+              "value": "10001"
+            },
+            {
+              "seq": 5,
+              "type": "CountryCode",
+              "value": "US"
+            }
+          ]
+        }
+      ],
+      "closures": [],
+      "lmsConfig": {
+        "vendor": null,
+        "ncipNamespaceEnabled": null,
+        "bibIdNormalization": null,
+        "address": "http://illmock:8081/ncip",
+        "fromAgency": "ReShare",
+        "fromAgencyAuthentication": "changeme",
+        "toAgency": "test2",
+        "lookupUserEnabled": true,
+        "acceptItemEnabled": false,
+        "checkInItemEnabled": true,
+        "checkOutItemEnabled": true,
+        "itemLocation": "KU/CC/DI/M",
+        "requestItemRequestType": "Page",
+        "requestItemRequestScopeType": "Item",
+        "requestItemBibIdCode": "SYSNUMBER",
+        "requestItemEnabled": null,
+        "requestItemPickupLocationEnabled": true,
+        "requesterPickupLocation": "main2",
+        "supplierPickupLocation": "cd1",
+        "requesterPatronPattern": "INST-{requesterSymbol}",
+        "patronProfiles": null
+      },
+      "catalogConfig": null,
+      "illConfig": {
+        "iso18626Url": null,
+        "iso18626Vendor": null,
+        "lendersOfLastResort": [],
+        "isPickupLocation": true,
+        "includeRequestingAgencyInfo": null,
+        "includeSupplierInfo": null,
+        "includeReturnInfo": null,
+        "includeVendorNote": null,
+        "useOfferedCosts": null,
+        "noteFieldSeparator": null,
+        "supplierPatronPattern": null,
+        "duplicateCheckWindowHours": null
+      },
+      "holdingsPolicy": null
+    }
+  },
+  {
+    "type": "tier",
+    "key": {
+      "consortium": "e2e00000-0000-4000-8000-000000000001",
+      "name": "Reciprocal Peer to Peer - Core Loan"
+    },
+    "data": {
+      "level": "standard",
+      "type": "loan",
+      "cost": 0,
+      "entries": [
+        "e2e00000-0000-4000-8000-000000000101",
+        "e2e00000-0000-4000-8000-000000000201",
+        "e2e00000-0000-4000-8000-000000000301"
+      ]
+    }
+  },
+  {
+    "type": "tier",
+    "key": {
+      "consortium": "e2e00000-0000-4000-8000-000000000001",
+      "name": "Reciprocal Peer to Peer - Core Copy"
+    },
+    "data": {
+      "level": "standard",
+      "type": "copy",
+      "cost": 0,
+      "entries": [
+        "e2e00000-0000-4000-8000-000000000101",
+        "e2e00000-0000-4000-8000-000000000201"
+      ]
+    }
+  },
+  {
+    "type": "network",
+    "key": {
+      "consortium": "e2e00000-0000-4000-8000-000000000001",
+      "name": "reshare2"
+    },
+    "data": {
+      "reciprocal": true,
+      "entries": [
+        {
+          "entry": "e2e00000-0000-4000-8000-000000000101",
+          "priority": 1
+        },
+        {
+          "entry": "e2e00000-0000-4000-8000-000000000201",
+          "priority": 1
+        },
+        {
+          "entry": "e2e00000-0000-4000-8000-000000000301",
+          "priority": 1
+        }
+      ]
+    }
+  }
+]

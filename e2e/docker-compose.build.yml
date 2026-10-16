@@ -1,0 +1,30 @@
+# Override: build broker, directory and illmock from a local crosslink checkout instead
+# of pulling the published images. For working on broker changes against the
+# E2E suite.
+#
+#   CROSSLINK_DIR=../../crosslink docker compose \
+#     -f docker-compose.yml -f docker-compose.build.yml up -d --build --wait
+#
+# or: CROSSLINK_DIR=... ./stack-up.sh --build-broker
+services:
+  broker:
+    image: crosslink-broker:e2e-local
+    # these tags only exist locally; undo the base file's always-pull
+    pull_policy: build
+    build:
+      context: ${CROSSLINK_DIR:?set CROSSLINK_DIR to a crosslink checkout}
+      dockerfile: broker/Dockerfile
+
+  directory:
+    image: crosslink-directory:e2e-local
+    pull_policy: build
+    build:
+      context: ${CROSSLINK_DIR:?set CROSSLINK_DIR to a crosslink checkout}
+      dockerfile: directory/Dockerfile
+
+  illmock:
+    image: crosslink-illmock:e2e-local
+    pull_policy: build
+    build:
+      context: ${CROSSLINK_DIR:?set CROSSLINK_DIR to a crosslink checkout}
+      dockerfile: illmock/Dockerfile

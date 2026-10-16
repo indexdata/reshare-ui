@@ -1,0 +1,38 @@
+#!/usr/bin/env node
+// Interactive front end to lib/broker.js. One JSON line per call, so an id
+// from one call feeds the next.
+//
+//   brkr create borrowing [--supplier illmock|<tenant>] [--scenario LOANED] [--serviceType Loan|Copy|CopyOrLoan] [--title T] [--note N]
+//   brkr create lending   [--requester <tenant>|illmock] [--serviceType Loan|Copy|CopyOrLoan] [--title T] [--note N]
+//   brkr state <id> <side>
+//   brkr act   <id> <side> <action> [--param value ...]   e.g. --dueDate 2026-10-01T00:00:00Z
+//   brkr wait  <id> <side> <STATE>[,<STATE>...] [--timeout ms]
+//
+// --tenant <t> on any verb addresses another tenant's request, which is how
+// the peer half of `create lending` is driven.
+const b = require('../lib/broker');
+
+const [verb, ...rest] = process.argv.slice(2);
+const args = [];
+const opts = {};
+for (let i = 0; i < rest.length; i++) {
+  if (rest[i].startsWith('--')) opts[rest[i].slice(2)] = rest[++i];
+  else args.push(rest[i]);
+}
+const { tenant, timeout, ...params } = opts;
+
+const verbs = {
+  create: ([side]) => (side === 'lending' ? b.createLending(opts) : b.createBorrowing(opts)),
+  state: ([id, side]) => b.getState(id, side, tenant),
+  act: ([id, side, action]) => b.act(id, side, action, Object.keys(params).length ? params : undefined, tenant),
+  wait: ([id, side, states]) => b.waitFor(id, side, states.split(','), { tenant, ...(timeout && { timeoutMs: Number(timeout) }) }),
+};
+
+if (!verbs[verb]) {
+  console.error('usage: brkr create|state|act|wait ... (see the header of this file)');
+  process.exit(2);
+}
+verbs[verb](args).then(
+  (out) => console.log(JSON.stringify(out)),
+  (err) => { console.error(err.message); process.exit(1); },
+);

@@ -34,11 +34,11 @@ jobs:
           changed="$RUNNER_TEMP/changed.txt"
           outside="$RUNNER_TEMP/outside.txt"
           git diff --name-only '${{ github.event.pull_request.base.sha }}' HEAD > "$changed"
-          grep -vE '^environments/' "$changed" > "$outside" || true
+          grep -vE '^(environments|e2e)/' "$changed" > "$outside" || true
           if grep -qE '^environments/platform-${{ matrix.platform }}/' "$changed"; then
             reason='a file under environments/platform-${{ matrix.platform }} changed'
           elif grep -qE '(^|/)package\.json$' "$outside"; then
-            reason='a package.json outside environments/ changed'
+            reason='a package.json outside environments/ and e2e/ changed'
           fi
           if [ -n "${reason:-}" ]; then
             echo 'build=true' >> "$GITHUB_OUTPUT"
