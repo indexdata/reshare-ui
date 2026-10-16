@@ -6,6 +6,8 @@ on:
       - main
     paths-ignore:
       - '**/*.md'
+      - 'e2e/**'
+      - '.github/workflows/e2e.yaml'
   workflow_dispatch:
     inputs:
       source_sha:

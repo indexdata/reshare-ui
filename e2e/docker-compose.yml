@@ -1,0 +1,102 @@
+# Local stack; stack-up.sh builds the UIs and imports the directory seed.
+# Use docker-compose.build.yml to build CrossLink images from a local checkout.
+name: reshare-e2e
+
+services:
+  # DB state lives while the stack is up, surviving restarts and failed runs,
+  # and stack:down discards it. No named volume: data kept across updates of
+  # the floating :main images would invite schema drift in a throwaway stack.
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: crosslink
+      POSTGRES_PASSWORD: crosslink
+      POSTGRES_DB: crosslink
+    volumes:
+      # creates the directory's database; runs only on a fresh data dir
+      - ./seed/postgres-init.sql:/docker-entrypoint-initdb.d/directory.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crosslink -d crosslink"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  broker:
+    image: ghcr.io/indexdata/crosslink-broker:main
+    # :main is a floating tag and docker never re-pulls a cached one on its
+    # own, so without this the stack can boot a broker weeks behind main.
+    pull_policy: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      directory:
+        condition: service_started
+    environment:
+      HTTP_PORT: 8080
+      DB_TYPE: postgres
+      DB_USER: crosslink
+      DB_PASSWORD: crosslink
+      DB_HOST: postgres
+      DB_DATABASE: crosslink
+      DB_PORT: 5432
+      DB_PROVISION: "true"
+      DB_MIGRATE: "true"
+      DIRECTORY_ADAPTER: api
+      DIRECTORY_API_URL: http://directory:8086/directory/entries
+      # symbols come from the entries whose tenant field names the tenant
+      TENANT_TO_SYMBOL: directory
+    ports:
+      - "${E2E_BIND:-127.0.0.1}:8080:8080"
+
+  # No healthcheck: the image is FROM scratch, with no shell or wget to run
+  # one. stack-up.sh waits for it before importing the seed.
+  directory:
+    image: ghcr.io/indexdata/crosslink-directory:main
+    pull_policy: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      HOST: 0.0.0.0
+      HTTP_PORT: 8086
+      DATABASE_URL: postgresql://crosslink:crosslink@postgres:5432/directory
+    ports:
+      - "${E2E_BIND:-127.0.0.1}:8086:8086"
+
+  illmock:
+    image: ghcr.io/indexdata/crosslink-illmock:main
+    pull_policy: always
+    command: ["/illmock"]
+    environment:
+      HTTP_PORT: 8081
+      # where illmock sends its own ISO18626 messages; the default is itself
+      PEER_URL: http://broker:8080/iso18626
+    ports:
+      - "${E2E_BIND:-127.0.0.1}:8081:8081"
+
+  nginx:
+    image: nginx:alpine
+    # nginx resolves proxy_pass hosts at startup
+    depends_on:
+      - broker
+      - directory
+    volumes:
+      - ./mock-okapi/mock-okapi.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./mock-okapi/cors.inc:/etc/nginx/cors.inc:ro
+      - ./mock-okapi/okapi-stubs.inc:/etc/nginx/okapi-stubs.inc:ro
+      - ./mock-okapi/token-expiry.js:/etc/nginx/token-expiry.js:ro
+      - ./mock-okapi/load-njs.sh:/docker-entrypoint.d/05-load-njs.sh:ro
+      - ./bundle:/usr/share/nginx/bundle:ro
+    ports:
+      - "${E2E_BIND:-127.0.0.1}:9130:9130"
+      - "${E2E_BIND:-127.0.0.1}:3000:3000"
+      - "${E2E_BIND:-127.0.0.1}:9131:9131"
+      - "${E2E_BIND:-127.0.0.1}:3002:3002"
+    healthcheck:
+      # 127.0.0.1, not localhost: nginx listens on IPv4 only
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9130/saml/check"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 2s
