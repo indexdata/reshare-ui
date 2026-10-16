@@ -11,6 +11,7 @@ import EntryForm from '../components/EntryForm';
 import { ENTRY_PANE_ID, EntryLoadingPane } from '../components/EntryPane';
 import { getAddressPlugin } from '../util/addressPlugin';
 import { normalizeLendToBorrowRatio } from '../util/lendToBorrowRatio';
+import { apiSymbolsToFormSymbols, formSymbolsToApiSymbols } from '../util/symbolAdapter';
 import {
   apiAddressesToFormAddresses,
   pluginAddressesToApiAddresses,
@@ -96,6 +97,7 @@ const EditEntryRoute = () => {
 
     return {
       ...entryQuery.data,
+      symbols: apiSymbolsToFormSymbols(entryQuery.data.symbols),
       addresses: apiAddressesToFormAddresses(
         entryQuery.data.addresses,
         addressPlugin
@@ -108,6 +110,7 @@ const EditEntryRoute = () => {
   const submit = (values, form) => {
     const submitValues = {
       ...values,
+      symbols: formSymbolsToApiSymbols(values.symbols),
       lendToBorrowRatio: normalizeLendToBorrowRatio(values.lendToBorrowRatio),
       addresses: pluginAddressesToApiAddresses(values.addresses, addressPlugin),
     };
@@ -127,6 +130,8 @@ const EditEntryRoute = () => {
       if (dirtyFields[key]) {
         if (key === 'addresses' || key.startsWith('addresses[')) {
           modifiedFields.addresses = submitValues.addresses;
+        } else if (key === 'symbols' || key.startsWith('symbols[')) {
+          modifiedFields.symbols = submitValues.symbols;
         } else {
           modifiedFields[key] = submitValues[key];
         }
