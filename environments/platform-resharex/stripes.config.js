@@ -8,6 +8,7 @@ module.exports = {
     hasAllPerms: false,
     showDevInfo: true,
     reshare: {
+      maxDMSUpload: 250,
       sharedIndex: { item: 'https://shared-index.example/item/{itemid}' },
       showRefresh: true,
       liveUpdates: true,
