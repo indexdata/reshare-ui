@@ -46,11 +46,12 @@ const EXISTING_TEMPLATES = {
 
 const PLACEHOLDERS = {
   singleRecord: [
-    { placeholder: '{{.ReqId}}', description: 'Requester request identifier' },
     { placeholder: '{{.Title}}', description: 'Title of the requested item' },
+    { placeholder: '{{.ReqId}}', description: 'Requester request identifier' },
   ],
   batchRecord: [
     { placeholder: '{{.FullCount}}', description: 'Total number of requests matched by the batch query' },
+    { placeholder: '{{.BatchId}}', description: 'Batch identifier' },
   ],
 };
 
@@ -300,11 +301,41 @@ describe('TemplateForm', () => {
       fireEvent.click(byId('template-subject-placeholder'));
 
       expect(await screen.findByText('{{.ReqId}}')).toBeInTheDocument();
-      expect(screen.getByText('Requester request identifier')).toBeInTheDocument();
       expect(screen.getByText('{{.FullCount}}')).toBeInTheDocument();
-      expect(screen.getByText('Total number of requests matched by the batch query')).toBeInTheDocument();
       expect(screen.getByText('ui-rs.settings.templates.placeholders.singleRecord')).toBeInTheDocument();
       expect(screen.getByText('ui-rs.settings.templates.placeholders.batchRecord')).toBeInTheDocument();
+    });
+
+    it('uses a large modal for the three-column placeholder grid', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: editingValues });
+
+      fireEvent.click(byId('template-subject-placeholder'));
+
+      expect(screen.getByRole('dialog').firstElementChild).toHaveClass('large');
+    });
+
+    it('orders placeholders alphabetically within each group', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: editingValues });
+
+      fireEvent.click(byId('template-subject-placeholder'));
+
+      await screen.findByText('{{.ReqId}}');
+      const headings = screen.getAllByRole('heading', { level: 3 });
+      expect(headings.map(heading => heading.textContent)).toEqual([
+        'ui-rs.settings.templates.placeholders.singleRecord',
+        'ui-rs.settings.templates.placeholders.batchRecord',
+      ]);
+
+      const placeholdersIn = (section) => [...section.querySelectorAll('code')]
+        .map(element => element.textContent);
+      expect(placeholdersIn(headings[0].closest('section'))).toEqual([
+        '{{.ReqId}}',
+        '{{.Title}}',
+      ]);
+      expect(placeholdersIn(headings[1].closest('section'))).toEqual([
+        '{{.BatchId}}',
+        '{{.FullCount}}',
+      ]);
     });
 
     it('offers placeholders while creating a template', async () => {
