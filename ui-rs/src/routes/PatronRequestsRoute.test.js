@@ -50,7 +50,7 @@ const responses = {
 
 // An explicit history, so tests can assert where the route navigates and whether it
 // pushed or replaced.
-const renderList = (initialEntries = ['/requests'], appName = 'request') => {
+const renderList = (initialEntries = ['/requests'], appName = 'request', timeZone = undefined) => {
   const history = createMemoryHistory({ initialEntries });
   return {
     history,
@@ -66,7 +66,7 @@ const renderList = (initialEntries = ['/requests'], appName = 'request') => {
           )}
         />
       </AppNameContext.Provider>,
-      { initialEntries, history }
+      { initialEntries, history, timeZone }
     ),
   };
 };
@@ -174,6 +174,13 @@ describe('PatronRequestsRoute', () => {
     });
     expect(document.querySelector('select[name="qindex"]').value).toBe('title');
     expect(patronRequestUrls().at(-1)).toContain('title="fixture-title"');
+  });
+
+  it('reads Date created days in the zone react-intl carries', async () => {
+    const filters = encodeURIComponent('createdAt.created_at>=2025-02-01 and created_at<=2025-02-28');
+    renderList([`/requests?filters=${filters}&sort=-dateCreated`], 'request', 'America/New_York');
+    await waitFor(() => expect(listQueryUrls().at(-1))
+      .toContain('created_at>="2025-02-01T05:00:00Z"+and+created_at<"2025-03-01T05:00:00Z"'));
   });
 
   // No filter-interaction test here on purpose: behaviour #1 already proves a real

@@ -1,7 +1,8 @@
 import { buildPatronRequestsCql, buildFacetOptionsCql, escapeCqlTerm } from './buildPatronRequestsCql';
 
-const cqlFor = (params) => buildPatronRequestsCql({ search: `?${params}` });
-const facetCqlFor = (params, excludeName, narrow) => buildFacetOptionsCql({ search: `?${params}` }, excludeName, narrow);
+const cqlFor = (params, timeZone) => buildPatronRequestsCql({ search: `?${params}` }, timeZone);
+const facetCqlFor = (params, excludeName, narrow) => buildFacetOptionsCql({ search: `?${params}` }, undefined, excludeName, narrow);
+const dateFilter = (name, fragment) => `filters=${name}.${encodeURIComponent(fragment)}`;
 
 describe('buildPatronRequestsCql', () => {
   describe('requester_name index', () => {
@@ -66,6 +67,28 @@ describe('buildPatronRequestsCql', () => {
     it('emits requester_symbol for a requester filter', () => {
       const cql = cqlFor('filters=requester.ISIL%3AUS-B');
       expect(cql).toContain('requester_symbol="ISIL:US-B"');
+    });
+  });
+
+  describe('date filters', () => {
+    it('sends a Date created range as instants spanning whole days in the tenant zone', () => {
+      const cql = cqlFor(dateFilter('createdAt', 'created_at>=2025-02-01 and created_at<=2025-02-28'), 'America/New_York');
+      expect(cql).toBe('created_at>="2025-02-01T05:00:00Z" and created_at<"2025-03-01T05:00:00Z"');
+    });
+
+    it('covers a one-day Date created range in UTC', () => {
+      const cql = cqlFor(dateFilter('createdAt', 'created_at>=2025-12-31 and created_at<=2025-12-31'), 'UTC');
+      expect(cql).toBe('created_at>="2025-12-31T00:00:00Z" and created_at<"2026-01-01T00:00:00Z"');
+    });
+
+    it('covers the 23-hour day when daylight saving starts', () => {
+      const cql = cqlFor(dateFilter('createdAt', 'created_at>=2025-03-09 and created_at<=2025-03-09'), 'America/New_York');
+      expect(cql).toBe('created_at>="2025-03-09T05:00:00Z" and created_at<"2025-03-10T04:00:00Z"');
+    });
+
+    it('bounds Date needed by whole dates without shifting them', () => {
+      const cql = cqlFor(dateFilter('neededAt', 'needed_at>=2025-02-01 and needed_at<=2025-02-28'), 'America/New_York');
+      expect(cql).toBe('needed_at>=2025-02-01 and needed_at<2025-03-01');
     });
   });
 });

@@ -33,7 +33,7 @@ const PatronRequestsQueries = ({ appName, children }) => {
   const side = appName === 'supply' ? 'lending' : 'borrowing';
   const stateSide = appName === 'supply' ? 'SUPPLIER' : 'REQUESTER';
 
-  const cql = buildPatronRequestsCql(location);
+  const cql = buildPatronRequestsCql(location, intl.timeZone);
 
   const { filterName: peerFilterName, symbolField, nameField } = PEER_FACET[appName];
   const selectedPeers = selectedFilterValues(location, peerFilterName);
@@ -84,6 +84,7 @@ const PatronRequestsQueries = ({ appName, children }) => {
   // unreachable facet service means the broker is down, not a facet with no values.
   const facetCql = buildFacetOptionsCql(
     location,
+    intl.timeZone,
     peerFilterName,
     { nameField, symbolField, term: trimmedTerm },
   );

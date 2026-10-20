@@ -17,7 +17,7 @@ const PullSlipsRoute = () => {
   const close = useCloseDirect();
   const title = intl.formatMessage({ id: 'ui-rs.pullSlips' });
 
-  const cql = buildPatronRequestsCql(location);
+  const cql = buildPatronRequestsCql(location, intl.timeZone);
   const side = appName === 'supply' ? 'lending' : 'borrowing';
   const urlParams = queryString.parse(location.search);
   const hasFilter = Boolean(urlParams.query || urlParams.filters);

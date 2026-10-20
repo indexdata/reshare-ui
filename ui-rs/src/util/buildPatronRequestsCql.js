@@ -1,3 +1,4 @@
+import { dayjs } from '@folio/stripes/components';
 import { makeQueryFunction } from '@folio/stripes/smart-components';
 import queryString from 'query-string';
 
@@ -5,7 +6,20 @@ export const MAX_RECORDS_PER_PDF = 100;
 
 export const DEFAULT_SEARCH = '?filters=terminal.false&sort=-dateCreated';
 
-export const filterConfig = [
+// Date-only upper bounds exclude most of the selected day.
+// Use an exclusive bound at the start of the following day.
+const parseDayRange = (field, dayStart) => (values) => values.join(' and ').replace(
+  new RegExp(`${field}(>=|<=)(\\d{4}-\\d{2}-\\d{2})`, 'g'),
+  (_match, relation, day) => (relation === '>='
+    ? `${field}>=${dayStart(day)}`
+    : `${field}<${dayStart(dayjs.utc(day).add(1, 'day').format('YYYY-MM-DD'))}`),
+);
+
+// Convert created_at days from the tenant's zone to UTC; the broker discards offsets.
+// needed_at represents a need-before date, so its calendar days stay unshifted.
+const dayStartInstant = (day, timeZone) => dayjs.tz(day, timeZone).utc().format('YYYY-MM-DDTHH:mm:ss[Z]');
+
+const makeFilterConfig = (timeZone = 'UTC') => [
   { name: 'state', cql: 'state', values: [] },
   { name: 'needsAttention', cql: 'needs_attention', operator: '=', values: [] },
   { name: 'hasCost', cql: 'has_cost', operator: '=', values: [] },
@@ -16,8 +30,13 @@ export const filterConfig = [
   { name: 'serviceLevel', cql: 'service_level', operator: '=', values: [] },
   { name: 'supplier', cql: 'supplier_symbol', operator: '=', values: [] },
   { name: 'requester', cql: 'requester_symbol', operator: '=', values: [] },
-  { name: 'createdAt', cql: 'created_at', parse: (values) => values.join(' and '), values: [] },
-  { name: 'neededAt', cql: 'needed_at', parse: (values) => values.join(' and '), values: [] },
+  {
+    name: 'createdAt',
+    cql: 'created_at',
+    parse: parseDayRange('created_at', (day) => `"${dayStartInstant(day, timeZone)}"`),
+    values: [],
+  },
+  { name: 'neededAt', cql: 'needed_at', parse: parseDayRange('needed_at', (day) => day), values: [] },
 ];
 
 export const sortMap = {
@@ -81,12 +100,12 @@ const queryContextFromLocation = (location) => {
   return { queryParams, queryTemplate };
 };
 
-const runCql = (queryParams, queryTemplate) => {
+const runCql = (queryParams, queryTemplate, timeZone) => {
   const getCQL = makeQueryFunction(
     'cql.allRecords=1',
     queryTemplate,
     sortMap,
-    filterConfig,
+    makeFilterConfig(timeZone),
     0,
     undefined,
     { rightTrunc: false, escape: true },
@@ -103,9 +122,9 @@ const dropFilterGroup = (filters, excludeName) => (
     .join(',')
 );
 
-export const buildPatronRequestsCql = (location) => {
+export const buildPatronRequestsCql = (location, timeZone) => {
   const { queryParams, queryTemplate } = queryContextFromLocation(location);
-  return runCql(queryParams, queryTemplate);
+  return runCql(queryParams, queryTemplate, timeZone);
 };
 
 // CQL for a facet's option list. Drops the facet's own selection so it never constrains its
@@ -113,11 +132,12 @@ export const buildPatronRequestsCql = (location) => {
 // filters and the search query still apply, and drops sort, since only the aggregation is
 // read. `narrow` is `{ nameField, symbolField, term }`; a non-empty term becomes a prefix
 // match on both fields.
-export const buildFacetOptionsCql = (location, excludeName, narrow) => {
+export const buildFacetOptionsCql = (location, timeZone, excludeName, narrow) => {
   const { queryParams, queryTemplate } = queryContextFromLocation(location);
   const base = runCql(
     { ...queryParams, filters: dropFilterGroup(queryParams.filters, excludeName), sort: '' },
     queryTemplate,
+    timeZone,
   );
   if (!narrow?.term) return base;
   const term = `${escapeCqlTerm(narrow.term)}*`;
