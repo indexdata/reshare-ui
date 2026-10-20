@@ -113,9 +113,10 @@ const LabelSuggestions = ({ suggestions }) => {
 
 const PlaceholderPicker = ({ placeholders, isLoading, isError, onClose, onInsert }) => {
   const [selected, setSelected] = useState([]);
+  const byPlaceholder = (a, b) => a.placeholder.localeCompare(b.placeholder);
   const groups = [
-    ['singleRecord', placeholders?.singleRecord ?? []],
-    ['batchRecord', placeholders?.batchRecord ?? []],
+    ['singleRecord', [...(placeholders?.singleRecord ?? [])].sort(byPlaceholder)],
+    ['batchRecord', [...(placeholders?.batchRecord ?? [])].sort(byPlaceholder)],
   ];
 
   const toggle = (placeholder) => {
@@ -130,6 +131,7 @@ const PlaceholderPicker = ({ placeholders, isLoading, isError, onClose, onInsert
     <Modal
       label={<FormattedMessage id="ui-rs.settings.templates.placeholders.heading" />}
       open
+      size="large"
       onClose={onClose}
       dismissible
     >
@@ -143,7 +145,7 @@ const PlaceholderPicker = ({ placeholders, isLoading, isError, onClose, onInsert
         <section key={name} className={css.placeholderGroup}>
           <h3><FormattedMessage id={`ui-rs.settings.templates.placeholders.${name}`} /></h3>
           <div className={css.placeholderList}>
-            {entries.map(({ placeholder, description }) => (
+            {entries.map(({ placeholder }) => (
               <Checkbox
                 key={placeholder}
                 checked={selected.includes(placeholder)}
@@ -151,7 +153,6 @@ const PlaceholderPicker = ({ placeholders, isLoading, isError, onClose, onInsert
                 label={(
                   <span>
                     <code>{placeholder}</code>
-                    <span className={css.placeholderDescription}>{description}</span>
                   </span>
                 )}
                 onChange={() => toggle(placeholder)}
