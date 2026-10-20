@@ -1,7 +1,6 @@
 import { test, expect, step } from '../../lib/tenants';
-import { peer, item, patron } from '../../lib/env';
-import { chooseFirstTier, expectState, openFromList } from '../../lib/request';
-import { checkA11y } from '../../lib/axe';
+import { item } from '../../lib/env';
+import { createCopyRequest, expectState, openFromList } from '../../lib/request';
 
 test('copy supplied as a link', async ({ ownPage: borrower, peerPage: lender }) => {
   test.setTimeout(180_000);
@@ -9,28 +8,20 @@ test('copy supplied as a link', async ({ ownPage: borrower, peerPage: lender }) 
   const chapter = 'E2E chapter';
   const deliveryUrl = `https://example.org/e2e/${Date.now()}.pdf`;
 
-  await step('borrower asks for a copy of a chapter', async () => {
-    await borrower.goto('/request/requests/create');
-    await borrower.locator('[name="patronInfo.patronId"]').fill(patron.id);
-    // stripes lays the label over its radio input, so the label takes the click
-    await borrower.locator('label', { hasText: /^Copy$/ }).click();
-    await borrower.locator('[name="serviceInfo.copyrightCompliance[\'#text\']"]').selectOption('US-CCG');
-    await chooseFirstTier(borrower);
-    await borrower.locator('[name="systemInstanceIdentifier"]').fill(`return-${peer.symbol}::${item.id}`);
-    await borrower.locator('[name="bibliographicInfo.title"]').fill(title);
-    await borrower.locator('[name="bibliographicInfo.author"]').fill(item.author);
-    await borrower.locator('[name="bibliographicInfo.titleOfComponent"]').fill(chapter);
-    await borrower.locator('[name="bibliographicInfo.pagesRequested"]').fill('1-10');
-    await checkA11y(borrower, 'create form, copy filled in');
-    await borrower.getByRole('button', { name: 'Create patron request' }).click();
-    await borrower.waitForURL(/\/requests\/(?!create)[^/]+\/flow/);
-  });
+  await step('borrower asks for a copy of a chapter', () => createCopyRequest(borrower, title, chapter));
 
-  await step('lender sees the citation and supplies the link', async () => {
+  await step('lender sees the citation and the pull slip, and supplies the link', async () => {
     await openFromList(lender, '/supply/requests', title);
-    // a copy agrees to supply on its own; there is no pull slip
+    // a copy agrees to supply on its own, so no step marks the slip printed
     await expectState(lender, 'Will supply');
     await expect(lender.getByText(chapter, { exact: true })).toBeVisible();
+    // the pane's action menu, not the flow's Actions accordion
+    await lender.locator('[data-test-pane-header-actions-button]').click();
+    await lender.getByRole('button', { name: 'Pull slip', exact: true }).click();
+    // the iframe appears only once the broker has returned the PDF
+    await expect(lender.locator('iframe[title="Pull slip"]')).toBeVisible();
+    await lender.getByRole('button', { name: 'Close Pull slip' }).click();
+    await expectState(lender, 'Will supply');
     await lender.locator('[name="deliveryUrl"]').fill(deliveryUrl);
     await lender.getByRole('button', { name: 'Supply document' }).click();
     await expectState(lender, 'Completed');

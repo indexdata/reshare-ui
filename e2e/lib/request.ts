@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { checkA11y } from './axe';
+import { item, patron, peer } from './env';
 
 // Wait for live updates; reloading would hide a broken event stream.
 export async function expectState(page: Page, state: string | RegExp) {
@@ -46,4 +47,23 @@ export async function clickAction(page: Page, name: string | RegExp) {
 export function usDate(daysFromNow: number): string {
   const d = new Date(Date.now() + daysFromNow * 86_400_000);
   return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
+}
+
+// The borrower asks the peer for a copy of a chapter, landing on its flow page.
+// A copy waits at the lender in Will supply until a person acts.
+export async function createCopyRequest(page: Page, title: string, chapter: string) {
+  await page.goto('/request/requests/create');
+  await page.locator('[name="patronInfo.patronId"]').fill(patron.id);
+  // stripes lays the label over its radio input, so the label takes the click
+  await page.locator('label', { hasText: /^Copy$/ }).click();
+  await page.locator('[name="serviceInfo.copyrightCompliance[\'#text\']"]').selectOption('US-CCG');
+  await chooseFirstTier(page);
+  await page.locator('[name="systemInstanceIdentifier"]').fill(`return-${peer.symbol}::${item.id}`);
+  await page.locator('[name="bibliographicInfo.title"]').fill(title);
+  await page.locator('[name="bibliographicInfo.author"]').fill(item.author);
+  await page.locator('[name="bibliographicInfo.titleOfComponent"]').fill(chapter);
+  await page.locator('[name="bibliographicInfo.pagesRequested"]').fill('1-10');
+  await checkA11y(page, 'create form, copy filled in');
+  await page.getByRole('button', { name: 'Create patron request' }).click();
+  await page.waitForURL(/\/requests\/(?!create)[^/]+\/flow/);
 }
