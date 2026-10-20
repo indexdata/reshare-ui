@@ -17,7 +17,7 @@
     "prop-types": "^15.6.0"
   },
   "peerDependencies": {
-    "@folio/stripes": "^8.0.0 || ^9.0.0 || ^10.0.0",
+    "@folio/stripes": "^10.0.0",
     "react": "*",
     "react-intl": "^6.0.0 || ^7.0.0",
     "react-query": "^3.9.0",

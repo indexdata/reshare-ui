@@ -21,7 +21,7 @@
     "react-final-form": "^6.3.0"
   },
   "peerDependencies": {
-    "@folio/stripes": "^9.0.0 || ^10.0.0",
+    "@folio/stripes": "^10.0.0",
     "react": "*",
     "react-intl": "^6.4.7 || ^7.0.0",
     "react-query": "^3.9.0",
