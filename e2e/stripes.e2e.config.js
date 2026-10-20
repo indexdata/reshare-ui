@@ -30,6 +30,8 @@ module.exports = {
     '@projectreshare/request': {},
     '@projectreshare/rs': {},
     '@projectreshare/supply': {},
+    '@projectreshare/rsdir': {},
+    '@projectreshare/update': {},
   },
   branding: {
     style: {},

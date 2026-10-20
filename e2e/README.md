@@ -72,12 +72,16 @@ unzip it, then `npx playwright show-report <directory>`.
 
 ### Suite conventions
 
-- `tests/smoke/`: read-only route checks using landmarks from `lib/routes.ts`,
-  plus seed assertions in captive specs. Route checks reject error boundaries,
-  uncaught exceptions and console errors.
-- `tests/workflows/`: UI-driven flows across two institutions. `lib/tenants.ts`
-  supplies separate browser sessions; `lib/request.ts` holds shared interactions.
-  Use unique titles and title search to find requests in a populated stack.
+- `tests/smoke/`: read-only specs, which change nothing on the system they run
+  against. Route checks use landmarks from `lib/routes.ts` and reject error
+  boundaries, uncaught exceptions and console errors; captive smoke specs
+  assert on the seed. A spec that creates or acts on anything does not belong
+  here, whatever its size.
+- `tests/workflows/`: specs that create requests and act on them, and leave
+  them behind on every run, so they belong on test systems only. Most drive two
+  institutions: `lib/tenants.ts` supplies separate browser sessions;
+  `lib/request.ts` holds shared interactions. Use unique titles and title
+  search to find requests in a populated stack.
 - `*.captive.spec.ts`: tests that depend on the seed, illmock scenarios or
   `lib/broker.js`. External runs exclude these files.
 - Wait for visible state, not fixed delays. Workflows rely on the broker's live
@@ -149,12 +153,12 @@ login handshake: `/authn/login` returns 201 with a token for any credentials,
 `/bl-users/_self` a user with `["*"]` permissions, `/saml/check` that SSO is off.
 The broker and directory trust the `X-Okapi-Tenant` and token headers nginx
 injects, which is their normal Okapi-mode posture. The directory also gets
-`X-Okapi-Permissions: ["directory.public.all"]`, what Okapi would pass on for a
-ReShare user with no directory grant beyond the app's own, so the UI runs on
-that minimum. This setup does not test authentication or production permission
-enforcement. Unrecognized mock paths return JSON 404s so missing stubs fail
-route checks; add stubs to `mock-okapi/okapi-stubs.inc`, which both tenants'
-mock-okapi servers include.
+`X-Okapi-Permissions` listing every directory role, consortium admin included,
+which is what Okapi would pass on for a user holding every permission. This
+setup does not test authentication or production permission enforcement.
+Unrecognized mock paths return JSON 404s so missing stubs fail route checks;
+add stubs to `mock-okapi/okapi-stubs.inc`, which both tenants' mock-okapi
+servers include.
 
 Token expirations are computed 24 days ahead to stay within Stripes' browser
 timer limit; see `mock-okapi/token-expiry.js`.
@@ -204,7 +208,8 @@ reports its outcome as `success`, whatever the HTTP status.
 ## Existing environments (experimental)
 
 Setting `E2E_USERNAME` selects external mode: captive specs and local API probes
-are skipped. Without `E2E_PEER_BASE_URL`, only route smoke tests run.
+are skipped. Without `E2E_PEER_BASE_URL`, only the smoke specs run, so the run
+is read-only.
 
 ```sh
 E2E_BASE_URL=https://rs1.example.org \
@@ -217,8 +222,9 @@ operations**. Configure its credentials and an available supplier item, a valid
 borrower patron and pickup location. External workflows have not yet been
 validated: they require live updates, the `return-<symbol>::<id>` catalog
 convention, and a lender that accepts due-date overrides into the past.
-Failed workflows can leave loans and requests behind. Defaults are not validated
-for external targets; set all relevant values explicitly.
+Every workflow run leaves its requests behind at both institutions, and a
+failed run can also leave a loan open. Defaults are not validated for external
+targets; set all relevant values explicitly.
 
 Use `npx playwright test --list` to inspect selection without running tests.
 

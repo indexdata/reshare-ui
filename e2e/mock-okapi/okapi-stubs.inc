@@ -3,9 +3,10 @@
 # 404. The including server sets $tenant first.
 
 set $permissions '["*"]';
-# What Okapi would forward to the directory for a user whose only directory
-# grant is directory.public.all, the one module.rs.enabled carries.
-set $directory_permissions '["directory.public.all"]';
+# What Okapi would forward to the directory for a user holding every
+# permission, as $permissions says: each directory role, consortium admin
+# included.
+set $directory_permissions '["directory.consortium.all","directory.institution.all","directory.system.all","directory.public.all"]';
 set $user_id           00000000-0000-4000-8000-000000000001;
 set $service_point_id  00000000-0000-4000-8000-000000000002;
 set $username          devuser;
