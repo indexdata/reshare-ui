@@ -16,10 +16,17 @@ Playwright runs TypeScript without checking its types. After changing a spec or
 anything in `lib/`, run `yarn typecheck`, which needs no stack, before running
 the spec.
 
+## Which checkout runs
+
+The stack runs the specs and seed of the checkout `stack:up` is started from,
+and builds the UI from that checkout's `platform-rs-dev` unless `PLATFORM_DIR`
+points at another. When the specs and the UI changes under test are in
+different checkouts, use `PLATFORM_DIR` to combine them.
+
 ## Looking at something
 
-1. `yarn stack:health`; if it fails, `yarn stack:up` (with `PLATFORM_DIR` set to
-   another checkout's `platform-rs-dev` when the UI under study lives there).
+1. `yarn stack:health`; if it fails, `yarn stack:up`, with `PLATFORM_DIR` as
+   above when the UI under study is in another checkout.
 2. Put a request in the state of interest with `bin/brkr`, whose output
    includes the request's page URL.
 3. Open that URL and log in with anything. When driving a browser through an
