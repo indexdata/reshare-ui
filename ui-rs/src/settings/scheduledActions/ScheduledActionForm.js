@@ -169,8 +169,6 @@ const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLa
                     label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.title" />}
                   />
                 </Col>
-              </Row>
-              <Row>
                 <Col xs={12} md={4}>
                   <Field name="actionName">
                     {({ input }) => (
@@ -192,7 +190,9 @@ const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLa
                     )}
                   </Field>
                 </Col>
-                <Col xs={12} md={8}>
+              </Row>
+              <Row>
+                <Col xs={12}>
                   <Field
                     id="scheduled-action-batchQuery"
                     name="batchQuery"

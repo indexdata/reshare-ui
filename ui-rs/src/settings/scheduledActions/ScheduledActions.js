@@ -23,7 +23,6 @@ const ScheduledActionsList = ({ match, history }) => {
     active: r => intl.formatMessage({
       id: `ui-rs.settings.scheduledActions.status.${r.active ? 'active' : 'inactive'}`,
     }),
-    createdAt: r => (r.createdAt ? intl.formatDate(r.createdAt) : ''),
   };
 
   return (
@@ -46,13 +45,12 @@ const ScheduledActionsList = ({ match, history }) => {
     >
       <MultiColumnList
         contentData={items}
-        visibleColumns={['title', 'actionName', 'schedule', 'active', 'createdAt']}
+        visibleColumns={['title', 'actionName', 'schedule', 'active']}
         columnMapping={{
           title: <FormattedMessage id="ui-rs.settings.scheduledActions.field.title" />,
           actionName: <FormattedMessage id="ui-rs.settings.scheduledActions.field.actionName" />,
           schedule: <FormattedMessage id="ui-rs.settings.scheduledActions.field.schedule" />,
           active: <FormattedMessage id="ui-rs.settings.scheduledActions.field.active" />,
-          createdAt: <FormattedMessage id="ui-rs.settings.scheduledActions.field.createdAt" />,
         }}
         formatter={formatter}
         onRowClick={(_e, row) => history.push({ pathname: `${match.url}/${row.id}`, state: { direct: true } })}

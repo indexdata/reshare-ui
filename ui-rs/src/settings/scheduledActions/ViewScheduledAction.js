@@ -110,6 +110,10 @@ const ViewScheduledAction = ({ match }) => {
             label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.scheduleUtc" />}
             value={describeSchedule(data.schedule, intl)}
           />
+          <KeyValue
+            label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.createdAt" />}
+            value={data.createdAt ? intl.formatDate(data.createdAt) : ''}
+          />
         </Col>
         <Col xs={12} md={6}>
           {ParamsView && <ParamsView actionParams={data.actionParams} />}
