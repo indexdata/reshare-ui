@@ -53,14 +53,14 @@ jobs:
       PROJECT: ${{ inputs.scope != 'all' && format('--project={0}', inputs.scope) || '' }}
       SPECS: ${{ inputs.specs }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Before setup-node: its yarn cache key comes from `yarn --version`, so
       # yarn has to exist first, which only GitHub's own image guarantees.
       - name: Install Yarn
         run: npm install -g yarn
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: yarn
@@ -110,7 +110,7 @@ jobs:
         run: docker compose logs --no-color broker directory illmock nginx
 
       # A run that failed before the suite has no report, and uploads nothing.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         id: report
         if: always()
         with:
@@ -135,14 +135,14 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: playwright-report
           path: playwright-report
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: playwright-report
-      - uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v5
         id: deploy
       - name: Link the report
         run: |

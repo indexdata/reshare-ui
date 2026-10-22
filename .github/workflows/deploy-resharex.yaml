@@ -41,9 +41,9 @@ jobs:
       - run: echo "Deploy triggered from ${{ inputs.source_repo }} @ ${{ inputs.source_sha }}"
 
       - name: checkout module
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: yarn
@@ -61,7 +61,7 @@ jobs:
         working-directory: ./environments/platform-resharex
 
       - name: Upload yarn.lock
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: yarn.lock
           path: environments/platform-resharex/yarn.lock
