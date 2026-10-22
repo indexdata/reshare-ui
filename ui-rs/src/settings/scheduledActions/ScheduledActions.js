@@ -46,8 +46,9 @@ const ScheduledActionsList = ({ match, history }) => {
     >
       <MultiColumnList
         contentData={items}
-        visibleColumns={['actionName', 'schedule', 'active', 'createdAt']}
+        visibleColumns={['title', 'actionName', 'schedule', 'active', 'createdAt']}
         columnMapping={{
+          title: <FormattedMessage id="ui-rs.settings.scheduledActions.field.title" />,
           actionName: <FormattedMessage id="ui-rs.settings.scheduledActions.field.actionName" />,
           schedule: <FormattedMessage id="ui-rs.settings.scheduledActions.field.schedule" />,
           active: <FormattedMessage id="ui-rs.settings.scheduledActions.field.active" />,

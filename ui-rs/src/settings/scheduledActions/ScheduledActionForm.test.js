@@ -61,6 +61,7 @@ const byId = (id) => document.getElementById(id);
 const save = () => byId('clickable-save-scheduled-action');
 
 const fillRequired = () => {
+  fireEvent.change(byId('scheduled-action-title'), { target: { value: 'Morning slips' } });
   fireEvent.change(byId('scheduled-action-batchQuery'), { target: { value: 'state==REQ' } });
   fireEvent.change(byId('scheduled-action-hours'), { target: { value: '9' } });
   fireEvent.click(screen.getByRole('button', { name: 'Monday' }));
@@ -105,7 +106,7 @@ describe('ScheduledActionForm', () => {
     });
   });
 
-  it('disables save until the query, an hour and a day are valid', async () => {
+  it('disables save until the title, query, an hour and a day are valid', async () => {
     await renderForm(jest.fn());
 
     expect(save()).toBeDisabled();
@@ -118,6 +119,10 @@ describe('ScheduledActionForm', () => {
 
     fireEvent.change(byId('scheduled-action-hours'), { target: { value: '9' } });
     fireEvent.change(byId('scheduled-action-minute'), { target: { value: '60' } });
+    await waitFor(() => expect(save()).toBeDisabled());
+
+    fireEvent.change(byId('scheduled-action-minute'), { target: { value: '0' } });
+    fireEvent.change(byId('scheduled-action-title'), { target: { value: '  ' } });
     await waitFor(() => expect(save()).toBeDisabled());
   });
 
@@ -135,6 +140,7 @@ describe('ScheduledActionForm', () => {
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     const values = onSubmit.mock.calls[0][0];
     expect(values.actionName).toBe('email-pullslips');
+    expect(values.title).toBe('Morning slips');
     expect(values.days).toEqual([1]);
     expect(values.hours).toBe('9');
     expect(values.minute).toBe('30');
@@ -179,19 +185,21 @@ describe('ScheduledActionForm', () => {
     expect(values.actionParams).not.toHaveProperty('includePdf');
   });
 
-  it('fills the whole form (query, action, params and schedule) from a preset', async () => {
+  it('fills the whole form (title, query, action, params and schedule) from a preset', async () => {
     await renderForm(jest.fn());
 
     await waitFor(() => expect(byId('scheduled-action-preset')).toBeInTheDocument());
 
     fireEvent.change(byId('scheduled-action-preset'), { target: { value: '1' } });
     await waitFor(() => expect(byId('scheduled-action-age-interval')).toBeInTheDocument());
+    expect(byId('scheduled-action-title').value).toBe(PRESETS[1].title);
     expect(byId('scheduled-action-batchQuery').value).toBe(PRESETS[1].batchQuery);
     expect(byId('scheduled-action-actionName').value).toBe('request-aging');
     expect(byId('scheduled-action-age-interval').value).toBe('2h');
     expect(byId('scheduled-action-frequency').value).toBe('minutely');
     expect(byId('scheduled-action-interval').value).toBe('15');
   });
+
 
   it('labels presets by titleKey, falling back to the title the broker sent', async () => {
     await renderForm(jest.fn());
@@ -254,6 +262,7 @@ describe('ScheduledActionForm', () => {
     expect(byId('scheduled-action-hours')).toBeNull();
 
     expect(save()).toBeDisabled();
+    fireEvent.change(byId('scheduled-action-title'), { target: { value: 'Aging' } });
     fireEvent.change(byId('scheduled-action-batchQuery'), { target: { value: 'state==REQ' } });
     await waitFor(() => expect(save()).not.toBeDisabled());
 
@@ -266,6 +275,7 @@ describe('ScheduledActionForm', () => {
     await renderForm(onSubmit);
     fireEvent.change(byId('scheduled-action-actionName'), { target: { value: 'request-aging' } });
     await waitFor(() => expect(byId('scheduled-action-age-interval')).toBeInTheDocument());
+    fireEvent.change(byId('scheduled-action-title'), { target: { value: 'Aging' } });
     fireEvent.change(byId('scheduled-action-batchQuery'), { target: { value: 'state==REQ' } });
 
     fireEvent.change(byId('scheduled-action-frequency'), { target: { value: 'minutely' } });

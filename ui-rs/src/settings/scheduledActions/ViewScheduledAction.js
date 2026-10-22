@@ -64,7 +64,7 @@ const ViewScheduledAction = ({ match }) => {
   return (
     <Pane
       defaultWidth="fill"
-      paneTitle={actionLabel}
+      paneTitle={data.title}
       onClose={close}
       dismissible
       actionMenu={({ onToggle }) => (
@@ -94,6 +94,10 @@ const ViewScheduledAction = ({ match }) => {
     >
       <Row>
         <Col xs={12} md={6}>
+          <KeyValue
+            label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.actionName" />}
+            value={actionLabel}
+          />
           <KeyValue
             label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.batchQuery" />}
             value={data.batchQuery}
@@ -130,7 +134,7 @@ const ViewScheduledAction = ({ match }) => {
       <ConfirmationModal
         open={confirmDelete}
         heading={<FormattedMessage id="ui-rs.settings.scheduledActions.delete.heading" />}
-        message={<FormattedMessage id="ui-rs.settings.scheduledActions.delete.message" values={{ name: actionLabel }} />}
+        message={<FormattedMessage id="ui-rs.settings.scheduledActions.delete.message" values={{ name: data.title }} />}
         confirmLabel={<FormattedMessage id="ui-rs.delete" />}
         onConfirm={() => { setConfirmDelete(false); remover.mutate(); }}
         onCancel={() => setConfirmDelete(false)}

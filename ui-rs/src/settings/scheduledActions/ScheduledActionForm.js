@@ -86,6 +86,7 @@ const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLa
   const msg = (id) => intl.formatMessage({ id: `ui-rs.settings.scheduledActions.validate.${id}` });
   const validate = (values) => {
     const errors = {};
+    if (!values.title || !values.title.trim()) errors.title = msg('title');
     if (!values.batchQuery || !values.batchQuery.trim()) errors.batchQuery = msg('batchQuery');
     const frequency = values.frequency ?? 'weekly';
     if (frequency === 'minutely') {
@@ -158,6 +159,17 @@ const ScheduledActionForm = ({ initialValues, onSubmit, onClose, title, submitLa
                 </MessageBanner>
               )}
               {!editing && <PresetPicker presets={presets ?? []} />}
+              <Row>
+                <Col xs={12} md={8}>
+                  <Field
+                    id="scheduled-action-title"
+                    name="title"
+                    required
+                    component={TextField}
+                    label={<FormattedMessage id="ui-rs.settings.scheduledActions.field.title" />}
+                  />
+                </Col>
+              </Row>
               <Row>
                 <Col xs={12} md={4}>
                   <Field name="actionName">
