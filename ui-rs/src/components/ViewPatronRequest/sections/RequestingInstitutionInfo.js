@@ -1,9 +1,6 @@
 import React from 'react';
 import { FormattedMessage } from 'react-intl';
 import { Link } from 'react-router-dom';
-import stringify from 'json-stable-stringify';
-import { withStripes } from '@folio/stripes/core';
-import get from 'lodash/get';
 import {
   Accordion,
   Card,
@@ -12,98 +9,76 @@ import {
   Row,
 } from '@folio/stripes/components';
 
+import formatAddress from '#/util/formatAddress';
+import { firstEmail } from '#/util/patronEmail';
 import css from './RequestingInstitutionInfo.css';
 
-class RequestingInstitutionInfo extends React.Component {
-  render() {
-    const { record, stripes } = this.props;
-    let institution = get(record, 'resolvedRequester.owner');
+// The requester as the lender sees it. requesterName is the broker's directory
+// name for the symbol; requestingAgencyInfo is what the requester sent, present
+// only when its directory entry opts in to including it.
+const RequestingInstitutionInfo = ({ record }) => {
+  if (record?.side !== 'lending') return null;
 
-    let cardStyle;
-    if (institution) {
-      cardStyle = 'positive';
-    } else {
-      cardStyle = 'negative';
-      institution = {};
-    }
+  const agencyInfo = record.illRequest?.requestingAgencyInfo ?? {};
+  const physicalAddress = agencyInfo.address?.find(a => a?.physicalAddress)?.physicalAddress;
+  const symbol = record.requesterSymbol;
 
-    return (
+  return (
+    <Accordion
+      id="requestingInstitutionInfo"
+      label={<FormattedMessage id="ui-rs.information.heading.requestinginstitution" />}
+    >
       <Card
         id="requestingInstitutionInfo-card"
         headerStart={<FormattedMessage id="ui-rs.institution" />}
-        headerEnd={<Link to={`/directory/entries/${institution.id}`}><FormattedMessage id="ui-rs.viewInDirectory" /></Link>}
+        headerEnd={symbol && (
+          <Link to={`/directory/entries/by-symbol/${symbol}`}>
+            <FormattedMessage id="ui-rs.viewInDirectory" />
+          </Link>
+        )}
         roundedBorder
-        cardStyle={cardStyle}
         cardClass={css.institutionCard}
         headerClass={css.institutionCardHeader}
       >
         <Row>
           <Col xs={6}>
             <KeyValue
-              label={<FormattedMessage id="ui-rs.information.institutionId" />}
-              value={institution.id}
-            />
-          </Col>
-          <Col xs={6}>
-            <KeyValue
               label={<FormattedMessage id="ui-rs.information.institutionName" />}
-              value={institution.name}
+              value={record.requesterName ?? agencyInfo.name}
+            />
+          </Col>
+          <Col xs={6}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rs.information.symbol" />}
+              value={symbol}
             />
           </Col>
         </Row>
         <Row>
           <Col xs={6}>
-            {institution.status?.value !== undefined &&
-              <KeyValue
-                label={<FormattedMessage id="ui-rs.information.institutionStatus" />}
-                value={<FormattedMessage
-                  id={`ui-rs.information.institutionStatus.${institution.status.value}`}
-                  defaultMessage={institution.status?.label ?? institution.status.value}
-                />}
-              />
-            }
+            <KeyValue
+              label={<FormattedMessage id="ui-rs.information.contactName" />}
+              value={agencyInfo.contactName}
+            />
           </Col>
           <Col xs={6}>
             <KeyValue
-              label={<FormattedMessage id="ui-rs.information.slug" />}
-              value={institution.slug}
+              label={<FormattedMessage id="ui-rs.information.emailAddress" />}
+              value={firstEmail(agencyInfo.address)}
             />
           </Col>
         </Row>
         <Row>
           <Col xs={12}>
             <KeyValue
-              label={<FormattedMessage id="ui-rs.information.symbols" />}
-              value={institution.symbolSummary}
+              label={<FormattedMessage id="ui-rs.information.address" />}
+              value={formatAddress(physicalAddress)}
             />
           </Col>
         </Row>
-        <Row>
-          <Col xs={12}>
-            <KeyValue
-              label={<FormattedMessage id="ui-rs.information.tags" />}
-              value={institution.tagSummary === 'No tags' ? <FormattedMessage id="ui-rs.information.tags.none" /> : institution.tagSummary}
-            />
-          </Col>
-        </Row>
-        {!stripes.config.showDevInfo ? '' :
-        <Row>
-          <Col xs={12}>
-            <Accordion
-              id="requestingInstitutionInfo-card-dev"
-              label={<FormattedMessage id="ui-rs.information.heading.developer" />}
-              closedByDefault
-            >
-              <pre>
-                {stringify(institution, { space: 2 })}
-              </pre>
-            </Accordion>
-          </Col>
-        </Row>
-        }
       </Card>
-    );
-  }
-}
+    </Accordion>
+  );
+};
 
-export default withStripes(RequestingInstitutionInfo);
+export default RequestingInstitutionInfo;
