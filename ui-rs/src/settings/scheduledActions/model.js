@@ -1,9 +1,10 @@
 import { scheduleToExpression, scheduleFromExpression } from './schedule/scheduleExpression';
 
 export function buildBatchActionBody(values = {}) {
-  const { actionName, batchQuery, frequency, days, hours, minute, interval, actionParams } = values;
+  const { actionName, title, batchQuery, frequency, days, hours, minute, interval, actionParams } = values;
   return {
     actionName,
+    title,
     batchQuery,
     schedule: scheduleToExpression({ frequency, days, hours, minute, interval }),
     actionParams: actionParams ?? {},
@@ -16,6 +17,7 @@ export function recordToFormValues(record = {}) {
     ?? { frequency: 'weekly', days: [], hours: '', minute: 0, interval: '' };
   return {
     actionName: record.actionName,
+    title: record.title,
     batchQuery: record.batchQuery,
     frequency: schedule.frequency,
     days: schedule.days,

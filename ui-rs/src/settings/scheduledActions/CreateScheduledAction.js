@@ -29,9 +29,9 @@ const CreateScheduledAction = () => {
       await queryClient.invalidateQueries('broker/batch_actions');
       close();
     },
-    onError: () => callout?.sendCallout({
+    onError: (err) => callout?.sendCallout({
       type: 'error',
-      message: <FormattedMessage id="ui-rs.settings.scheduledActions.create.error" />,
+      message: <FormattedMessage id="ui-rs.settings.scheduledActions.create.error" values={{ errMsg: err?.message }} />,
     }),
   });
 

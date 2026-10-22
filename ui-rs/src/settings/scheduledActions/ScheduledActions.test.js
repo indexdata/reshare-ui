@@ -4,6 +4,7 @@ import { fireEvent, screen, waitFor } from '@folio/jest-config-stripes/testing-l
 
 import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
+import { quietQueryLog } from '#/test/quietQueryLog';
 import ScheduledActions from './ScheduledActions';
 
 const mockOkapi = makeOkapiKyMock();
@@ -20,6 +21,8 @@ jest.mock('react-syntax-highlighter', () => ({
 }));
 jest.mock('react-syntax-highlighter/dist/esm/styles/hljs', () => ({ github: { hljs: {} } }));
 
+const { CalloutContext } = require('@folio/stripes/core');
+
 const PATH = '/settings/rs/scheduled-actions';
 
 const NO_EVENTS = { about: { count: 0 }, items: [] };
@@ -29,12 +32,16 @@ const messages = {
   'ui-rs.settings.scheduledActions.scheduleSummary': '{days} at {times}',
 };
 
-const renderList = () => renderWithRs(
-  <Route path={PATH} component={ScheduledActions} />,
-  { initialEntries: [PATH], messages },
+const renderList = (entry = PATH, sendCallout = jest.fn()) => renderWithRs(
+  <CalloutContext.Provider value={{ sendCallout }}>
+    <Route path={PATH} component={ScheduledActions} />
+  </CalloutContext.Provider>,
+  { initialEntries: [entry], messages },
 );
 
 describe('ScheduledActions list', () => {
+  quietQueryLog(/title already exists/); // one test rejects a save on purpose
+
   beforeEach(() => jest.clearAllMocks());
 
   it('renders a row per batch action with a readable schedule', async () => {
@@ -42,7 +49,7 @@ describe('ScheduledActions list', () => {
       'broker/batch_actions': {
         about: { count: 1 },
         items: [
-          { id: 'a1', actionName: 'email-pullslips', schedule: 'FREQ=WEEKLY;BYDAY=MO,WE;BYHOUR=6,13;BYMINUTE=0', active: true, createdAt: '2026-05-01T00:00:00Z' },
+          { id: 'a1', actionName: 'email-pullslips', title: 'Morning slips', schedule: 'FREQ=WEEKLY;BYDAY=MO,WE;BYHOUR=6,13;BYMINUTE=0', active: true, createdAt: '2026-05-01T00:00:00Z' },
         ],
       },
     });
@@ -50,9 +57,22 @@ describe('ScheduledActions list', () => {
     renderList();
 
     await waitFor(() => expect(screen.getByText('email-pullslips')).toBeInTheDocument());
+    expect(screen.getByText('Morning slips')).toBeInTheDocument();
     expect(screen.getByText('Mon, Wed at 06:00, 13:00')).toBeInTheDocument();
     expect(screen.getByText('ui-rs.settings.scheduledActions.status.active')).toBeInTheDocument();
     expect(mockOkapi.mock.calls.some(([path]) => path === 'broker/batch_actions')).toBe(true);
+  });
+
+  it('heads the view pane with the title and shows the action type', async () => {
+    const action = { id: 'a1', actionName: 'email-pullslips', title: 'Morning slips', schedule: 'FREQ=WEEKLY;BYDAY=MO;BYHOUR=6;BYMINUTE=0', batchQuery: 'state==REQ', active: true };
+    mockOkapi.setResponses({
+      'broker/batch_actions/a1': action,
+      'broker/batch_actions/a1/events': NO_EVENTS,
+    });
+
+    renderList(`${PATH}/a1`);
+    expect(await screen.findByRole('heading', { name: 'Morning slips' })).toBeInTheDocument();
+    expect(screen.getByText('email-pullslips')).toBeInTheDocument();
   });
 
   it('disables an active action from the view action menu', async () => {
@@ -76,6 +96,37 @@ describe('ScheduledActions list', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.scheduledActions.disable' }));
 
     await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledWith('broker/batch_actions/a1/disable'));
+  });
+
+  it('shows the broker\'s reason when saving fails, such as a title already in use', async () => {
+    const action = {
+      id: 'a1',
+      actionName: 'request-aging',
+      title: 'Aging',
+      schedule: 'FREQ=WEEKLY;BYDAY=MO;BYHOUR=6;BYMINUTE=0',
+      batchQuery: 'state==REQ',
+      actionParams: { interval: '2h' },
+      active: true,
+    };
+    mockOkapi.setResponses({ 'broker/batch_actions/a1': action });
+    const duplicate = 'a batch action with this owner and title already exists';
+    mockOkapi.put.mockRejectedValueOnce(new Error(duplicate));
+    const sendCallout = jest.fn();
+
+    renderList(`${PATH}/a1/edit`, sendCallout);
+
+    const title = await screen.findByRole('textbox', { name: /ui-rs.settings.scheduledActions.field.title/ });
+    expect(title).toHaveValue('Aging');
+    fireEvent.change(title, { target: { value: 'Taken' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rs.save' }));
+
+    await waitFor(() => expect(sendCallout).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'error',
+      message: expect.objectContaining({ props: expect.objectContaining({ values: { errMsg: duplicate } }) }),
+    })));
+    expect(mockOkapi.put).toHaveBeenCalledWith('broker/batch_actions/a1', {
+      json: expect.objectContaining({ title: 'Taken' }),
+    });
   });
 
   describe('event history', () => {

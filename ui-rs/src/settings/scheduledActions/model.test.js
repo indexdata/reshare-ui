@@ -4,9 +4,10 @@ import { scheduleToExpression, scheduleFromExpression } from './schedule/schedul
 // Wire-format details belong to scheduleExpression tests.
 describe('scheduledActions model', () => {
   describe('buildBatchActionBody', () => {
-    it('composes action type, schedule, batchQuery and namespaced params', () => {
+    it('composes action type, title, schedule, batchQuery and namespaced params', () => {
       expect(buildBatchActionBody({
         actionName: 'email-pullslips',
+        title: 'Morning slips',
         batchQuery: 'state==REQ',
         days: [1, 3, 5],
         hours: '6, 13',
@@ -14,6 +15,7 @@ describe('scheduledActions model', () => {
         actionParams: { includePdf: true },
       })).toEqual({
         actionName: 'email-pullslips',
+        title: 'Morning slips',
         batchQuery: 'state==REQ',
         schedule: scheduleToExpression({ days: [1, 3, 5], hours: '6, 13', minute: 30 }),
         actionParams: { includePdf: true },
@@ -31,11 +33,13 @@ describe('scheduledActions model', () => {
       const schedule = 'FREQ=WEEKLY;BYDAY=MO,WE,FR;BYHOUR=6,13;BYMINUTE=30';
       expect(recordToFormValues({
         actionName: 'email-pullslips',
+        title: 'Morning slips',
         schedule,
         batchQuery: 'state==REQ',
         actionParams: { includePdf: true },
       })).toEqual({
         actionName: 'email-pullslips',
+        title: 'Morning slips',
         batchQuery: 'state==REQ',
         ...scheduleFromExpression(schedule),
         actionParams: { includePdf: true },
