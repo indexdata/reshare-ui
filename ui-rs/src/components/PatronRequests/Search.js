@@ -11,6 +11,9 @@ const Search = ({ resetAll, searchHandlers, searchValue, searchChanged, filterCh
     { label: 'author', value: 'author' },
     { label: 'isbn', value: 'isbn' },
     { label: 'issn', value: 'issn' },
+    { label: 'itemId', value: 'item_id' },
+    { label: 'itemBarcode', value: 'barcode' },
+    { label: 'callNumber', value: 'call_number' },
     { label: 'requesterIdentifier', value: 'patron' },
     {
       label: 'requesterName',

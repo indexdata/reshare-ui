@@ -57,6 +57,11 @@ describe('buildPatronRequestsCql', () => {
     expect(cql).toContain('title="Dune"');
   });
 
+  it('passes a typed wildcard through to an item index', () => {
+    const cql = cqlFor('qindex=barcode&query=3000*');
+    expect(cql).toContain('barcode="3000*"');
+  });
+
   describe('peer filter groups', () => {
     it('emits supplier_symbol with the broker single-= operator for a supplier filter', () => {
       const cql = cqlFor('filters=supplier.ISIL%3AUS-A');
