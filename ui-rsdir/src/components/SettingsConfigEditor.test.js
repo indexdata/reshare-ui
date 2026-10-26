@@ -20,13 +20,17 @@ const vendorFieldMappingForVendor = (fields, vendor, configKey, setting) => (
 );
 const selectionChangeImpact = options => changeImpact({ ...options, vendorFieldMapping });
 
+jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
+
 const mockPatch = jest.fn();
 const mockKy = jest.fn();
 let mockOpenApiData;
+let mockOpenApiState;
+let mockMessages;
 
 jest.mock('../hooks/useDirectoryOpenApi', () => ({
   __esModule: true,
-  default: () => ({ data: mockOpenApiData }),
+  default: () => ({ data: mockOpenApiData, ...mockOpenApiState }),
 }));
 
 mockKy.patch = mockPatch;
@@ -35,7 +39,10 @@ jest.mock('react-intl', () => ({
   FormattedMessage: ({ defaultMessage, id, values = {} }) => (
     (defaultMessage || id).replace(/\{(\w+)\}/g, (match, key) => values[key] ?? match)
   ),
-  useIntl: () => ({ formatMessage: ({ defaultMessage, id }) => defaultMessage || id }),
+  useIntl: () => ({
+    messages: mockMessages,
+    formatMessage: ({ defaultMessage, id }) => mockMessages[id] || defaultMessage || id,
+  }),
 }));
 
 jest.mock('@folio/stripes/core', () => {
@@ -56,6 +63,7 @@ jest.mock('react-query', () => ({
 }));
 
 jest.mock('@folio/stripes/components', () => ({
+  MultiSelection: jest.requireActual('@folio/stripes-components/lib/MultiSelection').default,
   Badge: jest.requireActual('@folio/stripes-components/lib/Badge').default,
   ConfirmationModal: jest.requireActual('@folio/stripes-components/lib/ConfirmationModal').default,
   Icon: ({ icon, 'aria-hidden': ariaHidden }) => <svg aria-hidden={ariaHidden} data-icon={icon} />,
@@ -119,6 +127,8 @@ const renderEditor = ({
 
 beforeEach(() => {
   mockOpenApiData = undefined;
+  mockOpenApiState = {};
+  mockMessages = {};
   mockPatch.mockReset();
   mockKy.mockReset();
   mockPatch.mockResolvedValue({ text: () => Promise.resolve('') });
@@ -1403,5 +1413,360 @@ describe('SettingsConfigEditor read-only override values', () => {
     fireEvent.click(document.getElementById('edit-settings-config-items'));
     expect(screen.getAllByText('profile-child')).toHaveLength(2);
     expect(document.getElementById('settings-config-items-new-fixed')).not.toBeInTheDocument();
+  });
+});
+
+
+describe('SettingsConfigEditor predefined code/description arrays', () => {
+  const field = {
+    fieldName: 'loanConditions',
+    valueType: 'objectArray',
+    objectMap: [{ fieldName: 'code', required: true }, { fieldName: 'defaultDesc', required: true }],
+  };
+  const pairs = [
+    { code: 'LibraryUseOnly', defaultDesc: 'Use in library only' },
+    { code: 'NoReproduction', defaultDesc: 'No reproduction' },
+  ];
+  const spec = { components: { schemas: { IllConfig: { properties: {
+    loanConditions: { 'x-default-data': Object.fromEntries(pairs.map(item => [item.code, item.defaultDesc])) },
+  } } } } };
+  const edit = () => fireEvent.click(document.getElementById('edit-settings-config-loanConditions'));
+  const addSelected = () => fireEvent.click(screen.getByRole('button', { name: 'Add selected' }));
+  const save = () => fireEvent.click(document.getElementById('save-settings-config-loanConditions'));
+  const selectOption = async (user, label) => {
+    const input = screen.getByRole('combobox', { name: 'Add predefined' });
+    if (input.getAttribute('aria-expanded') !== 'true') await user.click(input);
+    await user.click(await screen.findByRole('option', { name: (_name, element) => element.textContent.startsWith(label) }));
+  };
+
+  beforeEach(() => { mockOpenApiData = spec; });
+
+  it('adds several defaults in selection order, removes and reoffers codes, and saves original pairs', async () => {
+    const user = userEvent.setup();
+    renderEditor({ configKey: 'illConfig', fieldMapping: [field] });
+    edit();
+    expect(screen.getByRole('button', { name: 'Add selected' })).toBeDisabled();
+    expect(screen.queryByRole('textbox', { name: 'code' })).not.toBeInTheDocument();
+    await selectOption(user, 'NoReproduction: No reproduction');
+    await selectOption(user, 'LibraryUseOnly: Use in library only');
+    addSelected();
+    expect(screen.getByText('All predefined entries added.')).toBeInTheDocument();
+    expect(mockPatch).not.toHaveBeenCalled();
+    fireEvent.click(document.getElementById('remove-settings-config-loanConditions-0'));
+    await selectOption(user, 'NoReproduction: No reproduction');
+    addSelected();
+    save();
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith('directory/entries/by-id/entry-id', {
+      json: { illConfig: { loanConditions: pairs } },
+    }));
+  });
+
+  it('searches descriptions and selects options by keyboard without accepting free text', async () => {
+    const user = userEvent.setup();
+    renderEditor({ configKey: 'illConfig', fieldMapping: [{ ...field, defaultOnly: true }] });
+    edit();
+    const input = screen.getByRole('combobox', { name: 'Add predefined' });
+    await user.type(input, 'reproduction');
+    expect(await screen.findByRole('option', { name: (_name, element) => element.textContent.startsWith('NoReproduction: No reproduction') })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('option', { name: (_name, element) => element.textContent.startsWith('LibraryUseOnly: Use in library only') })).not.toBeInTheDocument());
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(screen.getByRole('button', { name: 'Add selected' })).toBeEnabled();
+    addSelected();
+    expect(screen.getByText('No reproduction')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add custom' })).not.toBeInTheDocument();
+    save();
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+      json: { illConfig: { loanConditions: [pairs[1]] } },
+    }));
+  });
+
+  it('preserves existing nonmatching entries, filters by code rather than description, and allows removal', async () => {
+    const legacy = [{ code: 'LibraryUseOnly', defaultDesc: 'Customized' }, { code: 'Retired', defaultDesc: 'Old value' }];
+    renderEditor({ configKey: 'illConfig',
+      fieldMapping: [{ ...field, defaultOnly: true }],
+      initialResource: { illConfig: { loanConditions: legacy } } });
+    edit();
+    expect(screen.getByText('Customized')).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('combobox', { name: 'Add predefined' }));
+    expect(screen.queryByRole('option', { name: (_name, element) => element.textContent.startsWith('LibraryUseOnly: Use in library only') })).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    save();
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+      json: { illConfig: { loanConditions: legacy } },
+    }));
+  });
+
+  it.each([
+    { defaultOnly: true, nested: false },
+    { defaultOnly: false, nested: false },
+    { defaultOnly: true, nested: true },
+    { defaultOnly: false, nested: true },
+  ])('retains saved blank strings after removing and adding entries (defaultOnly=$defaultOnly, nested=$nested)', async ({ defaultOnly, nested }) => {
+    const legacy = [{ code: 'Legacy', defaultDesc: '' }, { code: '', defaultDesc: '' }];
+    const arrayField = { ...field, defaultOnly };
+    const fields = nested ? [{ fieldName: 'group', valueType: 'subField', subMap: [arrayField] }] : [arrayField];
+    const initialValue = { loanConditions: [pairs[0], ...legacy] };
+    const root = nested ? 'group' : 'loanConditions';
+    const arrayPath = nested ? 'group-loanConditions' : 'loanConditions';
+    if (nested) {
+      mockOpenApiData = { components: { schemas: { IllConfig: { properties: {
+        group: { properties: spec.components.schemas.IllConfig.properties },
+      } } } } };
+    }
+    renderEditor({ configKey: 'illConfig',
+      fieldMapping: fields,
+      initialResource: { illConfig: nested ? { group: initialValue } : initialValue } });
+    fireEvent.click(document.getElementById(`edit-settings-config-${root}`));
+    fireEvent.click(document.getElementById(`remove-settings-config-${arrayPath}-0`));
+    await selectOption(userEvent.setup(), 'NoReproduction: No reproduction');
+    addSelected();
+    fireEvent.click(document.getElementById(`save-settings-config-${root}`));
+    const nextValue = { loanConditions: [...legacy, pairs[1]] };
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+      json: { illConfig: nested ? { group: nextValue } : nextValue },
+    }));
+  });
+
+  it('still rejects blank strings in new custom entries', async () => {
+    renderEditor({ configKey: 'illConfig', fieldMapping: [field] });
+    edit();
+    fireEvent.click(screen.getByRole('button', { name: 'Add custom' }));
+    const code = screen.getByRole('textbox', { name: 'code' });
+    const description = screen.getByRole('textbox', { name: 'defaultDesc' });
+    fireEvent.change(code, { target: { value: 'New' } });
+    fireEvent.click(document.getElementById('add-settings-config-loanConditions'));
+    expect(description).toHaveAttribute('aria-invalid', 'true');
+    fireEvent.change(code, { target: { value: '' } });
+    fireEvent.change(description, { target: { value: 'New description' } });
+    fireEvent.click(document.getElementById('add-settings-config-loanConditions'));
+    expect(code).toHaveAttribute('aria-invalid', 'true');
+    save();
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+      json: { illConfig: { loanConditions: [] } },
+    }));
+  });
+
+  it('continues validating other children of saved code/description pairs', () => {
+    renderEditor({ configKey: 'illConfig',
+      fieldMapping: [{ ...field,
+        objectMap: [...field.objectMap, { fieldName: 'priority', valueType: 'integer', required: true }] }],
+      initialResource: { illConfig: { loanConditions: [{ code: 'Legacy', defaultDesc: '' }] } } });
+    edit();
+    save();
+    expect(mockPatch).not.toHaveBeenCalled();
+    expect(screen.getByText('Required')).toBeInTheDocument();
+  });
+
+  it('validates custom entries and duplicate codes, and restores the draft on Cancel', async () => {
+    renderEditor({ configKey: 'illConfig',
+      fieldMapping: [field],
+      initialResource: { illConfig: { loanConditions: [pairs[0]] } } });
+    edit();
+    fireEvent.click(screen.getByRole('button', { name: 'Add custom' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'code' }), { target: { value: pairs[0].code } });
+    fireEvent.click(document.getElementById('add-settings-config-loanConditions'));
+    expect(screen.getAllByRole('alert').length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByRole('textbox', { name: 'defaultDesc' }), { target: { value: 'New description' } });
+    fireEvent.click(document.getElementById('add-settings-config-loanConditions'));
+    expect(screen.getByText('The code {code} already exists.')).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('textbox', { name: 'code' }), { target: { value: 'Custom' } });
+    fireEvent.click(document.getElementById('add-settings-config-loanConditions'));
+    expect(screen.getByText('New description')).toBeInTheDocument();
+    fireEvent.click(document.getElementById('cancel-settings-config-loanConditions'));
+    expect(screen.queryByText('New description')).not.toBeInTheDocument();
+    edit();
+    expect(screen.queryByRole('textbox', { name: 'code' })).not.toBeInTheDocument();
+    expect(mockPatch).not.toHaveBeenCalled();
+  });
+
+  it('translates description display and search without changing custom inputs or persisted text', async () => {
+    mockMessages = { 'loanConditions.values.LibraryUseOnly': 'Consultation sur place' };
+    const user = userEvent.setup();
+    renderEditor({ configKey: 'illConfig', fieldMapping: [field] });
+    edit();
+    await user.type(screen.getByRole('combobox', { name: 'Add predefined' }), 'sur place');
+    await user.click(await screen.findByRole('option', { name: (_name, element) => element.textContent.startsWith('LibraryUseOnly: Consultation sur place') }));
+    addSelected();
+    expect(screen.getByText('Consultation sur place')).toBeInTheDocument();
+    expect(screen.getByText('LibraryUseOnly')).toBeInTheDocument();
+    save();
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+      json: { illConfig: { loanConditions: [pairs[0]] } },
+    }));
+  });
+
+  it('uses field-specific translations for custom codes and plain text fallbacks', () => {
+    mockMessages = { 'loanConditions.values.Custom': 'Translated custom', 'other.values.Custom': 'Different field' };
+    renderEditor({ configKey: 'illConfig',
+      fieldMapping: [field, { ...field, fieldName: 'other' }],
+      initialResource: { illConfig: {
+        loanConditions: [{ code: 'Custom', defaultDesc: 'Saved custom' }, { code: 'Unknown', defaultDesc: 'Literal {braces}' }],
+        other: [{ code: 'Custom', defaultDesc: 'Another saved description' }],
+      } } });
+    expect(screen.getByText('Translated custom')).toBeInTheDocument();
+    expect(screen.getByText('Different field')).toBeInTheDocument();
+    expect(screen.getByText('Literal {braces}')).toBeInTheDocument();
+    expect(screen.queryByText('Saved custom')).not.toBeInTheDocument();
+  });
+
+  it.each([undefined, null])('fails closed for defaultOnly when defaults are unavailable (%s)', defaults => {
+    mockOpenApiData = defaults === undefined ? undefined : { components: { schemas: { IllConfig: {
+      properties: { loanConditions: { 'x-default-data': defaults } },
+    } } } };
+    const refetch = jest.fn();
+    mockOpenApiState = { refetch, isError: true };
+    renderEditor({ configKey: 'illConfig', fieldMapping: [{ ...field, defaultOnly: true }] });
+    edit();
+    expect(screen.getByText('Predefined entries are unavailable.')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add custom' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows loading while retaining unrestricted custom entry and uses valid cached defaults after errors', async () => {
+    mockOpenApiData = undefined;
+    mockOpenApiState = { isFetching: true };
+    const { unmount } = renderEditor({ configKey: 'illConfig', fieldMapping: [field] });
+    edit();
+    expect(screen.getByText('Loading predefined entries…')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'code' })).toBeInTheDocument();
+    unmount();
+    mockOpenApiData = spec;
+    mockOpenApiState = { isError: true };
+    renderEditor({ configKey: 'illConfig', fieldMapping: [{ ...field, defaultOnly: true }] });
+    edit();
+    await selectOption(userEvent.setup(), 'LibraryUseOnly: Use in library only');
+    expect(screen.queryByText('Predefined entries are unavailable.')).not.toBeInTheDocument();
+  });
+
+  it('keeps a custom form active when metadata arrives and clears it after Save and Cancel', async () => {
+    mockOpenApiData = undefined;
+    mockOpenApiState = { isFetching: true };
+    const props = { configKey: 'illConfig',
+      fieldMapping: [field],
+      fieldLabelId: path => path,
+      initialResource: { illConfig: {} },
+      resourcePath: 'directory/entries/by-id/entry-id' };
+    const { rerender } = render(<SettingsConfigEditor {...props} />);
+    edit();
+    fireEvent.change(screen.getByRole('textbox', { name: 'code' }), { target: { value: 'Draft' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'defaultDesc' }), { target: { value: 'User draft' } });
+    mockOpenApiData = spec;
+    mockOpenApiState = {};
+    rerender(<SettingsConfigEditor {...props} />);
+    expect(screen.getByRole('textbox', { name: 'code' })).toHaveValue('Draft');
+    expect(screen.getByRole('textbox', { name: 'defaultDesc' })).toHaveValue('User draft');
+    fireEvent.click(document.getElementById('add-settings-config-loanConditions'));
+    save();
+    await waitFor(() => expect(document.getElementById('edit-settings-config-loanConditions')).toBeInTheDocument());
+    expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+      json: { illConfig: { loanConditions: [{ code: 'Draft', defaultDesc: 'User draft' }] } },
+    });
+    edit();
+    expect(screen.queryByRole('textbox', { name: 'code' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add custom' }));
+    fireEvent.click(document.getElementById('cancel-settings-config-loanConditions'));
+    edit();
+    expect(screen.queryByRole('textbox', { name: 'code' })).not.toBeInTheDocument();
+  });
+
+  it('gives selected-chip buttons valid, field-scoped labels even when codes contain spaces', async () => {
+    const code = 'Shared code/with punctuation';
+    const description = 'Description with spaces';
+    mockOpenApiData = { components: { schemas: { IllConfig: { properties: {
+      loanConditions: { 'x-default-data': { [code]: description } },
+      other: { 'x-default-data': { [code]: description } },
+    } } } } };
+    renderEditor({ configKey: 'illConfig', fieldMapping: [field, { ...field, fieldName: 'other' }] });
+    edit();
+    fireEvent.click(document.getElementById('edit-settings-config-other'));
+    const user = userEvent.setup();
+    const inputs = screen.getAllByRole('combobox', { name: 'Add predefined' });
+    for (const input of inputs) {
+      await user.click(input);
+      await user.click(await screen.findByRole('option', { name: name => name.startsWith(`${code}:`) }));
+      await user.keyboard('{Escape}');
+    }
+    const buttons = screen.getAllByRole('button', { name: name => name.includes(`${code}: ${description}`) });
+    expect(buttons).toHaveLength(2);
+    buttons.forEach(button => {
+      const labels = button.getAttribute('aria-labelledby').split(/\s+/);
+      expect(labels).toHaveLength(2);
+      labels.forEach(id => expect(document.getElementById(id)).toBeInTheDocument());
+    });
+    expect(buttons[0].getAttribute('aria-labelledby')).not.toEqual(buttons[1].getAttribute('aria-labelledby'));
+    await user.click(buttons[0]);
+    const addButtons = screen.getAllByRole('button', { name: 'Add selected' });
+    expect(addButtons[0]).toBeDisabled();
+    expect(addButtons[1]).toBeEnabled();
+  });
+
+  it('updates translations without resetting drafts and clears pending selections on entry navigation', async () => {
+    const initialResource = { illConfig: { loanConditions: [{ code: 'Custom', defaultDesc: 'Stored description' }] } };
+    const props = { configKey: 'illConfig',
+      fieldMapping: [field],
+      fieldLabelId: path => path,
+      initialResource,
+      resourcePath: 'directory/entries/by-id/first' };
+    mockMessages = { 'loanConditions.values.Custom': 'First language' };
+    const { rerender } = render(<SettingsConfigEditor {...props} />);
+    edit();
+    const user = userEvent.setup();
+    await selectOption(user, 'LibraryUseOnly: Use in library only');
+    fireEvent.click(screen.getByRole('button', { name: 'Add custom' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'code' }), { target: { value: 'Draft' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'defaultDesc' }), { target: { value: 'Untranslated draft' } });
+    mockMessages = { 'loanConditions.values.Custom': 'Second language',
+      'loanConditions.values.LibraryUseOnly': 'Translated selection' };
+    rerender(<SettingsConfigEditor {...props} />);
+    expect(screen.getByText('Second language')).toBeInTheDocument();
+    expect(within(document.getElementById('multi-values-list-settings-config-loanConditions-defaults'))
+      .getByText('LibraryUseOnly: Translated selection')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'defaultDesc' })).toHaveValue('Untranslated draft');
+    expect(screen.getByRole('textbox', { name: 'code' })).toHaveValue('Draft');
+    rerender(<SettingsConfigEditor {...props} initialResource={{ illConfig: {} }} resourcePath="directory/entries/by-id/second" />);
+    expect(screen.queryByRole('combobox', { name: 'Add predefined' })).not.toBeInTheDocument();
+    edit();
+    expect(screen.getByRole('button', { name: 'Add selected' })).toBeDisabled();
+    expect(screen.queryByRole('textbox', { name: 'code' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Second language')).not.toBeInTheDocument();
+    expect(mockPatch).not.toHaveBeenCalled();
+  });
+
+  it('translates read-only override descriptions and retains the literal code', () => {
+    mockMessages = { 'loanConditions.values.LibraryUseOnly': 'Translated override' };
+    renderEditor({ configKey: 'illConfig', fieldMapping: [{ ...field, disabled: true, overrideValue: [pairs[0]] }] });
+    expect(screen.getByText('Translated override')).toBeInTheDocument();
+    expect(screen.getByText('LibraryUseOnly')).toBeInTheDocument();
+    expect(screen.queryByText('Use in library only')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { fieldName: 'scalar', defaultOnly: true },
+    { fieldName: 'array', valueType: 'objectArray', defaultOnly: true, objectMap: [{ fieldName: 'code' }] },
+    { ...field, defaultOnly: 'true' },
+  ])('rejects incompatible defaultOnly mappings: $fieldName', invalidField => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      expect(() => renderEditor({ fieldMapping: [invalidField] })).toThrow(/defaultOnly/);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it('uses nested schema paths and saves through the containing object', async () => {
+    mockOpenApiData = { components: { schemas: { IllConfig: { properties: {
+      group: { properties: spec.components.schemas.IllConfig.properties },
+    } } } } };
+    renderEditor({ configKey: 'illConfig', fieldMapping: [{ fieldName: 'group', valueType: 'subField', subMap: [field] }] });
+    fireEvent.click(document.getElementById('edit-settings-config-group'));
+    await selectOption(userEvent.setup(), 'LibraryUseOnly: Use in library only');
+    addSelected();
+    fireEvent.click(document.getElementById('save-settings-config-group'));
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+      json: { illConfig: { group: { loanConditions: [pairs[0]] } } },
+    }));
   });
 });

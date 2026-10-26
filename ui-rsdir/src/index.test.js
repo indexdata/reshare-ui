@@ -1,5 +1,8 @@
 import React from 'react';
 import { Route } from 'react-router-dom';
+// Provided by the shared Stripes test environment.
+// eslint-disable-next-line import/no-extraneous-dependencies
+import userEvent from '@testing-library/user-event';
 import { createMemoryHistory } from 'history';
 import { act, fireEvent, screen, waitFor, within } from '@folio/jest-config-stripes/testing-library/react';
 
@@ -403,6 +406,28 @@ describe('directory entries', () => {
       'directory/entry-networks/m1', { json: { priority: 2 } }
     ));
   });
+
+  it.each(['loanConditions', 'availableCopyrightTypes', 'unfilledReasons', 'cancellationReasons'])(
+    'adds a predefined pair to ILL %s using the published schema', async fieldName => {
+      const user = userEvent.setup();
+      const [code, defaultDesc] = Object.entries(
+        directoryOpenApi.components.schemas.IllConfig.properties[fieldName]['x-default-data']
+      )[0];
+      renderDirectory(['/directory/entries/e1/illconfig']);
+      await screen.findByText('1.5');
+      expect(mockOkapi.patch).not.toHaveBeenCalled();
+      fireEvent.click(document.getElementById(`edit-ill-config-${fieldName}`));
+      const input = await screen.findByRole('combobox', { name: 'Add predefined' });
+      await user.click(input);
+      await user.click(await screen.findByRole('option', { name: name => name.startsWith(`${code}: ${defaultDesc}`) }));
+      fireEvent.click(screen.getByRole('button', { name: 'Add selected' }));
+      fireEvent.click(document.getElementById(`save-ill-config-${fieldName}`));
+      await waitFor(() => expect(mockOkapi.patch).toHaveBeenCalledWith(
+        'directory/entries/by-id/e1', { json: { illConfig: { [fieldName]: [{ code, defaultDesc }] } } }
+      ));
+      expect(screen.getByText('1.5')).toBeInTheDocument();
+    }
+  );
 
   it.each(['deficit', 'proportional'])('views and changes the ILL load balancing policy from %s', async policy => {
     mockOkapi.setResponses(responses({

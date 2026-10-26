@@ -9,6 +9,7 @@ import {
   ConfirmationModal,
   Icon,
   IconButton,
+  MultiSelection,
   Popover,
   Select,
   TextField,
@@ -17,7 +18,7 @@ import {
 
 import css from './SettingsConfigEditor.css';
 import useDirectoryOpenApi from '../hooks/useDirectoryOpenApi';
-import { configFieldDescription, supportsConfigDescriptions } from '../util/configFieldDescription';
+import { configFieldDefaultData, configFieldDescription, supportsConfigDescriptions } from '../util/configFieldDescription';
 
 const STRING_ARRAY = 'stringarray';
 const STRING_MAP = 'stringmap';
@@ -48,8 +49,22 @@ const normalizedSymbols = value => (Array.isArray(value) ? value : [])
   .filter(isValidSymbol)
   .map(({ authority, symbol }) => ({ authority, symbol }));
 
+const isCodeDescriptionArray = field => {
+  if (normalizedValueType(field.valueType) !== OBJECT_ARRAY || !Array.isArray(field.objectMap)) return false;
+
+  return ['code', 'defaultDesc'].every(name => (
+    field.objectMap.some(child => child.fieldName === name && normalizedValueType(child.valueType) === 'string')
+  ));
+};
+
 const validateFieldDefinition = (field, path = field.fieldName) => {
   const type = normalizedValueType(field.valueType);
+  if (field.defaultOnly !== undefined && typeof field.defaultOnly !== 'boolean') {
+    throw new Error(`SettingsConfigEditor field "${path}" requires defaultOnly to be a boolean.`);
+  }
+  if (field.defaultOnly && !isCodeDescriptionArray(field)) {
+    throw new Error(`SettingsConfigEditor field "${path}" can use defaultOnly only with a code/defaultDesc objectArray.`);
+  }
   const hasMinValue = field.minValue !== undefined;
   const hasMaxValue = field.maxValue !== undefined;
 
@@ -360,6 +375,8 @@ const SettingsConfigEditor = ({
   const [newStringMapEntries, setNewStringMapEntries] = useState({});
   const [stringMapEntryErrors, setStringMapEntryErrors] = useState({});
   const [newObjectValues, setNewObjectValues] = useState({});
+  const [selectedDefaults, setSelectedDefaults] = useState({});
+  const [customObjectForms, setCustomObjectForms] = useState({});
   const [pendingSelection, setPendingSelection] = useState(null);
   const editingFieldsRef = useRef({});
   const activeResourcePathRef = useRef(resourcePath);
@@ -405,6 +422,8 @@ const SettingsConfigEditor = ({
       setNewStringMapEntries({});
       setStringMapEntryErrors({});
       setNewObjectValues({});
+      setSelectedDefaults({});
+      setCustomObjectForms({});
     }
 
     previousResourcePathRef.current = resourcePath;
@@ -445,6 +464,13 @@ const SettingsConfigEditor = ({
     id: fieldLabelId(path),
     defaultMessage: path.split('.').pop(),
   });
+
+  const objectDescription = (path, item) => {
+    const id = `${fieldLabelId(path)}.values.${item.code}`;
+    const message = intl.messages?.[id];
+    return (typeof message === 'string' && message.trim()) || (Array.isArray(message) && message.length > 0) ?
+      intl.formatMessage({ id }) : item.defaultDesc;
+  };
 
   const renderFieldLabel = (field, path, instance) => {
     const label = labelForPath(path);
@@ -593,6 +619,8 @@ const SettingsConfigEditor = ({
     setNewStringMapEntries(current => omitRootPath(current, rootPath));
     setStringMapEntryErrors(current => omitRootPath(current, rootPath));
     setNewObjectValues(current => omitRootPath(current, rootPath));
+    setSelectedDefaults(current => omitRootPath(current, rootPath));
+    setCustomObjectForms(current => omitRootPath(current, rootPath));
   };
 
   const setFieldEditing = (fieldName, isEditing) => {
@@ -999,7 +1027,7 @@ const SettingsConfigEditor = ({
     defaultMessage: 'Select no more than one value.',
   });
 
-  const validationErrorsForValue = (field, value, path) => {
+  const validationErrorsForValue = (field, value, path, originalValue) => {
     const errors = {};
 
     if (field.disabled) {
@@ -1057,19 +1085,29 @@ const SettingsConfigEditor = ({
           child,
           source[child.fieldName],
           `${path}.${child.fieldName}`,
+          originalValue?.[child.fieldName],
         ));
       });
     }
 
     if (type === OBJECT_ARRAY && Array.isArray(value)) {
+      const originalItems = isCodeDescriptionArray(field) && Array.isArray(originalValue) ? originalValue : [];
       value.forEach((item, index) => {
         const objectPath = `${path}.${index}`;
+        // The API allows empty strings. Preserve saved pairs without relaxing
+        // required-field validation for new additions or other mapped children.
+        const isSavedPair = originalItems.some(original => (
+          typeof original?.code === 'string' && typeof original?.defaultDesc === 'string' &&
+          original.code === item?.code && original.defaultDesc === item?.defaultDesc
+        ));
 
-        if (field.objectMap.every(child => isEmptyFieldValue(item?.[child.fieldName], child))) {
+        if (!isSavedPair && field.objectMap.every(child => isEmptyFieldValue(item?.[child.fieldName], child))) {
           errors[objectPath] = objectValueRequiredMessage();
         }
 
         field.objectMap.forEach(child => {
+          if (isSavedPair && ['code', 'defaultDesc'].includes(child.fieldName) && item[child.fieldName] === '') return;
+
           Object.assign(errors, validationErrorsForValue(
             child,
             item?.[child.fieldName],
@@ -1083,7 +1121,8 @@ const SettingsConfigEditor = ({
   };
 
   const validationErrorsForField = field => {
-    return validationErrorsForValue(field, values[field.fieldName], field.fieldName);
+    return validationErrorsForValue(field, values[field.fieldName], field.fieldName,
+      resource?.[configKey]?.[field.fieldName]);
   };
 
   const saveField = field => {
@@ -1484,7 +1523,8 @@ const SettingsConfigEditor = ({
                         {renderFieldLabel(child, `${path}.${child.fieldName}`, `override-${index}`)}:
                       </span>
                       <div className={css.objectArrayComponentValue}>
-                        {renderOverrideValue(child, item[child.fieldName], `${path}.${child.fieldName}`)}
+                        {renderOverrideValue(child, child.fieldName === 'defaultDesc' && isCodeDescriptionArray(field) ?
+                          objectDescription(path, item) : item[child.fieldName], `${path}.${child.fieldName}`)}
                       </div>
                     </div>
                   ))}
@@ -1532,7 +1572,15 @@ const SettingsConfigEditor = ({
     const path = pathForField(field, parentField);
     const objectPath = `${path}.new`;
     const objectValue = newObjectValue(field, parentField);
+    if (field.defaultOnly) return;
     const errors = {};
+    if (isCodeDescriptionArray(field) &&
+      (draftFieldValue(field, parentField) || []).some(item => item.code === objectValue.code)) {
+      errors[`${objectPath}.code`] = intl.formatMessage({
+        id: 'ui-rsdir.settingsConfig.duplicateCode',
+        defaultMessage: 'The code {code} already exists.',
+      }, { code: objectValue.code });
+    }
 
     if (field.objectMap.every(child => isEmptyFieldValue(objectValue[child.fieldName], child))) {
       errors[objectPath] = objectValueRequiredMessage();
@@ -1571,6 +1619,8 @@ const SettingsConfigEditor = ({
   };
 
   const handleNewObjectScalarChange = (field, parentField, child) => event => {
+    const path = pathForField(field, parentField);
+    setCustomObjectForms(current => ({ ...current, [path]: true }));
     setNewObjectChildValue(field, parentField, child, event.target.value);
     setFieldErrors(current => ({
       ...current,
@@ -1907,7 +1957,8 @@ const SettingsConfigEditor = ({
                     {!child.disabled &&
                       <>
                         <div className={css.objectArrayComponentValue}>
-                          {renderObjectChildValue(child, objectValue[child.fieldName])}
+                          {renderObjectChildValue(child, child.fieldName === 'defaultDesc' && isCodeDescriptionArray(field) ?
+                            objectDescription(path, objectValue) : objectValue[child.fieldName])}
                         </div>
                         {fieldErrors[childPath] &&
                           <div className={css.subFieldError} role="alert">{fieldErrors[childPath]}</div>
@@ -1941,11 +1992,78 @@ const SettingsConfigEditor = ({
     );
   };
 
+  const renderPredefinedObjects = (field, parentField, defaults) => {
+    const path = pathForField(field, parentField);
+    const controlPath = controlPathForField(field, parentField);
+    const isSaving = savingFields[topFieldName(field, parentField)];
+    const current = draftFieldValue(field, parentField) || [];
+    const available = (defaults || []).filter(item => !current.some(value => value.code === item.code));
+    const options = available.map(item => ({
+      value: item.code, label: `${item.code}: ${objectDescription(path, item)}`,
+    }));
+    const selected = (selectedDefaults[path] || []).map(code => options.find(option => option.value === code)).filter(Boolean);
+    const unavailable = !Array.isArray(defaults);
+
+    return (
+      <div className={css.predefinedObjects}>
+        {unavailable ? (
+          <div role="status">
+            {openApiQuery.isFetching ?
+              <FormattedMessage id="ui-rsdir.settingsConfig.defaults.loading" defaultMessage="Loading predefined entries…" /> :
+              <>
+                <FormattedMessage id="ui-rsdir.settingsConfig.defaults.unavailable" defaultMessage="Predefined entries are unavailable." />
+                <Button disabled={isSaving} onClick={() => openApiQuery.refetch()}>
+                  <FormattedMessage id="ui-rsdir.settingsConfig.defaults.retry" defaultMessage="Retry" />
+                </Button>
+              </>
+            }
+          </div>
+        ) : available.length === 0 ? (
+          <div role="status">
+            <FormattedMessage id="ui-rsdir.settingsConfig.defaults.exhausted" defaultMessage="All predefined entries added." />
+          </div>
+        ) : (
+          <>
+            <MultiSelection
+              dataOptions={options}
+              disabled={isSaving}
+              filterProps={{ useContainsMatch: true }}
+              id={`${controlIdPrefix}-${controlPath}-defaults`}
+              itemToString={option => (option ? `${controlIdPrefix}-${controlPath}-${encodeURIComponent(option.value)}` : '')}
+              label={intl.formatMessage({ id: 'ui-rsdir.settingsConfig.defaults.select', defaultMessage: 'Add predefined' })}
+              onChange={items => setSelectedDefaults(previous => ({ ...previous, [path]: items.map(item => item.value) }))}
+              value={selected}
+            />
+            <Button
+              disabled={isSaving || selected.length === 0}
+              id={`add-defaults-${controlIdPrefix}-${controlPath}`}
+              onClick={() => {
+                const additions = selected.map(option => available.find(item => item.code === option.value));
+                setDraftFieldValue(field, parentField, previous => [
+                  ...(previous || []),
+                  ...additions.filter(item => !(previous || []).some(value => value.code === item.code))
+                    .map(item => ({ ...item })),
+                ]);
+                setSelectedDefaults(previous => omitRootPath(previous, path));
+                setFieldErrors(previous => omitRootPath(previous, path));
+              }}
+            >
+              <FormattedMessage id="ui-rsdir.settingsConfig.defaults.add" defaultMessage="Add selected" />
+            </Button>
+          </>
+        )}
+      </div>
+    );
+  };
+
   const renderObjectArrayInput = (field, parentField) => {
     const path = pathForField(field, parentField);
     const objectPath = `${path}.new`;
     const controlPath = controlPathForField(field, parentField);
     const isSaving = savingFields[topFieldName(field, parentField)];
+    const defaults = isCodeDescriptionArray(field) ? configFieldDefaultData(openApiQuery.data, configKey, path) : undefined;
+    const offersDefaults = isCodeDescriptionArray(field) && (supportsConfigDescriptions(configKey) || field.defaultOnly);
+    const showCustom = !field.defaultOnly && (!offersDefaults || defaults === undefined || customObjectForms[path]);
 
     return (
       <div>
@@ -1953,33 +2071,45 @@ const SettingsConfigEditor = ({
           <div className={css.subFieldError} role="alert">{fieldErrors[path]}</div>
         }
         {renderObjectArrayValues(field, true, parentField)}
-        <div className={css.objectArrayAdd}>
-          {field.objectMap.map(child => (
-            <div
-              className={`${css.objectArrayAddField} ${child.disabled ? css.disabledField : ''}`}
-              key={child.fieldName}
-            >
-              <div className={css.subFieldLabel}>
-                {renderFieldLabel(child, `${path}.${child.fieldName}`, 'new')}
-              </div>
-              {child.disabled && Object.prototype.hasOwnProperty.call(child, 'overrideValue') &&
-                renderOverrideValue(child, child.overrideValue, `${path}.${child.fieldName}`)
-              }
-              {!child.disabled && renderNewObjectChildInput(field, parentField, child)}
-            </div>
-          ))}
-          {fieldErrors[objectPath] &&
-            <div className={css.subFieldError} role="alert">{fieldErrors[objectPath]}</div>
-          }
+        {offersDefaults && (defaults !== undefined || field.defaultOnly || openApiQuery.isFetching || openApiQuery.isError) &&
+          renderPredefinedObjects(field, parentField, defaults)}
+        {!field.defaultOnly && offersDefaults && !showCustom &&
           <Button
             disabled={isSaving}
-            id={`add-${controlIdPrefix}-${controlPath}`}
-            marginBottom0
-            onClick={() => addObjectArrayValue(field, parentField)}
+            onClick={() => setCustomObjectForms(current => ({ ...current, [path]: true }))}
           >
-            <FormattedMessage id="ui-rsdir.add" defaultMessage="Add" />
+            <FormattedMessage id="ui-rsdir.settingsConfig.defaults.custom" defaultMessage="Add custom" />
           </Button>
-        </div>
+        }
+        {showCustom &&
+          <div className={css.objectArrayAdd}>
+            {field.objectMap.map(child => (
+              <div
+                className={`${css.objectArrayAddField} ${child.disabled ? css.disabledField : ''}`}
+                key={child.fieldName}
+              >
+                <div className={css.subFieldLabel}>
+                  {renderFieldLabel(child, `${path}.${child.fieldName}`, 'new')}
+                </div>
+                {child.disabled && Object.prototype.hasOwnProperty.call(child, 'overrideValue') &&
+                  renderOverrideValue(child, child.overrideValue, `${path}.${child.fieldName}`)
+                }
+                {!child.disabled && renderNewObjectChildInput(field, parentField, child)}
+              </div>
+            ))}
+            {fieldErrors[objectPath] &&
+              <div className={css.subFieldError} role="alert">{fieldErrors[objectPath]}</div>
+            }
+            <Button
+              disabled={isSaving}
+              id={`add-${controlIdPrefix}-${controlPath}`}
+              marginBottom0
+              onClick={() => addObjectArrayValue(field, parentField)}
+            >
+              <FormattedMessage id="ui-rsdir.add" defaultMessage="Add" />
+            </Button>
+          </div>
+        }
       </div>
     );
   };

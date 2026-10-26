@@ -1,4 +1,4 @@
-import { configFieldDescription } from './configFieldDescription';
+import { configFieldDefaultData, configFieldDescription } from './configFieldDescription';
 
 // Representative resource schemas from directory/api.yaml (not import/patch schemas).
 const spec = { components: { schemas: {
@@ -78,4 +78,41 @@ it('handles blank help, unresolved references, external references, cycles and a
   expect(configFieldDescription(cyclicSpec, 'lmsConfig', 'cycle')).toBe('Help beside cycle');
   expect(configFieldDescription(cyclicSpec, 'lmsConfig', 'composed.child')).toBe('Child help');
   expect(configFieldDescription(cyclicSpec, 'lmsConfig', 'fallback')).toBe('Referenced help');
+});
+
+
+describe('configFieldDefaultData', () => {
+  const data = { LibraryUseOnly: 'Use in library only', 'US-CCG': 'CCG (US)' };
+  const defaultsSpec = { components: { schemas: {
+    IllConfig: { properties: {
+      direct: { 'x-default-data': data, $ref: '#/components/schemas/Other' },
+      referenced: { allOf: [{ $ref: '#/components/schemas/Other' }] },
+      nested: { type: 'array', items: { properties: { child: { 'x-default-data': data } } } },
+      empty: { 'x-default-data': {} },
+      ambiguous: { allOf: [{ 'x-default-data': data }, { 'x-default-data': { Different: 'Other' } }] },
+    } },
+    Other: { 'x-default-data': { Referenced: 'Referenced description' }, $ref: '#/components/schemas/Other' },
+  } } };
+
+  it('resolves property, referenced, composed and nested array metadata in published order', () => {
+    const expected = Object.entries(data).map(([code, defaultDesc]) => ({ code, defaultDesc }));
+    expect(configFieldDefaultData(defaultsSpec, 'illConfig', 'direct')).toEqual(expected);
+    expect(configFieldDefaultData(defaultsSpec, 'illConfig', 'nested.child')).toEqual(expected);
+    expect(configFieldDefaultData(defaultsSpec, 'illConfig', 'referenced')).toEqual([
+      { code: 'Referenced', defaultDesc: 'Referenced description' },
+    ]);
+    expect(configFieldDefaultData(defaultsSpec, 'illConfig', 'empty')).toEqual([]);
+  });
+
+  it.each([null, [], 'wrong', { Invalid: 2 }, { ' ': 'Blank code' }, { Empty: '' }])('rejects malformed defaults: %j', dataValue => {
+    const malformed = { components: { schemas: { IllConfig: { properties: { codes: { 'x-default-data': dataValue } } } } } };
+    expect(configFieldDefaultData(malformed, 'illConfig', 'codes')).toBeNull();
+  });
+
+  it('ignores absent or ambiguous metadata and unsupported configurations', () => {
+    expect(configFieldDefaultData(undefined, 'illConfig', 'direct')).toBeUndefined();
+    expect(configFieldDefaultData(defaultsSpec, 'illConfig', 'missing')).toBeUndefined();
+    expect(configFieldDefaultData(defaultsSpec, 'illConfig', 'ambiguous')).toBeUndefined();
+    expect(configFieldDefaultData(defaultsSpec, 'config', 'direct')).toBeUndefined();
+  });
 });

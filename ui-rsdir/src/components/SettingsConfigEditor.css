@@ -197,3 +197,8 @@
     grid-column: 1;
   }
 }
+
+.predefinedObjects {
+  margin-top: var(--gutter-static-two-thirds);
+  margin-bottom: var(--gutter-static-two-thirds);
+}
