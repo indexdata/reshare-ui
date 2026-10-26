@@ -23,6 +23,7 @@ The optional editor callback `getSelectionChangeImpact({ fieldName, nextValue, r
 | `valueType` | string | No | Controls the editor and JSON conversion. It defaults to `string` and is case-insensitive. Use the documented spelling for consistency. |
 | `required` | boolean | No | Prevents saving when the value is empty. For an `objectArray` child, it also prevents adding an object without that value. |
 | `disabled` | boolean | No | Renders a greyed-out field label with no editing controls. Supported on top-level mappings, `subMap` children, and `objectMap` children. Fields with `overrideValue` display that value read-only. Other disabled fields keep their content hidden. Disabled fields skip their own validation but retain their normal serialized value and still count when an enabled parent checks whether it is empty. |
+| `defaultOnly` | boolean | No | For a code/description `objectArray`, restricts new additions to exact pairs published in OpenAPI `x-default-data`. Defaults to `false`. Saved entries remain visible and removable even if absent from current defaults. |
 | `onlyOne` | boolean | No | For a `subField`, allows at most one direct `subMap` child to be selected. The editor renders a child selector and omits unselected children from the saved value. Disabled children remain visible but unavailable in the selector. Combine with `required` to require exactly one selection. |
 | `lockedSelection` | string | No | Names the required direct child of an `onlyOne` field and disables its selector. Vendor/profile mappings derive this from overridden child or descendant paths. The editor displays that branch and retains its values, initializing it if absent; competing mapped branches are omitted on the next explicit save. Other fields within the branch remain editable unless disabled separately. |
 | `overrideSource` | object | No | UI attribution `{ setting, name }`, where `setting` is `lmsConfig.vendor` or `catalogConfig.profile` and `name` is the selected vendor/profile. Vendor mappings attach it to overridden fields and locked `onlyOne` selectors. Renders a clickable badge with the active vendor/profile name (for example `[Alma]`) beside the label explaining the source; published override values appear read-only. This metadata is never saved to the configuration. |
@@ -235,6 +236,55 @@ Each object is displayed as a removable block containing its mapped fields. New 
 An `objectMap` may contain scalar fields, fields with `validChoices`, `stringArray`, `symbolList`, and `stringMap`. It may not contain `subField` or another `objectArray`.
 
 Setting `required: true` on the `objectArray` itself requires at least one object.
+
+#### Predefined code/description entries
+
+An `objectArray` with string children `code` and `defaultDesc` automatically reads
+`x-default-data` from the corresponding OpenAPI property. The extension is an object
+mapping codes to descriptions, for example:
+
+```yaml
+x-default-data:
+  LibraryUseOnly: "Use in library only"
+```
+
+The editor offers a searchable **Add predefined** picker and **Add selected** button.
+Options show `code: description`; configured codes are excluded using exact,
+case-sensitive comparison. Removing an entry makes its predefined option available
+again. Entries append in selection order to the draft; Save persists them. Nothing
+is populated automatically. **Add custom** reveals the normal object-entry form,
+which rejects duplicate codes. Object arrays without the extension retain their
+normal form.
+
+Set `defaultOnly: true` on the object-array mapping to omit custom-entry controls
+and allow only predefined pairs for new additions. This requires string `code` and
+`defaultDesc` mappings. It does not remove or rewrite saved entries that differ
+from the defaults. Unchanged saved code/description pairs may retain empty strings
+accepted by the API; new entries still require both values. Once a user starts
+typing a custom entry, its form stays open if metadata finishes loading.
+Missing or malformed metadata offers Retry; it never enables
+free-text entry for a `defaultOnly` array. Other configuration fields remain usable.
+
+#### Optional translations of entry descriptions
+
+Description translations are optional and affect display only. For a code such as
+`LibraryUseOnly` in `loanConditions`, add this key to
+`translations/ui-rsdir/en.json` (or the appropriate locale file):
+
+```json
+"illConfig.loanConditions.values.LibraryUseOnly": "For use inside the library only"
+```
+
+The runtime ID is `${fieldLabelId(path)}.values.${code}`. Codes are used literally,
+including their punctuation, and never translated. A non-empty translation replaces
+the description in the predefined picker, selected chips, saved-entry blocks, and
+read-only overrides, including entries with customized descriptions. Without a
+translation, the object's own `defaultDesc` is displayed as plain text. Search
+matches codes and the displayed description. Custom codes may use the same
+translation convention, independently for each field.
+
+Translations do not change custom-entry inputs, drafts, API defaults, or PATCH
+payloads. Selecting a predefined option saves its original API description.
 
 ## Paths, labels, and IDs
 

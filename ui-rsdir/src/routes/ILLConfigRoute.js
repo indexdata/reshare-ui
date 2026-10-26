@@ -8,7 +8,16 @@ import SettingsConfigEditor from '../components/SettingsConfigEditor';
 const STALE_QUERY_TIME = 2 * 60 * 1000;
 const entryPath = id => `directory/entries/by-id/${id}`;
 const fieldLabelId = fieldName => `ui-rsdir.illConfig.${fieldName}`;
-const fieldMap = [
+export const fieldMap = [
+  ...['loanConditions', 'availableCopyrightTypes', 'unfilledReasons', 'cancellationReasons'].map(fieldName => ({
+    fieldName,
+    valueType: 'objectArray',
+    defaultOnly: fieldName === 'availableCopyrightTypes',
+    objectMap: [
+      { fieldName: 'code', valueType: 'string', required: true },
+      { fieldName: 'defaultDesc', valueType: 'string', required: true },
+    ],
+  })),
   {
     fieldName: 'loadBalancingPolicy',
     valueType: 'string',

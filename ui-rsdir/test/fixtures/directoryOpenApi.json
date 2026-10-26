@@ -94,5 +94,97 @@
         "bibIdNormalization": "sierra"
       }
     }
+  },
+  "components": {
+    "schemas": {
+      "IllConfig": {
+        "type": "object",
+        "properties": {
+          "loanConditions": {
+            "type": "array",
+            "description": "Configured loan condition codes and descriptions.",
+            "items": {
+              "$ref": "#/components/schemas/IllConfigCodeDescription"
+            },
+            "x-default-data": {
+              "LibraryUseOnly": "Use in library only",
+              "WatchLibraryUseOnly": "Watch over use in library only",
+              "NoReproduction": "No reproduction",
+              "SignatureRequired": "Signature required",
+              "SpecCollSupervReq": "Special collections supervision required"
+            }
+          },
+          "availableCopyrightTypes": {
+            "type": "array",
+            "description": "Configured codes and descriptions.",
+            "items": {
+              "$ref": "#/components/schemas/IllConfigCodeDescription"
+            },
+            "x-default-data": {
+              "AU-CopyRCatS183ComW": "Copyright Act S183 - Commonwealth (Australia)",
+              "AU-CopyRCatS183State": "Copyright Act S183 - State (Australia)",
+              "AU-CopyrightActS49": "Copyright Act S49 (Australia)",
+              "AU-CopyrightActS50-1": "Copyright Act S50 (Australia)",
+              "AU-CopyrightActS50-7A": "Copyright Act S50 A (Australia)",
+              "AU-CopyrightCleared": "Copyright Cleared (Australia)",
+              "AU-GenBus": "General Business (Australia)",
+              "NZ-CopyrightActS54": "Copyright Act S54 (New Zealand)",
+              "NZ-CopyrightActS55": "Copyright Act S55 (New Zealand)",
+              "Other": "Other types of copyright compliance. Use Note in ServiceInfo for details.",
+              "UK-CopyRFeePaid": "Copyright Fee Paid (UK)",
+              "UK-FairDealing": "Fair Dealing (UK)",
+              "US-CCG": "CCG (US)",
+              "US-CCL": "CCL (US code)"
+            }
+          },
+          "unfilledReasons": {
+            "type": "array",
+            "description": "Configured codes and descriptions.",
+            "items": {
+              "$ref": "#/components/schemas/IllConfigCodeDescription"
+            },
+            "x-default-data": {
+              "NonCirculating": "Non-circulating (e.g. handbook)",
+              "NotAvailableForILL": "Not available for ILL",
+              "NotHeld": "Not held",
+              "NotOnShelf": "Not on shelf",
+              "PolicyProblem": "Policy problem",
+              "PoorCondition": "Poor condition"
+            }
+          },
+          "cancellationReasons": {
+            "type": "array",
+            "description": "Configured codes and descriptions.",
+            "items": {
+              "$ref": "#/components/schemas/IllConfigCodeDescription"
+            },
+            "x-default-data": {
+              "DuplicateRequest": "Duplicate request",
+              "NotFound": "Not found as cited",
+              "LocallyAvailable": "Requested item is locally available",
+              "AccountInvalid": "User account is invalid",
+              "UserRequest": "User requested cancellation"
+            }
+          }
+        }
+      },
+      "IllConfigCodeDescription": {
+        "type": "object",
+        "description": "A configured ILL code and its default description.",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "defaultDesc"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "defaultDesc": {
+            "type": "string"
+          }
+        }
+      }
+    }
   }
 }
