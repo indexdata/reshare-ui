@@ -143,6 +143,16 @@ describe('TemplateForm', () => {
 
     await waitFor(() => expect(save()).not.toBeDisabled());
     expect(byId('template-subject')).toBeDisabled();
+    expect(byId('template-placeholder')).toBeInTheDocument();
+
+    fireEvent.focus(byId('template-subject'));
+    byId('template-body').setSelectionRange(4, 4);
+    fireEvent.click(byId('template-placeholder'));
+    fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.ReqId\}\}/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
+
+    expect(byId('template-subject')).toHaveValue('');
+    expect(byId('template-body')).toHaveValue('Body{{.ReqId}}');
   });
 
   // Only that the HTML branch mounts: with the editor stubbed, nothing here can say
@@ -298,7 +308,7 @@ describe('TemplateForm', () => {
     it('shows the broker placeholders in their data-source groups', async () => {
       await renderForm(jest.fn(), { editing: true, initialValues: editingValues });
 
-      fireEvent.click(byId('template-subject-placeholder'));
+      fireEvent.click(byId('template-placeholder'));
 
       expect(await screen.findByText('{{.ReqId}}')).toBeInTheDocument();
       expect(screen.getByText('{{.FullCount}}')).toBeInTheDocument();
@@ -309,7 +319,7 @@ describe('TemplateForm', () => {
     it('uses a large modal for the three-column placeholder grid', async () => {
       await renderForm(jest.fn(), { editing: true, initialValues: editingValues });
 
-      fireEvent.click(byId('template-subject-placeholder'));
+      fireEvent.click(byId('template-placeholder'));
 
       expect(screen.getByRole('dialog').firstElementChild).toHaveClass('large');
     });
@@ -317,7 +327,7 @@ describe('TemplateForm', () => {
     it('orders placeholders alphabetically within each group', async () => {
       await renderForm(jest.fn(), { editing: true, initialValues: editingValues });
 
-      fireEvent.click(byId('template-subject-placeholder'));
+      fireEvent.click(byId('template-placeholder'));
 
       await screen.findByText('{{.ReqId}}');
       const headings = screen.getAllByRole('heading', { level: 3 });
@@ -341,18 +351,19 @@ describe('TemplateForm', () => {
     it('offers placeholders while creating a template', async () => {
       await renderForm(jest.fn());
 
-      fireEvent.click(byId('template-subject-placeholder'));
+      fireEvent.click(byId('template-placeholder'));
 
       expect(await screen.findByText('{{.ReqId}}')).toBeInTheDocument();
-      expect(byId('template-body-placeholder')).toBeInTheDocument();
+      expect(byId('template-placeholder')).toBeInTheDocument();
     });
 
     it('inserts selected placeholders at the subject cursor', async () => {
       await renderForm(jest.fn(), { editing: true, initialValues: editingValues });
       const subject = byId('template-subject');
       subject.setSelectionRange(6, 6);
+      fireEvent.focus(subject);
 
-      fireEvent.click(byId('template-subject-placeholder'));
+      fireEvent.click(byId('template-placeholder'));
       fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.ReqId\}\}/ }));
       fireEvent.click(screen.getByRole('checkbox', { name: /\{\{\.Title\}\}/ }));
       fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
@@ -364,11 +375,29 @@ describe('TemplateForm', () => {
       await renderForm(jest.fn(), { editing: true, initialValues: editingValues });
       const body = byId('template-body');
       body.setSelectionRange(8, 8);
+      fireEvent.focus(body);
 
-      fireEvent.click(byId('template-body-placeholder'));
+      fireEvent.click(byId('template-placeholder'));
       fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.FullCount\}\}/ }));
       fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
 
+      expect(body.value).toBe('Request {{.FullCount}}details');
+    });
+
+    it('switches the shared insertion target to the most recently focused field', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: editingValues });
+      const subject = byId('template-subject');
+      const body = byId('template-body');
+      subject.setSelectionRange(6, 6);
+      fireEvent.focus(subject);
+      body.setSelectionRange(8, 8);
+      fireEvent.focus(body);
+
+      fireEvent.click(byId('template-placeholder'));
+      fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.FullCount\}\}/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
+
+      expect(subject.value).toBe('Hello world');
       expect(body.value).toBe('Request {{.FullCount}}details');
     });
 
@@ -377,7 +406,7 @@ describe('TemplateForm', () => {
       lastEditor.setSelection(2);
       lastEditor.blur();
 
-      fireEvent.click(byId('template-body-placeholder'));
+      fireEvent.click(byId('template-placeholder'));
       fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.ReqId\}\}/ }));
       fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
 
@@ -390,7 +419,7 @@ describe('TemplateForm', () => {
       const source = byId('template-body');
       source.setSelectionRange(3, 3);
 
-      fireEvent.click(byId('template-body-placeholder'));
+      fireEvent.click(byId('template-placeholder'));
       fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.ReqId\}\}/ }));
       fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
 
@@ -403,7 +432,7 @@ describe('TemplateForm', () => {
       lastEditor.blur();
       act(() => lastEditor.onChange('<p>Changed</p>', null, 'user'));
 
-      fireEvent.click(byId('template-body-placeholder'));
+      fireEvent.click(byId('template-placeholder'));
       fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.ReqId\}\}/ }));
       fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
 
@@ -419,7 +448,7 @@ describe('TemplateForm', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'ui-rs.settings.templates.wysiwyg.confirm' }));
       await waitFor(() => expect(byId('template-body-source')).not.toBeChecked());
 
-      fireEvent.click(byId('template-body-placeholder'));
+      fireEvent.click(byId('template-placeholder'));
       fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.ReqId\}\}/ }));
       fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
 
@@ -433,7 +462,7 @@ describe('TemplateForm', () => {
       });
       await renderForm(jest.fn(), { editing: true, initialValues: editingValues });
 
-      fireEvent.click(byId('template-subject-placeholder'));
+      fireEvent.click(byId('template-placeholder'));
 
       expect(await screen.findByText('ui-rs.settings.templates.placeholders.unavailable')).toBeInTheDocument();
       expect(byId('template-subject')).toBeEnabled();
