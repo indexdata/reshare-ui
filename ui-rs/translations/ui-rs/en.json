@@ -685,6 +685,7 @@
   "suppliers.symbol": "Symbol",
   "suppliers.rotaStatus": "Rota status",
   "suppliers.lastStatus": "Last supplier status",
+  "suppliers.cancellationReason": "Cancellation Reason",
   "suppliers.reasonUnfilled": "Reason unfilled",
   "suppliers.note": "Supplier note",
   "suppliers.status.new": "Not yet tried",

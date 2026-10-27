@@ -118,6 +118,51 @@ describe('Suppliers', () => {
     expect(await screen.findByText('Currently no books available')).toBeInTheDocument();
   });
 
+  it.each(['cancelled', 'Cancelled'])('shows the request cancellation reason only on suppliers with status %s', async (lastStatus) => {
+    mockOkapi.setResponses({
+      'broker/located_suppliers': {
+        items: [skipped, { ...selected, lastStatus, cancellationReason: 'Supplier reason' }],
+      },
+    });
+    renderSection({
+      id: 'pr-1',
+      side: 'borrowing',
+      requesterRequestId: 'REQ-101',
+      cancellationReason: 'Patron no longer needs the item',
+    }, {
+      messages: { 'ui-rs.suppliers.cancellationReason': 'Cancellation Reason' },
+    });
+
+    expect(await screen.findByText('Patron no longer needs the item')).toBeInTheDocument();
+    expect(screen.getAllByText('Cancellation Reason')).toHaveLength(1);
+    expect(screen.queryByText('Supplier reason')).not.toBeInTheDocument();
+  });
+
+  it.each(['WillSupply', undefined, null, ''])('omits cancellation reason for status %s even when the request has a reason', async (lastStatus) => {
+    mockOkapi.setResponses({
+      'broker/located_suppliers': { items: [{ ...selected, lastStatus }] },
+    });
+    renderSection({
+      id: 'pr-1',
+      side: 'borrowing',
+      requesterRequestId: 'REQ-101',
+      cancellationReason: 'Patron no longer needs the item',
+    });
+
+    await screen.findByText('1. Library B');
+    expect(screen.queryByText('ui-rs.suppliers.cancellationReason')).not.toBeInTheDocument();
+    expect(screen.queryByText('Patron no longer needs the item')).not.toBeInTheDocument();
+  });
+
+  it('keeps the cancellation reason column when a cancelled request has no reason', async () => {
+    mockOkapi.setResponses({
+      'broker/located_suppliers': { items: [{ ...selected, lastStatus: 'Cancelled' }] },
+    });
+    renderSection();
+
+    expect(await screen.findByText('ui-rs.suppliers.cancellationReason')).toBeInTheDocument();
+  });
+
   it('shows the empty state when nothing was located, without a wasted fetch', async () => {
     const { unmount } = renderSection({ id: 'pr-1', side: 'borrowing' });
     expect(screen.getByText('ui-rs.suppliers.empty')).toBeInTheDocument();
