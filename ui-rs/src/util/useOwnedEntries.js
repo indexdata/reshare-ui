@@ -16,7 +16,7 @@ const useOwnedEntries = ({ enabled = true } = {}) => {
   const entries = useMemo(() => query.data?.items ?? [], [query.data]);
   const byId = useMemo(() => new Map(entries.map(entry => [entry.id, entry])), [entries]);
 
-  return { entries, byId, isSettled: query.isSuccess || query.isError };
+  return { entries, byId, isSettled: query.isSuccess || query.isError, isError: query.isError };
 };
 
 const useTenantInstitution = () => {
