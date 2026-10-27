@@ -11,6 +11,7 @@ const mockOkapi = makeOkapiKyMock();
 jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
 jest.mock('@folio/stripes-components/lib/TextArea', () => require('#/test/textAreaMock').default);
 jest.mock('@folio/stripes-components/lib/Editor', () => require('#/test/editorMock').default);
+jest.mock('#/components/HtmlSourceEditor', () => require('#/test/htmlSourceEditorMock').default);
 jest.mock('@folio/stripes/core', () => require('#/test/stripesCore').makeStripesCoreMock(() => mockOkapi));
 
 const PATH = '/settings/rs/templates';
@@ -105,6 +106,24 @@ describe('Templates', () => {
     expect(path).toBe('broker/templates/t1');
     expect(json.title).toBe('Received (revised)');
     expect(json).not.toHaveProperty('purpose');
+  });
+
+  it('shows a saved pull slip as it prints, with its source', async () => {
+    const slip = { ...TEMPLATE, id: 't2', title: 'Slip', purpose: 'pullslip', contentType: 'html', body: '<table><tr><td>{{.Title}}</td></tr></table>' };
+    mockOkapi.setResponses({
+      'broker/templates': { about: { count: 1 }, items: [slip] },
+      'broker/templates/t2': slip,
+    });
+    mockOkapi.post.mockResolvedValue({ blob: async () => new Blob(['%PDF-1.7'], { type: 'application/pdf' }) });
+    renderList();
+
+    fireEvent.click(await screen.findByText('Slip'));
+
+    expect(await screen.findByTitle('ui-rs.settings.templates.preview.heading')).toBeInTheDocument();
+    expect(mockOkapi.post).toHaveBeenCalledWith('broker/templates/preview', {
+      json: { body: slip.body, labels: ['received-notification'] },
+    });
+    expect(byId('template-body-view')).toHaveTextContent(slip.body);
   });
 
   it('deletes a template once the deletion is confirmed', async () => {

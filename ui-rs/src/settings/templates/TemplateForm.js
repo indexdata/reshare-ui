@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Form, Field, useForm } from 'react-final-form';
 import { FieldArray } from 'react-final-form-arrays';
 import arrayMutators from 'final-form-arrays';
@@ -22,7 +22,9 @@ import {
 } from '@folio/stripes/components';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 
+import HtmlSourceEditor from '#/components/HtmlSourceEditor';
 import { recordToFormValues, escapeHtml, suggestedLabels } from './mapping';
+import PreviewWorkspace from './PreviewWorkspace';
 import css from './TemplateForm.css';
 
 // "Template" here is a stored message template. The scheduled-actions form uses the
@@ -177,8 +179,8 @@ const PlaceholderPicker = ({ placeholders, isLoading, isError, onClose, onInsert
   );
 };
 
-const PlaceholderButton = ({ id, onClick }) => (
-  <Button id={id} buttonStyle="link" marginBottom0 onClick={onClick}>
+const PlaceholderButton = ({ id, onClick, buttonStyle = 'link' }) => (
+  <Button id={id} buttonStyle={buttonStyle} marginBottom0 onClick={onClick}>
     <FormattedMessage id="ui-rs.settings.templates.placeholders.open" />
   </Button>
 );
@@ -201,19 +203,29 @@ const SourceToggle = ({ checked, onChange }) => (
   />
 );
 
-const BodyField = ({ isHtml, storedBody, editorRef, editorSelectionRef }) => {
+const BodyField = ({
+  isHtml,
+  isPullslip,
+  storedBody,
+  editorRef,
+  editorSelectionRef,
+  onSourceSelectionChange,
+  sourceEditorRef,
+  sourceStateRef,
+  onInsertPlaceholder,
+  onPreview,
+  diagnostics,
+}) => {
   const form = useForm();
   const [sourceMode, setSourceMode] = useState(false);
   const [confirmWysiwyg, setConfirmWysiwyg] = useState(false);
   const [quillWouldRewrite, setQuillWouldRewrite] = useState(false);
   const label = <FormattedMessage id="ui-rs.settings.templates.field.body" />;
+  const placeholderButton = <PlaceholderButton id="template-body-placeholder" onClick={onInsertPlaceholder} />;
 
-  if (!isHtml || sourceMode) {
+  if (!isHtml) {
     return (
       <>
-        {isHtml && (
-          <SourceToggle checked onChange={() => setConfirmWysiwyg(true)} />
-        )}
         <Field
           id="template-body"
           name="body"
@@ -222,6 +234,47 @@ const BodyField = ({ isHtml, storedBody, editorRef, editorSelectionRef }) => {
           rows={10}
           label={label}
         />
+        {placeholderButton}
+      </>
+    );
+  }
+
+  const sourceEditor = (
+    <Field
+      id="template-body"
+      name="body"
+      required
+      component={HtmlSourceEditor}
+      label={label}
+      onSelectionChange={onSourceSelectionChange}
+      editorRef={sourceEditorRef}
+      stateRef={sourceStateRef}
+      diagnostics={diagnostics}
+      toolbar={(
+        <>
+          <PlaceholderButton
+            id="template-body-placeholder"
+            buttonStyle="default slim"
+            onClick={onInsertPlaceholder}
+          />
+          {onPreview && (
+            <Button id="template-body-preview" buttonStyle="default slim" marginBottom0 onClick={onPreview}>
+              <FormattedMessage id="ui-rs.settings.templates.preview.open" />
+            </Button>
+          )}
+        </>
+      )}
+    />
+  );
+
+  // Quill strips the tables and styles used by pull slips.
+  if (isPullslip) return sourceEditor;
+
+  if (sourceMode) {
+    return (
+      <>
+        <SourceToggle checked onChange={() => setConfirmWysiwyg(true)} />
+        {sourceEditor}
         <ConfirmationModal
           open={confirmWysiwyg}
           heading={<FormattedMessage id="ui-rs.settings.templates.wysiwyg.heading" />}
@@ -282,6 +335,7 @@ const BodyField = ({ isHtml, storedBody, editorRef, editorSelectionRef }) => {
           </Button>
         </div>
       )}
+      {placeholderButton}
     </>
   );
 };
@@ -289,8 +343,21 @@ const BodyField = ({ isHtml, storedBody, editorRef, editorSelectionRef }) => {
 const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, submitting, editing }) => {
   const intl = useIntl();
   const [placeholderTarget, setPlaceholderTarget] = useState(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  // Focus after Modal restores its trigger or the workspace remounts the editor.
+  const refocusRef = useRef(null);
+  useEffect(() => {
+    if (placeholderTarget || !refocusRef.current) return;
+    refocusRef.current();
+    refocusRef.current = null;
+  }, [placeholderTarget, previewOpen]);
   const bodyEditorRef = useRef(null);
+  const sourceEditorRef = useRef(null);
+  // Preserve cursor and undo history when moving the editor into or out of preview.
+  const sourceStateRef = useRef(null);
   const bodyEditorSelectionRef = useRef(null);
+  const sourceSelectionRef = useRef(null);
+  const setSourceSelection = useCallback((selection) => { sourceSelectionRef.current = selection; }, []);
   // Presets seed the form; stored templates contribute any locally used labels.
   // Both are optional, so either request can fail without disabling free-text labels.
   const { data: presets } = useOkapiQuery('broker/state_model/templates', { useErrorBoundary: false });
@@ -357,6 +424,7 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
       {({ handleSubmit, values, pristine, invalid, form }) => {
         const isHtml = values.contentType === 'html';
         const isPullslip = values.purpose === 'pullslip';
+        const canPreview = isPullslip && isHtml;
         const openPlaceholderPicker = (field) => {
           if (field === 'body' && isHtml && bodyEditorRef.current) {
             const editorInstance = bodyEditorRef.current;
@@ -379,6 +447,10 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
             });
             return;
           }
+          if (field === 'body' && isHtml && sourceSelectionRef.current) {
+            setPlaceholderTarget({ field, ...sourceSelectionRef.current });
+            return;
+          }
           const element = document.getElementById(`template-${field}`);
           const value = form.getState().values[field] ?? '';
           const start = typeof element?.selectionStart === 'number' ? element.selectionStart : value.length;
@@ -395,13 +467,41 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
             ops.push({ insert: value });
             editor.updateContents({ ops }, 'user');
             editor.setSelection(start + value.length, 0);
+            refocusRef.current = () => bodyEditorRef.current?.getEditor().focus();
             setPlaceholderTarget(null);
             return;
           }
           const current = form.getState().values[field] ?? '';
           form.change(field, `${current.slice(0, start)}${value}${current.slice(end)}`);
+          refocusRef.current = () => {
+            if (field === 'body' && sourceEditorRef.current) {
+              sourceEditorRef.current.focus();
+              return;
+            }
+            const element = document.getElementById(`template-${field}`);
+            element?.focus();
+            element?.setSelectionRange(start + value.length, start + value.length);
+          };
           setPlaceholderTarget(null);
         };
+        const togglePreview = (open) => {
+          refocusRef.current = () => sourceEditorRef.current?.focus();
+          setPreviewOpen(open);
+        };
+        const renderBody = (props) => (
+          <BodyField
+            isHtml={isHtml}
+            isPullslip={isPullslip}
+            storedBody={initialValues?.body}
+            editorRef={bodyEditorRef}
+            editorSelectionRef={bodyEditorSelectionRef}
+            onSourceSelectionChange={setSourceSelection}
+            sourceEditorRef={sourceEditorRef}
+            sourceStateRef={sourceStateRef}
+            onInsertPlaceholder={() => openPlaceholderPicker('body')}
+            {...props}
+          />
+        );
         const footer = (
           <PaneFooter
             renderStart={
@@ -434,7 +534,7 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
             paneTitle={title}
             onClose={onClose}
             dismissible
-            footer={footer}
+            footer={previewOpen ? undefined : footer}
           >
             <form id="template-form" onSubmit={handleSubmit}>
               {!editing && <PresetPicker presets={presets ?? []} bodyIsMarkup={bodyIsMarkup} />}
@@ -540,16 +640,7 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
 
               <Row>
                 <Col xs={12}>
-                  <BodyField
-                    isHtml={isHtml}
-                    storedBody={initialValues?.body}
-                    editorRef={bodyEditorRef}
-                    editorSelectionRef={bodyEditorSelectionRef}
-                  />
-                  <PlaceholderButton
-                    id="template-body-placeholder"
-                    onClick={() => openPlaceholderPicker('body')}
-                  />
+                  {!previewOpen && renderBody({ onPreview: canPreview ? () => togglePreview(true) : undefined })}
                 </Col>
               </Row>
 
@@ -591,6 +682,16 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
                 />
               )}
             </form>
+            {canPreview && (
+              <PreviewWorkspace
+                open={previewOpen}
+                values={values}
+                title={title}
+                footer={footer}
+                onClose={() => togglePreview(false)}
+                renderEditor={diagnostics => renderBody({ diagnostics })}
+              />
+            )}
           </Pane>
         );
       }}

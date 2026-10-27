@@ -25,3 +25,14 @@
   margin-top: 0.15rem;
   color: var(--color-text-p2);
 }
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.previewFrame {
+  flex: 1;
+  min-height: 0;
+}

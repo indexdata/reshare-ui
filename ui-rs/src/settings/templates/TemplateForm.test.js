@@ -1,5 +1,6 @@
 import React from 'react';
-import { act, fireEvent, screen, waitFor } from '@folio/jest-config-stripes/testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@folio/jest-config-stripes/testing-library/react';
+import { Paneset } from '@folio/stripes/components';
 
 import { renderWithRs, settleQueries } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
@@ -12,6 +13,7 @@ const mockOkapi = makeOkapiKyMock();
 jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
 jest.mock('@folio/stripes-components/lib/TextArea', () => require('#/test/textAreaMock').default);
 jest.mock('@folio/stripes-components/lib/Editor', () => require('#/test/editorMock').default);
+jest.mock('#/components/HtmlSourceEditor', () => require('#/test/htmlSourceEditorMock').default);
 jest.mock('@folio/stripes/core', () => require('#/test/stripesCore').makeStripesCoreMock(() => mockOkapi));
 
 const PRESETS = [
@@ -68,6 +70,17 @@ const baseInitial = {
 const htmlValues = { ...baseInitial, title: 'T', subject: 'S', labels: ['l'], contentType: 'html', body: '<p>Hi</p>' };
 
 const byId = (id) => document.getElementById(id);
+// jsdom clicks don't focus the trigger that Modal restores on close.
+const openPicker = (id) => {
+  byId(id).focus();
+  fireEvent.click(byId(id));
+};
+
+const placeCursor = (element, offset) => {
+  element.setSelectionRange(offset, offset);
+  // fireEvent.select would also focus outside act().
+  fireEvent(element, new Event('select'));
+};
 const save = () => byId('clickable-save-template');
 
 const fillRequired = () => {
@@ -82,21 +95,24 @@ const fillRequired = () => {
 // started them rather than after it.
 const renderForm = async (onSubmit, { initialValues = baseInitial, ...props } = {}) => {
   const rendered = renderWithRs(
-    <TemplateForm
-      initialValues={initialValues}
-      onSubmit={onSubmit}
-      onClose={() => {}}
-      title="Test"
-      submitLabelId="ui-rs.create"
-      {...props}
-    />,
+    <Paneset>
+      <TemplateForm
+        initialValues={initialValues}
+        onSubmit={onSubmit}
+        onClose={() => {}}
+        title="Test"
+        submitLabelId="ui-rs.create"
+        {...props}
+      />
+    </Paneset>,
   );
   await settleQueries(rendered.queryClient);
   return rendered;
 };
 
 describe('TemplateForm', () => {
-  quietQueryLog(/^Unexpected Okapi request/); // one test drops the preset responses on purpose
+  // One test drops the preset responses on purpose, and one has the broker reject a template.
+  quietQueryLog(/^(Unexpected Okapi request|sample long: )/);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -235,6 +251,129 @@ describe('TemplateForm', () => {
     });
   });
 
+  describe('a pull slip body', () => {
+    const slip = '<table style="width: 100%"><tr><td>{{.Title}}</td></tr></table>';
+    const slipValues = { ...baseInitial, title: 'Slip', purpose: 'pullslip', labels: ['slip'], contentType: 'html', body: slip };
+
+    it('is edited as source, with no rich-text editor on offer', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: slipValues });
+
+      expect(byId('template-body-source')).toBeNull();
+      expect(byId('template-body').value).toBe(slip);
+    });
+
+    it('saves the markup as typed', async () => {
+      const onSubmit = jest.fn();
+      await renderForm(onSubmit, { editing: true, initialValues: slipValues });
+
+      const edited = slip.replace('100%', '50%');
+      fireEvent.change(byId('template-body'), { target: { value: edited } });
+      await waitFor(() => expect(save()).not.toBeDisabled());
+      fireEvent.click(save());
+
+      await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+      expect(onSubmit.mock.calls[0][0].body).toBe(edited);
+    });
+
+    it('takes a placeholder at the source cursor', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: { ...slipValues, body: '<p></p>' } });
+      const source = byId('template-body');
+      placeCursor(source, 3);
+
+      openPicker('template-body-placeholder');
+      fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.ReqId\}\}/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
+
+      expect(source.value).toBe('<p>{{.ReqId}}</p>');
+      expect(source).toHaveFocus();
+    });
+  });
+
+  describe('the preview workspace', () => {
+    const slip = '<p>\n{{.Title}}\n</p>';
+    const slipValues = { ...baseInitial, title: 'Slip', purpose: 'pullslip', labels: ['slip '], contentType: 'html', body: slip };
+    const pdf = { blob: async () => new Blob(['%PDF-1.7'], { type: 'application/pdf' }) };
+    const previewCalls = () => mockOkapi.post.mock.calls.filter(([path]) => path === 'broker/templates/preview');
+    const rejection = (error, template) => Object.assign(new Error(error), { status: 400, parsedBody: { error, template } });
+    const openPreview = async () => {
+      fireEvent.click(byId('template-body-preview'));
+      await waitFor(() => expect(byId('template-preview-pdf')).toBeInTheDocument());
+    };
+
+    beforeEach(() => {
+      mockOkapi.post.mockImplementation(async () => pdf);
+    });
+
+    it('is offered for a pull slip but not for an email', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: htmlValues });
+      fireEvent.click(byId('template-body-source'));
+      expect(byId('template-body-preview')).toBeNull();
+    });
+
+    it('renders the body against the samples beside the editor', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: slipValues });
+
+      await openPreview();
+
+      await waitFor(() => expect(screen.getByTitle('ui-rs.settings.templates.preview.heading')).toBeInTheDocument());
+      expect(previewCalls()[0][1]).toEqual({ json: { body: slip, labels: ['slip'] } });
+      expect(byId('template-preview-editor')).toContainElement(byId('template-body'));
+    });
+
+    it('renders again once typing pauses', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: slipValues });
+      await openPreview();
+      await waitFor(() => expect(previewCalls()).toHaveLength(1));
+
+      fireEvent.change(byId('template-body'), { target: { value: '<p>{{.Author}}</p>' } });
+      expect(previewCalls()).toHaveLength(1);
+
+      await waitFor(() => expect(previewCalls()).toHaveLength(2), { timeout: 2000 });
+      expect(previewCalls()[1][1].json.body).toBe('<p>{{.Author}}</p>');
+    });
+
+    it('shows a template error with its line and sample, keeping the last slips', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: slipValues });
+      await openPreview();
+      await waitFor(() => expect(screen.getByTitle('ui-rs.settings.templates.preview.heading')).toBeInTheDocument());
+
+      mockOkapi.post.mockRejectedValueOnce(rejection('sample long: template body: template: template:2:3: index out of range', {
+        part: 'body', sample: 'long', line: 2, column: 3, message: 'index out of range',
+      }));
+      fireEvent.change(byId('template-body'), { target: { value: `${slip} ` } });
+      fireEvent.click(byId('template-preview-refresh'));
+
+      expect(await screen.findByText('ui-rs.settings.templates.preview.errorSample')).toBeInTheDocument();
+      expect(screen.getByTitle('ui-rs.settings.templates.preview.heading')).toBeInTheDocument();
+    });
+
+    it('saves from the workspace', async () => {
+      const onSubmit = jest.fn();
+      await renderForm(onSubmit, { editing: true, initialValues: slipValues });
+      await openPreview();
+
+      fireEvent.change(byId('template-body'), { target: { value: '<p>Edited</p>' } });
+      await waitFor(() => expect(save()).not.toBeDisabled());
+      expect(byId('template-preview-editor')).toContainElement(save());
+      fireEvent.click(save());
+
+      await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+      expect(onSubmit.mock.calls[0][0].body).toBe('<p>Edited</p>');
+    });
+
+    it('hands the body back to the form when closed, keeping what was typed', async () => {
+      await renderForm(jest.fn(), { editing: true, initialValues: slipValues });
+      await openPreview();
+      fireEvent.change(byId('template-body'), { target: { value: '<p>Edited</p>' } });
+
+      fireEvent.click(within(byId('template-preview-pdf')).getByRole('button', { name: /close/i }));
+
+      await waitFor(() => expect(byId('template-preview-pdf')).toBeNull());
+      expect(byId('template-body').value).toBe('<p>Edited</p>');
+      expect(byId('template-body')).toHaveFocus();
+    });
+  });
+
   // When Quill re-parses a stored body it reports a change with source `api` rather
   // than `user`. The stub lets these tests send that report by hand; they cover how
   // the form reacts to it, not whether Quill would really rewrite this markup.
@@ -352,12 +491,14 @@ describe('TemplateForm', () => {
       const subject = byId('template-subject');
       subject.setSelectionRange(6, 6);
 
-      fireEvent.click(byId('template-subject-placeholder'));
+      openPicker('template-subject-placeholder');
       fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.ReqId\}\}/ }));
       fireEvent.click(screen.getByRole('checkbox', { name: /\{\{\.Title\}\}/ }));
       fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
 
       expect(subject.value).toBe('Hello {{.ReqId}} {{.Title}}world');
+      expect(subject).toHaveFocus();
+      expect(subject.selectionStart).toBe('Hello {{.ReqId}} {{.Title}}'.length);
     });
 
     it('inserts a selected placeholder at the body cursor', async () => {
@@ -365,11 +506,13 @@ describe('TemplateForm', () => {
       const body = byId('template-body');
       body.setSelectionRange(8, 8);
 
-      fireEvent.click(byId('template-body-placeholder'));
+      openPicker('template-body-placeholder');
       fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.FullCount\}\}/ }));
       fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
 
       expect(body.value).toBe('Request {{.FullCount}}details');
+      expect(body).toHaveFocus();
+      expect(body.selectionStart).toBe('Request {{.FullCount}}'.length);
     });
 
     it('inserts a selected placeholder at the rich-text cursor', async () => {
@@ -377,18 +520,19 @@ describe('TemplateForm', () => {
       lastEditor.setSelection(2);
       lastEditor.blur();
 
-      fireEvent.click(byId('template-body-placeholder'));
+      openPicker('template-body-placeholder');
       fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.ReqId\}\}/ }));
       fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
 
       expect(byId('template-body').value).toBe('<p>Hi{{.ReqId}}</p>');
+      expect(byId('template-body')).toHaveFocus();
     });
 
     it('inserts at the source cursor after the rich-text editor unmounts', async () => {
       await renderForm(jest.fn(), { editing: true, initialValues: htmlValues });
       fireEvent.click(byId('template-body-source'));
       const source = byId('template-body');
-      source.setSelectionRange(3, 3);
+      placeCursor(source, 3);
 
       fireEvent.click(byId('template-body-placeholder'));
       fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.ReqId\}\}/ }));
