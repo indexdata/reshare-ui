@@ -1,5 +1,4 @@
 import React from 'react';
-import { ReasonUnfilled } from '@projectreshare/stripes-reshare';
 import ActionReasonButton from '../ActionReasonButton';
 
 export { default as Generic } from './Generic';
@@ -14,9 +13,8 @@ export { default as SupplyDocument } from './SupplyDocument';
 export const CannotSupply = props => (
   <ActionReasonButton
     action="cannot-supply"
-    reasons={ReasonUnfilled}
+    reasonConfigField="unfilledReasons"
     reasonField="reasonUnfilled"
-    reasonTranslationPrefix="stripes-reshare.iso18626.ReasonUnfilled"
     {...props}
   />
 );
