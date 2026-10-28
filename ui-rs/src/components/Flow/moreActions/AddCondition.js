@@ -14,7 +14,8 @@ const AddCondition = ({ request, performAction }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { institution, isSettled, isError } = useTenantInstitution({ enabled: isOpen });
   const conditions = (institution?.illConfig?.loanConditions ?? [])
-    .filter(({ code }) => typeof code === 'string' && code.trim());
+    .filter(({ code }) => typeof code === 'string' && code.trim())
+    .filter(({ code }, index, items) => items.findIndex(item => item.code === code) === index);
   const isLoading = isOpen && !isSettled;
   const hasCondition = value => !isLoading && !isError && conditions.some(({ code }) => code === value);
   const stripes = useStripes();
