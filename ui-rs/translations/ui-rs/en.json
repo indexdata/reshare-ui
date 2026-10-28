@@ -176,6 +176,9 @@
 
   "requestform.populateById": "Use to fill form",
   "requestform.populateFromSI": "Search shared catalog",
+  "requestform.copyright.invalid": "Select a copyright type currently available for this institution.",
+  "requestform.copyright.loadError": "Copyright types could not be loaded from the directory.",
+  "requestform.copyright.empty": "No copyright types are available for this institution. Define available copyright types in the directory before submitting a copy request.",
 
   "flow.flow": "Flow",
   "flow.details": "Details",
