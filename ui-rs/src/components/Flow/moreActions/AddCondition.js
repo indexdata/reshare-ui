@@ -1,16 +1,22 @@
 import React, { useState } from 'react';
 import { Form, Field } from 'react-final-form';
-import { FormattedMessage, useIntl } from 'react-intl';
-import { LoanCondition, useIsActionPending } from '@projectreshare/stripes-reshare';
+import { FormattedMessage } from 'react-intl';
+import { useIsActionPending } from '@projectreshare/stripes-reshare';
 import { useStripes } from '@folio/stripes/core';
-import { Button, Col, Icon, Label, Layout, Modal, ModalFooter, RadioButton, Row, TextArea, TextField } from '@folio/stripes/components';
+import { Button, Col, Icon, Label, Layout, Loading, MessageBanner, Modal, ModalFooter, RadioButton, Row, TextArea, TextField } from '@folio/stripes/components';
+
+import { useTenantInstitution } from '#/util/useOwnedEntries';
 
 import { useInvalidateNotifications } from '../../chat/useNotifications';
 import actionMeta from '../actionMeta';
 
 const AddCondition = ({ request, performAction }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const intl = useIntl();
+  const { institution, isSettled, isError } = useTenantInstitution({ enabled: isOpen });
+  const conditions = (institution?.illConfig?.loanConditions ?? [])
+    .filter(({ code }) => typeof code === 'string' && code.trim());
+  const isLoading = isOpen && !isSettled;
+  const hasCondition = value => conditions.some(({ code }) => code === value);
   const stripes = useStripes();
   const invalidateNotifications = useInvalidateNotifications(request?.id);
   const actionPending = !!useIsActionPending(request.id);
@@ -20,8 +26,9 @@ const AddCondition = ({ request, performAction }) => {
 
   const onSubmit = async values => {
     const { loanCondition, note, cost } = values;
-    const payload = { loanCondition, note };
-    const numericCost = !cost?.trim() ? undefined : Number(cost);
+    if (actionPending || isLoading || isError || (!hasCondition(loanCondition) && !(showCost && cost?.trim()))) return undefined;
+    const payload = { loanCondition: hasCondition(loanCondition) ? loanCondition : undefined, note };
+    const numericCost = !showCost || !cost?.trim() ? undefined : Number(cost);
     if (Number.isFinite(numericCost)) {
       payload.cost = numericCost;
       payload.currency = stripes.currency;
@@ -41,10 +48,10 @@ const AddCondition = ({ request, performAction }) => {
   };
 
   const validate = values => {
-    const hasCondition = !!values.loanCondition;
+    const validCondition = hasCondition(values.loanCondition);
     const hasCost = showCost && !!values.cost?.trim();
 
-    if (hasCondition || hasCost) return {};
+    if (validCondition || hasCost) return {};
 
     return {
       loanCondition: true,
@@ -66,13 +73,24 @@ const AddCondition = ({ request, performAction }) => {
         <Form
           onSubmit={onSubmit}
           validate={validate}
-          render={({ handleSubmit, submitting, invalid, form }) => {
+          render={({ handleSubmit, submitting, invalid, values, form }) => {
             return (
               <form onSubmit={handleSubmit}>
                 <FormattedMessage
                   id="ui-rs.actions.add-condition.confirm"
                   values={{ id: request.requesterRequestId || request.id, item: request.illRequest?.bibliographicInfo?.title }}
                 />
+                {isLoading && <Loading />}
+                {isError &&
+                  <MessageBanner type="warning">
+                    <FormattedMessage id="ui-rs.actions.add-condition.conditionsError" />
+                  </MessageBanner>
+                }
+                {!isLoading && !isError && conditions.length === 0 &&
+                  <MessageBanner type="warning">
+                    <FormattedMessage id="ui-rs.actions.add-condition.noConditions" />
+                  </MessageBanner>
+                }
                 <Layout className="padding-top-gutter">
                   <Label>
                     <FormattedMessage id="ui-rs.actions.add-condition.condition" />
@@ -81,15 +99,15 @@ const AddCondition = ({ request, performAction }) => {
                 <Row>
                   <Field
                     name="loanCondition"
-                    render={({ input }) => LoanCondition.map(value => (
-                      <Col key={value} xs={12}>
+                    render={({ input }) => conditions.map(({ code, defaultDesc }) => (
+                      <Col key={code} xs={12}>
                         <RadioButton
-                          checked={input.value === value}
+                          checked={input.value === code}
                           fullWidth
-                          label={intl.formatMessage({ id: `stripes-reshare.iso18626.LoanCondition.${value}`, defaultMessage: value })}
+                          label={defaultDesc?.trim() ? defaultDesc : code}
                           marginBottom0
-                          onChange={() => input.onChange(value)}
-                          value={value}
+                          onChange={() => input.onChange(code)}
+                          value={code}
                         />
                       </Col>
                     ))}
@@ -119,7 +137,7 @@ const AddCondition = ({ request, performAction }) => {
                   <Button
                     buttonStyle="primary"
                     onClick={form.submit}
-                    disabled={submitting || invalid || actionPending}
+                    disabled={submitting || invalid || actionPending || isLoading || isError || (!hasCondition(values.loanCondition) && !(showCost && values.cost?.trim()))}
                   >
                     <FormattedMessage id="stripes-reshare.actions.add-condition" />
                   </Button>

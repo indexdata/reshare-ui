@@ -19,8 +19,8 @@ const useOwnedEntries = ({ enabled = true } = {}) => {
   return { entries, byId, isSettled: query.isSuccess || query.isError, isError: query.isError };
 };
 
-const useTenantInstitution = () => {
-  const { entries, isSettled, isError } = useOwnedEntries();
+const useTenantInstitution = ({ enabled = true } = {}) => {
+  const { entries, isSettled, isError } = useOwnedEntries({ enabled });
   const institution = useMemo(() => entries.find(entry => entry.type === 'Institution'), [entries]);
 
   return { institution, isSettled, isError };
