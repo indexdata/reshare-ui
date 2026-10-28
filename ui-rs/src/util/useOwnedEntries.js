@@ -20,10 +20,10 @@ const useOwnedEntries = ({ enabled = true } = {}) => {
 };
 
 const useTenantInstitution = () => {
-  const { entries, isSettled } = useOwnedEntries();
+  const { entries, isSettled, isError } = useOwnedEntries();
   const institution = useMemo(() => entries.find(entry => entry.type === 'Institution'), [entries]);
 
-  return { institution, isSettled };
+  return { institution, isSettled, isError };
 };
 
 // Candidates for a request's requesterPickupLocationId, which the broker accepts

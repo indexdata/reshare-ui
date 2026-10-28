@@ -1,12 +1,13 @@
 import React from 'react';
 // Provided by the shared Stripes test environment.
 // eslint-disable-next-line import/no-extraneous-dependencies
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 // Provided by the shared Stripes test environment.
 // eslint-disable-next-line import/no-extraneous-dependencies
 import userEvent from '@testing-library/user-event';
 import SettingsConfigEditor from './SettingsConfigEditor';
 import { fieldMap as baseCatalogFieldMapping } from '../routes/CatalogConfigRoute';
+import { fieldMap as illFieldMapping } from '../routes/ILLConfigRoute';
 import { applyDisabledPaths, hostProfilesFromOpenApi, selectionChangeImpact as changeImpact, vendorFieldMappingForVendor as mapVendorFields } from '../config/vendorFieldMapping';
 
 import specWithProfiles from '../../test/fixtures/directoryOpenApi';
@@ -132,6 +133,456 @@ beforeEach(() => {
   mockPatch.mockReset();
   mockKy.mockReset();
   mockPatch.mockResolvedValue({ text: () => Promise.resolve('') });
+});
+
+describe('SettingsConfigEditor default copyright type', () => {
+  const pair = { code: 'US-CCG', defaultDesc: 'CCG (US)' };
+  const otherPair = { code: 'US-CCL', defaultDesc: 'CCL (US code)' };
+  const legacy = { code: 'Legacy', defaultDesc: 'Saved legacy description' };
+  const fields = illFieldMapping.filter(field => ['availableCopyrightTypes', 'defaultCopyrightType'].includes(field.fieldName));
+  const editor = (illConfig, resourcePath = 'directory/entries/by-id/entry-id') => (
+    <SettingsConfigEditor
+      configKey="illConfig"
+      fieldLabelId={path => path}
+      fieldMapping={fields}
+      initialResource={{ illConfig }}
+      resourcePath={resourcePath}
+      successMessage="Saved"
+    />
+  );
+  const edit = () => fireEvent.click(document.getElementById('edit-settings-config-defaultCopyrightType'));
+  const save = () => fireEvent.click(document.getElementById('save-settings-config-defaultCopyrightType'));
+  const input = () => screen.getByRole('combobox', { name: 'defaultCopyrightType' });
+  const select = code => fireEvent.change(input(), { target: { value: `code:${code}` } });
+  const editAvailable = () => fireEvent.click(document.getElementById('edit-settings-config-availableCopyrightTypes'));
+  const removeAvailable = (index = 0) => fireEvent.click(document.getElementById(`remove-settings-config-availableCopyrightTypes-${index}`));
+  const saveAvailable = () => fireEvent.click(document.getElementById('save-settings-config-availableCopyrightTypes'));
+  const confirmSave = () => fireEvent.click(screen.getByRole('button', { name: 'Save and clear default' }));
+  const expectSaved = async value => waitFor(() => expect(mockPatch).toHaveBeenCalledWith(
+    'directory/entries/by-id/entry-id', { json: { illConfig: { defaultCopyrightType: value } } },
+  ));
+
+  beforeEach(() => { mockOpenApiData = specWithProfiles; });
+
+  it.each([
+    [{ fieldName: 'defaultCopyrightType', valueType: 'codeDescription' }, 'requires an availableValuesField'],
+    [{ fieldName: 'group', valueType: 'subField', subMap: [fields[1]] }, 'only on top-level fields'],
+  ])('rejects an unsupported single-object mapping (%s)', (field, message) => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      expect(() => renderEditor({ fieldMapping: [field] })).toThrow(message);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it('filters published choices by saved codes only and saves one canonical object', async () => {
+    render(editor({ availableCopyrightTypes: [
+      { ...pair, defaultDesc: 'Customized available description' },
+      { ...otherPair, code: 'us-ccl' },
+      legacy,
+    ] }));
+    expect(mockPatch).not.toHaveBeenCalled();
+    edit();
+    expect(input()).toHaveValue('');
+    expect(within(input()).getAllByRole('option').map(option => option.value)).toEqual(['', 'code:US-CCG']);
+    expect(within(input()).getByRole('option', { name: 'US-CCG: CCG (US)' })).toBeInTheDocument();
+    select(pair.code);
+    save();
+    await expectSaved(pair);
+    await waitFor(() => expect(document.getElementById('edit-settings-config-defaultCopyrightType')).toBeInTheDocument());
+    expect(screen.getByText('US-CCG: CCG (US)')).toBeInTheDocument();
+  });
+
+  it('reads defaults from the single-object property independently of available-type metadata', async () => {
+    const defaultPair = { ...pair, defaultDesc: 'Published default description' };
+    mockOpenApiData = { components: { schemas: { IllConfig: { properties: {
+      defaultCopyrightType: { 'x-default-data': { [pair.code]: defaultPair.defaultDesc } },
+      availableCopyrightTypes: { 'x-default-data': { [pair.code]: 'Different array default' } },
+    } } } } };
+    render(editor({ availableCopyrightTypes: [pair, otherPair] }));
+    edit();
+    expect(within(input()).getAllByRole('option').map(option => option.value)).toEqual(['', 'code:US-CCG']);
+    select(pair.code);
+    save();
+    await expectSaved(defaultPair);
+  });
+
+  it.each([undefined, null, []])('disables an empty default when available types are %p', availableCopyrightTypes => {
+    render(editor({ availableCopyrightTypes, defaultCopyrightType: null }));
+    expect(document.getElementById('edit-settings-config-defaultCopyrightType')).toBeDisabled();
+    expect(screen.getByText('Define available Copyright types before selecting a default')).toBeInTheDocument();
+    expect(mockPatch).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, null, []])('preserves and clears a saved default when available types are %p', async availableCopyrightTypes => {
+    render(editor({ availableCopyrightTypes, defaultCopyrightType: legacy }));
+    expect(screen.getByText('Legacy: Saved legacy description')).toBeInTheDocument();
+    edit();
+    expect(input()).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(screen.queryByRole('option', { name: 'Legacy: Saved legacy description' })).not.toBeInTheDocument();
+    save();
+    await expectSaved(null);
+    await waitFor(() => expect(document.getElementById('edit-settings-config-defaultCopyrightType')).toBeDisabled());
+  });
+
+  it('preserves an unchanged legacy default and cannot reoffer it after replacing it', async () => {
+    render(editor({ availableCopyrightTypes: [pair, legacy], defaultCopyrightType: legacy }));
+    edit();
+    expect(within(input()).getByRole('option', { name: 'Legacy: Saved legacy description' })).toBeDisabled();
+    save();
+    await expectSaved(legacy);
+    await waitFor(() => expect(document.getElementById('edit-settings-config-defaultCopyrightType')).toBeInTheDocument());
+    edit();
+    select(pair.code);
+    expect(screen.queryByRole('option', { name: 'Legacy: Saved legacy description' })).not.toBeInTheDocument();
+    fireEvent.change(input(), { target: { value: '' } });
+    expect(screen.queryByRole('option', { name: 'Legacy: Saved legacy description' })).not.toBeInTheDocument();
+    save();
+    await expectSaved(null);
+  });
+
+  it('keeps a saved custom description until explicitly choosing the published pair', async () => {
+    const customized = { ...pair, defaultDesc: 'Old default description' };
+    render(editor({ availableCopyrightTypes: [pair], defaultCopyrightType: customized }));
+    edit();
+    expect(input()).toHaveValue('current');
+    select(pair.code);
+    expect(screen.queryByRole('option', { name: 'US-CCG: Old default description' })).not.toBeInTheDocument();
+    save();
+    await expectSaved(pair);
+  });
+
+  it('restores a saved legacy pair on Cancel after clearing', () => {
+    render(editor({ availableCopyrightTypes: [pair], defaultCopyrightType: legacy }));
+    edit();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    fireEvent.click(document.getElementById('cancel-settings-config-defaultCopyrightType'));
+    expect(screen.getByText('Legacy: Saved legacy description')).toBeInTheDocument();
+    edit();
+    expect(input()).toHaveValue('current');
+    expect(mockPatch).not.toHaveBeenCalled();
+  });
+
+  it('disables new selection when saved available codes do not match published defaults', () => {
+    render(editor({ availableCopyrightTypes: [legacy] }));
+    expect(document.getElementById('edit-settings-config-defaultCopyrightType')).toBeDisabled();
+    expect(screen.getByText('No available entries match the predefined options.')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['loading', undefined, { isFetching: true }, 'Loading predefined entries…'],
+    ['failed', undefined, { isError: true }, 'Predefined entries are unavailable.'],
+    ['missing', { components: { schemas: {} } }, {}, 'Predefined entries are unavailable.'],
+    ['malformed', { components: { schemas: { IllConfig: { properties: {
+      defaultCopyrightType: { 'x-default-data': { 'US-CCG': null } },
+    } } } } }, {}, 'Predefined entries are unavailable.'],
+  ])('allows clearing a saved value while metadata is %s', async (_name, data, state, message) => {
+    mockOpenApiData = data;
+    mockOpenApiState = { ...state, refetch: jest.fn() };
+    render(editor({ availableCopyrightTypes: [pair], defaultCopyrightType: legacy }));
+    expect(screen.getByText(message)).toBeInTheDocument();
+    edit();
+    expect(input()).toBeDisabled();
+    if (!state.isFetching) {
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(mockOpenApiState.refetch).toHaveBeenCalledTimes(1);
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    save();
+    await expectSaved(null);
+  });
+
+  it('uses cached defaults after a background metadata failure and preserves drafts when loading completes', () => {
+    mockOpenApiData = undefined;
+    mockOpenApiState = { isFetching: true };
+    const config = { availableCopyrightTypes: [pair], defaultCopyrightType: legacy };
+    const view = render(editor(config));
+    edit();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    mockOpenApiData = specWithProfiles;
+    mockOpenApiState = { isError: true };
+    view.rerender(editor(config));
+    expect(input()).toBeEnabled();
+    expect(input()).toHaveValue('');
+    expect(screen.queryByRole('option', { name: 'Legacy: Saved legacy description' })).not.toBeInTheDocument();
+    select(pair.code);
+    expect(input()).toHaveValue('code:US-CCG');
+  });
+
+  it('uses committed availability until confirming a save that removes and clears the default', async () => {
+    render(editor({ availableCopyrightTypes: [pair], defaultCopyrightType: pair }));
+    editAvailable();
+    removeAvailable();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    edit();
+    expect(input()).toBeEnabled();
+    expect(within(input()).getByRole('option', { name: 'US-CCG: CCG (US)' })).toBeEnabled();
+    saveAvailable();
+    expect(screen.getByRole('dialog')).toHaveTextContent('Saving these changes will remove US-CCG');
+    expect(screen.queryByText('Unsaved changes to the default copyright type will also be discarded.')).not.toBeInTheDocument();
+    expect(mockPatch).not.toHaveBeenCalled();
+    confirmSave();
+    await waitFor(() => expect(document.getElementById('edit-settings-config-defaultCopyrightType')).toBeDisabled());
+    expect(screen.queryByRole('combobox', { name: 'defaultCopyrightType' })).not.toBeInTheDocument();
+    expect(mockPatch).toHaveBeenCalledTimes(1);
+    expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+      json: { illConfig: { availableCopyrightTypes: [], defaultCopyrightType: null } },
+    });
+  });
+
+  it('keeps the removal draft and saved default after cancelling the warning', () => {
+    render(editor({ availableCopyrightTypes: [pair, otherPair], defaultCopyrightType: pair }));
+    editAvailable();
+    removeAvailable();
+    saveAvailable();
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(document.getElementById('remove-settings-config-availableCopyrightTypes-1')).not.toBeInTheDocument();
+    expect(document.getElementById('edit-settings-config-defaultCopyrightType').closest('section')).toHaveTextContent('US-CCG: CCG (US)');
+    expect(mockPatch).not.toHaveBeenCalled();
+    saveAvailable();
+    expect(screen.getByRole('dialog')).toHaveTextContent('Saving these changes will remove US-CCG');
+  });
+
+  it.each([
+    ['unrelated removal', [pair, otherPair], pair, 1, [pair]],
+    ['different description', [{ ...pair, defaultDesc: 'Custom available description' }, otherPair], pair, 1,
+      [{ ...pair, defaultDesc: 'Custom available description' }]],
+    ['null default', [pair, otherPair], null, 0, [otherPair]],
+    ['pre-existing mismatch', [pair, otherPair], legacy, 0, [otherPair]],
+    ['remaining duplicate code', [pair, pair], pair, 0, [pair]],
+  ])('saves without clearing or prompting for %s', async (_name, availableCopyrightTypes, defaultCopyrightType, index, remaining) => {
+    render(editor({ availableCopyrightTypes, defaultCopyrightType }));
+    editAvailable();
+    removeAvailable(index);
+    saveAvailable();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+      json: { illConfig: { availableCopyrightTypes: remaining } },
+    }));
+  });
+
+  it('does not prompt if a removed default code is re-added before Save', async () => {
+    const user = userEvent.setup();
+    render(editor({ availableCopyrightTypes: [pair], defaultCopyrightType: pair }));
+    editAvailable();
+    removeAvailable();
+    await user.click(screen.getByRole('combobox', { name: 'Add predefined' }));
+    await user.click(await screen.findByRole('option', { name: name => name.startsWith('US-CCG: CCG (US)') }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add selected' }));
+    saveAvailable();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+      json: { illConfig: { availableCopyrightTypes: [pair] } },
+    }));
+  });
+
+  it('warns before discarding an unsaved default edit and resets both editors on success', async () => {
+    render(editor({ availableCopyrightTypes: [pair, otherPair], defaultCopyrightType: pair }));
+    edit();
+    select(otherPair.code);
+    editAvailable();
+    removeAvailable();
+    saveAvailable();
+    expect(screen.getByRole('dialog')).toHaveTextContent('Unsaved changes to the default copyright type will also be discarded.');
+    confirmSave();
+    await waitFor(() => expect(document.getElementById('edit-settings-config-availableCopyrightTypes')).toBeInTheDocument());
+    expect(document.getElementById('edit-settings-config-defaultCopyrightType')).toBeInTheDocument();
+    edit();
+    expect(input()).toHaveValue('');
+    expect(within(input()).getAllByRole('option').map(option => option.value)).toEqual(['', 'code:US-CCL']);
+  });
+
+  it('disables both affected editors while saving and retains both drafts for a confirmed retry', async () => {
+    let failSave;
+    mockPatch.mockImplementationOnce(() => new Promise((_resolve, reject) => { failSave = reject; }));
+    render(editor({ availableCopyrightTypes: [pair, otherPair], defaultCopyrightType: pair }));
+    edit();
+    select(otherPair.code);
+    editAvailable();
+    removeAvailable();
+    saveAvailable();
+    confirmSave();
+    expect(input()).toBeDisabled();
+    expect(document.getElementById('save-settings-config-availableCopyrightTypes')).toBeDisabled();
+    expect(document.getElementById('save-settings-config-defaultCopyrightType')).toBeDisabled();
+    failSave(new Error('Save failed'));
+    expect(await screen.findByText('Save failed')).toBeInTheDocument();
+    await waitFor(() => expect(input()).toBeEnabled());
+    expect(input()).toHaveValue('code:US-CCL');
+    saveAvailable();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(mockPatch).toHaveBeenCalledTimes(1);
+    confirmSave();
+    await waitFor(() => expect(document.getElementById('edit-settings-config-defaultCopyrightType')).toBeInTheDocument());
+    expect(mockPatch).toHaveBeenCalledTimes(2);
+    expect(mockPatch).toHaveBeenLastCalledWith(expect.anything(), {
+      json: { illConfig: { availableCopyrightTypes: [otherPair], defaultCopyrightType: null } },
+    });
+  });
+
+  it('blocks default saves during an available-types save and revalidates the retained draft afterward', async () => {
+    let finishSave;
+    mockPatch.mockImplementationOnce(() => new Promise(resolve => { finishSave = resolve; }));
+    render(editor({ availableCopyrightTypes: [pair, otherPair], defaultCopyrightType: pair }));
+    edit();
+    select(otherPair.code);
+    editAvailable();
+    removeAvailable(1);
+    saveAvailable();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(input()).toBeDisabled();
+    expect(document.getElementById('save-settings-config-defaultCopyrightType')).toBeDisabled();
+    fireEvent.click(document.getElementById('save-settings-config-defaultCopyrightType'));
+    expect(mockPatch).toHaveBeenCalledTimes(1);
+    expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+      json: { illConfig: { availableCopyrightTypes: [pair] } },
+    });
+    finishSave({ text: async () => '' });
+    await waitFor(() => expect(input()).toBeEnabled());
+    expect(input()).toHaveValue('current');
+    expect(within(input()).getByRole('option', { name: 'US-CCL: CCL (US code)' })).toBeDisabled();
+    save();
+    expect(screen.getByText('Select an available predefined entry or clear the value.')).toBeInTheDocument();
+    expect(mockPatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks available-types saves during a default save and checks the new default before removing it', async () => {
+    let finishSave;
+    mockPatch.mockImplementationOnce(() => new Promise(resolve => { finishSave = resolve; }));
+    render(editor({ availableCopyrightTypes: [pair, otherPair], defaultCopyrightType: pair }));
+    editAvailable();
+    removeAvailable(1);
+    edit();
+    select(otherPair.code);
+    save();
+    expect(document.getElementById('save-settings-config-availableCopyrightTypes')).toBeDisabled();
+    expect(document.getElementById('remove-settings-config-availableCopyrightTypes-0')).toBeDisabled();
+    saveAvailable();
+    expect(mockPatch).toHaveBeenCalledTimes(1);
+    finishSave({ text: async () => '' });
+    await waitFor(() => expect(document.getElementById('save-settings-config-availableCopyrightTypes')).toBeEnabled());
+    saveAvailable();
+    expect(screen.getByRole('dialog')).toHaveTextContent('Saving these changes will remove US-CCL');
+    expect(mockPatch).toHaveBeenCalledTimes(1);
+    confirmSave();
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledTimes(2));
+    expect(mockPatch).toHaveBeenLastCalledWith(expect.anything(), {
+      json: { illConfig: { availableCopyrightTypes: [pair], defaultCopyrightType: null } },
+    });
+  });
+
+  it.each(['available types', 'default'])('serializes saves in the same event batch when %s saves first', firstSave => {
+    mockPatch.mockImplementationOnce(() => new Promise(() => {}));
+    render(editor({ availableCopyrightTypes: [pair, otherPair], defaultCopyrightType: pair }));
+    edit();
+    select(otherPair.code);
+    editAvailable();
+    removeAvailable(1);
+    act(() => {
+      if (firstSave === 'available types') {
+        saveAvailable();
+        save();
+      } else {
+        save();
+        saveAvailable();
+      }
+    });
+    expect(mockPatch).toHaveBeenCalledTimes(1);
+    expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+      json: { illConfig: firstSave === 'available types' ?
+        { availableCopyrightTypes: [pair] } : { defaultCopyrightType: otherPair } },
+    });
+  });
+
+  it('releases both dependency locks on failure while leaving unrelated fields editable', async () => {
+    let failSave;
+    mockPatch.mockImplementationOnce(() => new Promise((_resolve, reject) => { failSave = reject; }));
+    renderEditor({
+      configKey: 'illConfig',
+      fieldMapping: illFieldMapping,
+      initialResource: { illConfig: { availableCopyrightTypes: [pair, otherPair], defaultCopyrightType: pair } },
+    });
+    edit();
+    editAvailable();
+    removeAvailable(1);
+    saveAvailable();
+    expect(input()).toBeDisabled();
+    expect(document.getElementById('save-settings-config-availableCopyrightTypes')).toBeDisabled();
+    expect(document.getElementById('edit-settings-config-minimumCost')).toBeEnabled();
+    failSave(new Error('Available types save failed'));
+    expect(await screen.findByText('Available types save failed')).toBeInTheDocument();
+    await waitFor(() => expect(input()).toBeEnabled());
+    expect(document.getElementById('save-settings-config-availableCopyrightTypes')).toBeEnabled();
+    select(otherPair.code);
+    save();
+    await expectSaved(otherPair);
+  });
+
+  it('dismisses pending confirmation when navigating to another entry', () => {
+    const view = render(editor({ availableCopyrightTypes: [pair], defaultCopyrightType: pair }));
+    editAvailable();
+    removeAvailable();
+    saveAvailable();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    view.rerender(editor({ availableCopyrightTypes: [otherPair], defaultCopyrightType: otherPair }, 'directory/entries/by-id/second'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('US-CCL: CCL (US code)')).toBeInTheDocument();
+    expect(mockPatch).not.toHaveBeenCalled();
+  });
+
+  it('refreshes confirmation if the saved default changes while the warning is open', () => {
+    const config = { availableCopyrightTypes: [pair, otherPair], defaultCopyrightType: pair };
+    const view = render(editor(config));
+    editAvailable();
+    removeAvailable();
+    removeAvailable();
+    saveAvailable();
+    view.rerender(editor({ ...config, defaultCopyrightType: otherPair }));
+    confirmSave();
+    expect(mockPatch).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toHaveTextContent('Saving these changes will remove US-CCL');
+  });
+
+  it('revalidates new selections when availability changes during an edit', async () => {
+    const view = render(editor({ availableCopyrightTypes: [pair] }));
+    edit();
+    select(pair.code);
+    view.rerender(editor({ availableCopyrightTypes: [] }));
+    save();
+    expect(screen.getByRole('alert')).toHaveTextContent('Select an available predefined entry or clear the value.');
+    expect(mockPatch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    save();
+    await expectSaved(null);
+  });
+
+  it('retains the draft after a failed save and allows retry', async () => {
+    mockPatch.mockRejectedValueOnce(new Error('Save failed'));
+    render(editor({ availableCopyrightTypes: [pair, otherPair] }));
+    edit();
+    select(otherPair.code);
+    save();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Save failed');
+    await waitFor(() => expect(input()).toBeEnabled());
+    expect(input()).toHaveValue('code:US-CCL');
+    save();
+    await expectSaved(otherPair);
+    await waitFor(() => expect(document.getElementById('edit-settings-config-defaultCopyrightType')).toBeInTheDocument());
+    expect(mockPatch).toHaveBeenCalledTimes(2);
+  });
+
+  it('translates display descriptions without changing the saved pair', async () => {
+    mockMessages = { 'defaultCopyrightType.values.US-CCG': 'Translated default description' };
+    render(editor({ availableCopyrightTypes: [pair] }));
+    edit();
+    expect(within(input()).getByRole('option', { name: 'US-CCG: Translated default description' })).toBeInTheDocument();
+    select(pair.code);
+    save();
+    await expectSaved(pair);
+  });
 });
 
 describe('SettingsConfigEditor field descriptions', () => {

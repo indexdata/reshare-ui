@@ -1,7 +1,7 @@
 import React from 'react';
 import { Route } from 'react-router-dom';
 import { createMemoryHistory } from 'history';
-import { fireEvent, waitFor } from '@folio/jest-config-stripes/testing-library/react';
+import { fireEvent, screen, waitFor } from '@folio/jest-config-stripes/testing-library/react';
 
 import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
@@ -62,11 +62,18 @@ const branches = [
   { id: 'branch-e', name: 'East Branch', type: 'Branch', illConfig: { isPickupLocation: true } },
   { id: 'branch-w', name: 'West Branch', type: 'Branch', illConfig: { isPickupLocation: true } },
 ];
+const copyrightTypes = [
+  { code: 'AU-GenBus', defaultDesc: 'General Business (Australia)' },
+  { code: 'US-CCG', defaultDesc: 'CCG (US)' },
+];
+const institution = {
+  id: 'inst-1', name: 'Our Library', type: 'Institution', illConfig: { availableCopyrightTypes: copyrightTypes },
+};
 const tiers = [
   { id: 't-std-loan', name: 'Standard loan', type: 'loan', level: 'standard', cost: 0 },
   { id: 't-exp-loan', name: 'Express loan', type: 'loan', level: 'express', cost: 15 },
 ];
-const tieredEntries = { items: [{ id: 'inst-1', name: 'Our Library', type: 'Institution', tiers }, ...branches] };
+const tieredEntries = { items: [{ ...institution, tiers }, ...branches] };
 
 const paidCosts = { monetaryValue: '15.00', currencyCode: { '#text': 'USD' } };
 const madeUnder = (serviceLevel, maximumCosts) => editableRequest({
@@ -77,7 +84,7 @@ const madeUnder = (serviceLevel, maximumCosts) => editableRequest({
   },
 });
 
-const renderEdit = ({ request = editableRequest(), owned = { items: branches }, history } = {}) => {
+const renderEdit = ({ request = editableRequest(), owned = { items: [institution, ...branches] }, history } = {}) => {
   mockOkapi.setResponses({
     'broker/patron_requests/req-1': request,
     'broker/state_model/models/default': defaultModel,
@@ -254,6 +261,54 @@ describe('EditRoute', () => {
     const { illRequest } = mockOkapi.put.mock.calls[0][1].json;
     expect(illRequest.serviceInfo.serviceLevel).toEqual({ '#text': 'Rush' });
     expect(illRequest.billingInfo.maximumCosts).toEqual(rushCosts);
+  });
+
+  describe('copyright', () => {
+    const fieldName = "serviceInfo.copyrightCompliance['#text']";
+    const copyRequest = code => editableRequest({ illRequest: {
+      ...editableRequest().illRequest,
+      serviceInfo: { serviceType: 'Copy', copyrightCompliance: { '#text': code } },
+    } });
+
+    it.each([undefined, null, 'AU-GenBus'])(
+      'uses an institution default only for an empty existing copyright field (%p)', async code => {
+        renderEdit({ request: copyRequest(code),
+          owned: { items: [
+            { ...institution,
+              illConfig: { availableCopyrightTypes: copyrightTypes,
+                defaultCopyrightType: { code: 'US-CCG', defaultDesc: 'Different default description' } } },
+            ...branches,
+          ] } });
+        const expectedCode = code || 'US-CCG';
+        await waitFor(() => expect(fieldByName(fieldName)).toHaveValue(expectedCode));
+        expect(Array.from(fieldByName(fieldName).options).filter(option => option.value).map(option => option.textContent))
+          .toEqual(copyrightTypes.map(item => item.defaultDesc));
+        setField('bibliographicInfo.title', 'Edited copy title');
+        fireEvent.click(document.querySelector('button[type="submit"]'));
+        await waitFor(() => expect(mockOkapi.put).toHaveBeenCalledTimes(1));
+        expect(mockOkapi.put.mock.calls[0][1].json.illRequest.serviceInfo.copyrightCompliance).toEqual({ '#text': expectedCode });
+      }
+    );
+
+    it.each([[copyrightTypes], [[]]])('keeps an unavailable saved code visible but blocks saving (%p)', async availableCopyrightTypes => {
+      renderEdit({ request: copyRequest('OldPolicy'),
+        owned: { items: [
+          { ...institution, illConfig: { availableCopyrightTypes, defaultCopyrightType: copyrightTypes[1] } }, ...branches,
+        ] } });
+      await waitFor(() => expect(fieldByName(fieldName)).toHaveValue('OldPolicy'));
+      expect(fieldByName(fieldName).querySelector('option[value="OldPolicy"]')).toBeDisabled();
+      if (availableCopyrightTypes.length === 0) expect(fieldByName(fieldName)).toBeDisabled();
+      setField('bibliographicInfo.title', 'Edited copy title');
+      fireEvent.click(document.querySelector('button[type="submit"]'));
+      expect(await screen.findByText('Select a copyright type currently available for this institution.')).toBeInTheDocument();
+      expect(mockOkapi.put).not.toHaveBeenCalled();
+      if (availableCopyrightTypes.length > 0) {
+        setField(fieldName, 'US-CCG');
+        fireEvent.click(document.querySelector('button[type="submit"]'));
+        await waitFor(() => expect(mockOkapi.put).toHaveBeenCalledTimes(1));
+        expect(mockOkapi.put.mock.calls[0][1].json.illRequest.serviceInfo.copyrightCompliance).toEqual({ '#text': 'US-CCG' });
+      }
+    });
   });
 
   it('redirects away without a PUT when the request is not editable', async () => {

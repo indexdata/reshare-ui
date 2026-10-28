@@ -45,8 +45,6 @@ const CreateRoute = () => {
   if (!optionsLoaded) return null;
 
   const initialValues = {
-    // TODO: Broker API
-    // copyrightType: defaultCopyrightSetting,
     serviceInfo: { serviceType: 'Loan' },
     ...(options.locations?.length === 1 && {
       requesterPickupLocationId: options.locations[0].value,

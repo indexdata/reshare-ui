@@ -68,13 +68,20 @@ const branches = [
   { id: 'branch-e', name: 'East Branch', type: 'Branch', illConfig: { isPickupLocation: true } },
   { id: 'branch-w', name: 'West Branch', type: 'Branch', illConfig: { isPickupLocation: true } },
 ];
+const copyrightTypes = [
+  { code: 'AU-GenBus', defaultDesc: 'General Business (Australia)' },
+  { code: 'US-CCG', defaultDesc: 'CCG (US)' },
+];
+const institution = {
+  id: 'inst-1', name: 'Our Library', type: 'Institution', illConfig: { availableCopyrightTypes: copyrightTypes },
+};
 const tiers = [
   { id: 't-exp-loan', name: 'Express loan', type: 'loan', level: 'express', cost: 0 },
   { id: 't-std-loan', name: 'Standard loan', type: 'loan', level: 'standard', cost: 15 },
 ];
-const tieredEntries = { items: [{ id: 'inst-1', name: 'Our Library', type: 'Institution', tiers }, ...branches] };
+const tieredEntries = { items: [{ ...institution, tiers }, ...branches] };
 
-const renderRerequest = ({ history, owned = { items: branches } } = {}) => {
+const renderRerequest = ({ history, owned = { items: [institution, ...branches] } } = {}) => {
   mockOkapi.setResponses({
     'broker/patron_requests/req-1': () => broker.request,
     'broker/patron_requests/req-1/actions': () => broker.actions,
@@ -125,6 +132,49 @@ describe('RerequestRoute', () => {
     jest.clearAllMocks();
     broker = { request: cancelledRequest(), actions: rerequestable };
     brokerPosts();
+  });
+
+  describe('copyright', () => {
+    const fieldName = "serviceInfo.copyrightCompliance['#text']";
+    const setCopyRequest = code => {
+      broker.request = cancelledRequest({ illRequest: {
+        ...cancelledRequest().illRequest,
+        serviceInfo: { serviceType: 'Copy', copyrightCompliance: { '#text': code } },
+      } });
+    };
+
+    it.each([undefined, 'AU-GenBus'])('defaults only empty fields when re-requesting a Copy (%p)', async code => {
+      setCopyRequest(code);
+      renderRerequest({ owned: { items: [
+        { ...institution, illConfig: { availableCopyrightTypes: copyrightTypes, defaultCopyrightType: copyrightTypes[1] } },
+        ...branches,
+      ] } });
+      const expectedCode = code || 'US-CCG';
+      await waitFor(() => expect(fieldByName(fieldName)).toHaveValue(expectedCode));
+      fireEvent.click(submitButton());
+      await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(2));
+      expect(createdPayload().illRequest.serviceInfo.copyrightCompliance).toEqual({ '#text': expectedCode });
+      expect(createdPayload().prevReqId).toBe('req-1');
+    });
+
+    it.each([[copyrightTypes], [[]]])('blocks both re-request POSTs for an unavailable saved copyright code (%p)', async availableCopyrightTypes => {
+      setCopyRequest('OldPolicy');
+      renderRerequest({ owned: { items: [
+        { ...institution, illConfig: { availableCopyrightTypes, defaultCopyrightType: copyrightTypes[1] } }, ...branches,
+      ] } });
+      await loaded();
+      expect(fieldByName(fieldName)).toHaveValue('OldPolicy');
+      expect(fieldByName(fieldName).querySelector('option[value="OldPolicy"]')).toBeDisabled();
+      fireEvent.click(submitButton());
+      expect(await screen.findByText('Select a copyright type currently available for this institution.')).toBeInTheDocument();
+      expect(mockOkapi.post).not.toHaveBeenCalled();
+      if (availableCopyrightTypes.length > 0) {
+        setField(fieldName, 'US-CCG');
+        fireEvent.click(submitButton());
+        await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(2));
+        expect(createdPayload().illRequest.serviceInfo.copyrightCompliance).toEqual({ '#text': 'US-CCG' });
+      }
+    });
   });
 
   it('prefills from the original and submits it unchanged as a new, linked request', async () => {
