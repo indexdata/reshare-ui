@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import uniqBy from 'lodash/uniqBy';
 import { Form, Field } from 'react-final-form';
 import { FormattedMessage } from 'react-intl';
 import { useIsActionPending } from '@projectreshare/stripes-reshare';
@@ -12,11 +13,13 @@ import actionMeta from '../actionMeta';
 
 const AddCondition = ({ request, performAction }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { institution, isSettled, isError } = useTenantInstitution({ enabled: isOpen });
-  const conditions = (institution?.illConfig?.loanConditions ?? [])
-    .filter(({ code }) => typeof code === 'string' && code.trim())
-    .filter(({ code }, index, items) => items.findIndex(item => item.code === code) === index);
-  const isLoading = isOpen && !isSettled;
+  const { institution, isSettled, isError, isFetching } = useTenantInstitution({ enabled: isOpen });
+  const conditions = uniqBy(
+    (institution?.illConfig?.loanConditions ?? [])
+      .filter(({ code }) => typeof code === 'string' && code.trim()),
+    'code'
+  );
+  const isLoading = isOpen && (!isSettled || isFetching);
   const hasCondition = value => !isLoading && !isError && conditions.some(({ code }) => code === value);
   const stripes = useStripes();
   const invalidateNotifications = useInvalidateNotifications(request?.id);
@@ -30,8 +33,9 @@ const AddCondition = ({ request, performAction }) => {
     const numericCost = Number(cost);
     return Number.isFinite(numericCost) && numericCost >= 0 ? numericCost : undefined;
   };
+  const hasInvalidCost = cost => !!(showCost && cost?.trim()) && getCost(cost) === undefined;
   const hasUnavailableSelection = value => !!value && !hasCondition(value);
-  const canSubmit = values => !isLoading && !hasUnavailableSelection(values.loanCondition)
+  const canSubmit = values => !isLoading && !hasUnavailableSelection(values.loanCondition) && !hasInvalidCost(values.cost)
     && (hasCondition(values.loanCondition) || getCost(values.cost) !== undefined);
 
   const onSubmit = async values => {
@@ -65,6 +69,9 @@ const AddCondition = ({ request, performAction }) => {
   };
 
   const validate = values => {
+    if (hasInvalidCost(values.cost)) {
+      return { cost: <FormattedMessage id="ui-rs.actions.add-condition.invalidCost" /> };
+    }
     if (canSubmit(values)) return {};
 
     return {

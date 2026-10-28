@@ -325,6 +325,7 @@
   "actions.add-condition.noConditions": "No available loan conditions are populated in your institution’s Directory entry.",
   "actions.add-condition.conditionsError": "Loan conditions could not be loaded. Close this dialog and try again to select a condition.",
   "actions.add-condition.unavailableSelection": "The selected condition is unavailable. Select another condition or clear the selection before submitting.",
+  "actions.add-condition.invalidCost": "Enter a valid cost of zero or greater.",
   "actions.add-condition.clearSelection": "Clear condition selection",
   "actions.add-condition.condition": "Condition for item supply:",
   "actions.add-condition.success": "Condition added.",

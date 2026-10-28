@@ -36,11 +36,21 @@ describe('AddCondition Directory conditions', () => {
   });
 
   it('loads on opening, displays Directory descriptions in order and submits the selected code', async () => {
+    const duplicateDescription = 'Discarded duplicate description';
+    mockOkapi.setResponses({
+      'directory/entries/owned': {
+        items: [{
+          ...institution,
+          illConfig: { loanConditions: [...conditions, { code: 'Custom', defaultDesc: duplicateDescription }] },
+        }],
+      },
+    });
     renderModal();
     expect(mockOkapi).not.toHaveBeenCalled();
     open();
     await screen.findByRole('radio', { name: conditions[0].defaultDesc });
     expect(screen.getAllByRole('radio').map(radio => radio.value)).toEqual(['Custom', 'LibraryUseOnly']);
+    expect(screen.queryByText(duplicateDescription)).not.toBeInTheDocument();
     for (const { condition, operatorNote } of [
       { condition: conditions[0], operatorNote: '  A note\nwith whitespace  ' },
       { condition: conditions[0] },
@@ -48,7 +58,19 @@ describe('AddCondition Directory conditions', () => {
     ]) {
       performAction.mockClear();
       fireEvent.click(screen.getByRole('radio', { name: condition.defaultDesc }));
-      if (operatorNote) fireEvent.change(note(), { target: { value: operatorNote } });
+      if (operatorNote) {
+        fireEvent.change(note(), { target: { value: operatorNote } });
+        const costField = screen.getByRole('spinbutton');
+        fireEvent.change(costField, { target: { value: '-1' } });
+        fireEvent.blur(costField);
+        expect(screen.getByText('ui-rs.actions.add-condition.invalidCost')).toBeInTheDocument();
+        expect(confirm()).toBeDisabled();
+        await act(async () => fireEvent.submit(note().closest('form')));
+        expect(performAction).not.toHaveBeenCalled();
+        fireEvent.change(costField, { target: { value: '' } });
+        expect(screen.queryByText('ui-rs.actions.add-condition.invalidCost')).not.toBeInTheDocument();
+        expect(confirm()).toBeEnabled();
+      }
       fireEvent.click(confirm());
       await waitFor(() => expect(performAction).toHaveBeenCalledWith(
         'add-condition',
@@ -76,6 +98,10 @@ describe('AddCondition Directory conditions', () => {
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
     fireEvent.change(note(), { target: { value: 'Note alone' } });
     expect(confirm()).toBeDisabled();
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '-1' } });
+    expect(confirm()).toBeDisabled();
+    await act(async () => fireEvent.submit(note().closest('form')));
+    expect(performAction).not.toHaveBeenCalled();
     fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '2.50' } });
     fireEvent.click(confirm());
     await waitFor(() => expect(performAction).toHaveBeenCalledWith(
@@ -117,10 +143,25 @@ describe('AddCondition Directory conditions', () => {
     fireEvent.click(await screen.findByRole('radio', { name: conditions[0].defaultDesc }));
     expect(confirm()).toBeEnabled();
     fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '0' } });
+    let resolveRefresh;
+    mockOkapi.setResponses({
+      'directory/entries/owned': () => new Promise(resolve => { resolveRefresh = resolve; }),
+    });
+    let refresh;
+    act(() => {
+      refresh = queryClient.invalidateQueries(['directory/entries/owned']);
+    });
+    await waitFor(() => expect(screen.getByRole('radio', { name: conditions[0].defaultDesc })).toBeDisabled());
+    expect(screen.getByRole('radio', { name: conditions[1].defaultDesc })).toBeDisabled();
+    expect(confirm()).toBeDisabled();
+    expect(screen.queryByText('ui-rs.actions.add-condition.unavailableSelection')).not.toBeInTheDocument();
+    await act(async () => fireEvent.submit(note().closest('form')));
+    expect(performAction).not.toHaveBeenCalled();
     await act(async () => {
-      queryClient.setQueryData(['directory/entries/owned', { limit: '1000' }], {
+      resolveRefresh({
         items: [{ ...institution, illConfig: { loanConditions: [conditions[1]] } }],
       });
+      await refresh;
     });
     expect(screen.getByText('ui-rs.actions.add-condition.unavailableSelection')).toBeInTheDocument();
     expect(confirm()).toBeDisabled();
