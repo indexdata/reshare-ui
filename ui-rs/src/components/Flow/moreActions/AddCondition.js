@@ -16,7 +16,7 @@ const AddCondition = ({ request, performAction }) => {
   const conditions = (institution?.illConfig?.loanConditions ?? [])
     .filter(({ code }) => typeof code === 'string' && code.trim());
   const isLoading = isOpen && !isSettled;
-  const hasCondition = value => conditions.some(({ code }) => code === value);
+  const hasCondition = value => !isLoading && !isError && conditions.some(({ code }) => code === value);
   const stripes = useStripes();
   const invalidateNotifications = useInvalidateNotifications(request?.id);
   const actionPending = !!useIsActionPending(request.id);
@@ -24,12 +24,28 @@ const AddCondition = ({ request, performAction }) => {
   const showCost = stripes.config?.reshare?.showCost
     && Number(request?.illRequest?.billingInfo?.maximumCosts?.monetaryValue) > 0;
 
+  const getCost = cost => {
+    if (!showCost || !cost?.trim()) return undefined;
+    const numericCost = Number(cost);
+    return Number.isFinite(numericCost) && numericCost >= 0 ? numericCost : undefined;
+  };
+  const hasUnavailableSelection = value => !!value && !hasCondition(value);
+  const canSubmit = values => !isLoading && !hasUnavailableSelection(values.loanCondition)
+    && (hasCondition(values.loanCondition) || getCost(values.cost) !== undefined);
+
   const onSubmit = async values => {
     const { loanCondition, note, cost } = values;
-    if (actionPending || isLoading || isError || (!hasCondition(loanCondition) && !(showCost && cost?.trim()))) return undefined;
-    const payload = { loanCondition: hasCondition(loanCondition) ? loanCondition : undefined, note };
-    const numericCost = !showCost || !cost?.trim() ? undefined : Number(cost);
-    if (Number.isFinite(numericCost)) {
+    if (actionPending || !canSubmit(values)) return undefined;
+    const payload = { note };
+    if (hasCondition(loanCondition)) {
+      const selectedCondition = conditions.find(({ code }) => code === loanCondition);
+      const description = selectedCondition.defaultDesc?.trim() ? selectedCondition.defaultDesc : selectedCondition.code;
+      payload.loanCondition = loanCondition;
+      // Preserve the supplier's description in both parties' notification notes.
+      payload.note = note ? `${description}\n\n${note}` : description;
+    }
+    const numericCost = getCost(cost);
+    if (numericCost !== undefined) {
       payload.cost = numericCost;
       payload.currency = stripes.currency;
     }
@@ -48,10 +64,7 @@ const AddCondition = ({ request, performAction }) => {
   };
 
   const validate = values => {
-    const validCondition = hasCondition(values.loanCondition);
-    const hasCost = showCost && !!values.cost?.trim();
-
-    if (validCondition || hasCost) return {};
+    if (canSubmit(values)) return {};
 
     return {
       loanCondition: true,
@@ -91,6 +104,11 @@ const AddCondition = ({ request, performAction }) => {
                     <FormattedMessage id="ui-rs.actions.add-condition.noConditions" />
                   </MessageBanner>
                 }
+                {!isLoading && hasUnavailableSelection(values.loanCondition) &&
+                  <MessageBanner type="warning">
+                    <FormattedMessage id="ui-rs.actions.add-condition.unavailableSelection" />
+                  </MessageBanner>
+                }
                 <Layout className="padding-top-gutter">
                   <Label>
                     <FormattedMessage id="ui-rs.actions.add-condition.condition" />
@@ -102,6 +120,7 @@ const AddCondition = ({ request, performAction }) => {
                     render={({ input }) => conditions.map(({ code, defaultDesc }) => (
                       <Col key={code} xs={12}>
                         <RadioButton
+                          disabled={submitting || isLoading || isError}
                           checked={input.value === code}
                           fullWidth
                           label={defaultDesc?.trim() ? defaultDesc : code}
@@ -113,6 +132,15 @@ const AddCondition = ({ request, performAction }) => {
                     ))}
                   />
                 </Row>
+                {values.loanCondition &&
+                  <Button
+                    type="button"
+                    disabled={submitting}
+                    onClick={() => form.change('loanCondition', undefined)}
+                  >
+                    <FormattedMessage id="ui-rs.actions.add-condition.clearSelection" />
+                  </Button>
+                }
                 {showCost && (
                   <Layout className="padding-top-gutter">
                     <Field
@@ -137,7 +165,7 @@ const AddCondition = ({ request, performAction }) => {
                   <Button
                     buttonStyle="primary"
                     onClick={form.submit}
-                    disabled={submitting || invalid || actionPending || isLoading || isError || (!hasCondition(values.loanCondition) && !(showCost && values.cost?.trim()))}
+                    disabled={submitting || invalid || actionPending || !canSubmit(values)}
                   >
                     <FormattedMessage id="stripes-reshare.actions.add-condition" />
                   </Button>

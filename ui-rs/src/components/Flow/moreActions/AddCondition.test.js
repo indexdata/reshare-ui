@@ -41,13 +41,26 @@ describe('AddCondition Directory conditions', () => {
     open();
     await screen.findByRole('radio', { name: conditions[0].defaultDesc });
     expect(screen.getAllByRole('radio').map(radio => radio.value)).toEqual(['Custom', 'LibraryUseOnly']);
-    fireEvent.click(screen.getByRole('radio', { name: conditions[0].defaultDesc }));
-    fireEvent.change(note(), { target: { value: 'A note' } });
-    fireEvent.click(confirm());
-    await waitFor(() => expect(performAction).toHaveBeenCalledWith(
-      'add-condition', { loanCondition: 'Custom', note: 'A note' }, expect.anything()
-    ));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    for (const { condition, operatorNote } of [
+      { condition: conditions[0], operatorNote: '  A note\nwith whitespace  ' },
+      { condition: conditions[0] },
+      { condition: conditions[1] },
+    ]) {
+      performAction.mockClear();
+      fireEvent.click(screen.getByRole('radio', { name: condition.defaultDesc }));
+      if (operatorNote) fireEvent.change(note(), { target: { value: operatorNote } });
+      fireEvent.click(confirm());
+      await waitFor(() => expect(performAction).toHaveBeenCalledWith(
+        'add-condition',
+        {
+          loanCondition: condition.code,
+          note: operatorNote ? `${condition.defaultDesc}\n\n${operatorNote}` : condition.defaultDesc,
+        },
+        expect.anything()
+      ));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      if (condition !== conditions[1]) open();
+    }
   });
 
   it.each([
@@ -67,12 +80,12 @@ describe('AddCondition Directory conditions', () => {
     fireEvent.click(confirm());
     await waitFor(() => expect(performAction).toHaveBeenCalledWith(
       'add-condition',
-      { loanCondition: undefined, note: 'Note alone', cost: 2.5, currency: 'USD' },
+      { note: 'Note alone', cost: 2.5, currency: 'USD' },
       expect.anything()
     ));
   });
 
-  it('blocks submission while loading and reports lookup failure separately from an empty list', async () => {
+  it('blocks loading but allows cost-only submission after lookup failure', async () => {
     let rejectLookup;
     mockOkapi.setResponses({
       'directory/entries/owned': () => new Promise((resolve, reject) => { rejectLookup = reject; }),
@@ -84,9 +97,18 @@ describe('AddCondition Directory conditions', () => {
     expect(screen.queryByText('ui-rs.actions.add-condition.noConditions')).not.toBeInTheDocument();
     await act(async () => rejectLookup(new Error('Directory unavailable')));
     await screen.findByText('ui-rs.actions.add-condition.conditionsError');
+    expect(confirm()).toBeEnabled();
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '' } });
+    fireEvent.change(note(), { target: { value: 'Cost quote' } });
     expect(confirm()).toBeDisabled();
     await act(async () => fireEvent.submit(note().closest('form')));
     expect(performAction).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '2' } });
+    expect(screen.getByText('ui-rs.actions.add-condition.conditionsError')).toBeInTheDocument();
+    fireEvent.click(confirm());
+    await waitFor(() => expect(performAction).toHaveBeenCalledWith(
+      'add-condition', { note: 'Cost quote', cost: 2, currency: 'USD' }, expect.anything()
+    ));
   });
 
   it('does not submit a condition removed by a Directory refresh', async () => {
@@ -94,13 +116,41 @@ describe('AddCondition Directory conditions', () => {
     open();
     fireEvent.click(await screen.findByRole('radio', { name: conditions[0].defaultDesc }));
     expect(confirm()).toBeEnabled();
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '0' } });
     await act(async () => {
       queryClient.setQueryData(['directory/entries/owned', { limit: '1000' }], {
         items: [{ ...institution, illConfig: { loanConditions: [conditions[1]] } }],
       });
     });
+    expect(screen.getByText('ui-rs.actions.add-condition.unavailableSelection')).toBeInTheDocument();
     expect(confirm()).toBeDisabled();
     await act(async () => fireEvent.submit(note().closest('form')));
     expect(performAction).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rs.actions.add-condition.clearSelection' }));
+    expect(confirm()).toBeEnabled();
+    expect(screen.queryByText('ui-rs.actions.add-condition.unavailableSelection')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: conditions[1].defaultDesc }));
+    expect(confirm()).toBeEnabled();
+    expect(screen.queryByText('ui-rs.actions.add-condition.unavailableSelection')).not.toBeInTheDocument();
+    mockOkapi.setResponses({
+      'directory/entries/owned': () => { throw new Error('Directory unavailable'); },
+    });
+    await act(async () => {
+      await queryClient.invalidateQueries(['directory/entries/owned']);
+    });
+    await screen.findByText('ui-rs.actions.add-condition.conditionsError');
+    expect(screen.getByRole('radio', { name: conditions[1].defaultDesc })).toBeDisabled();
+    expect(screen.getByText('ui-rs.actions.add-condition.unavailableSelection')).toBeInTheDocument();
+    expect(confirm()).toBeDisabled();
+    await act(async () => fireEvent.submit(note().closest('form')));
+    expect(performAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rs.actions.add-condition.clearSelection' }));
+    expect(confirm()).toBeEnabled();
+    expect(screen.queryByText('ui-rs.actions.add-condition.unavailableSelection')).not.toBeInTheDocument();
+    fireEvent.click(confirm());
+    await waitFor(() => expect(performAction).toHaveBeenCalledWith(
+      'add-condition', { note: undefined, cost: 0, currency: 'USD' }, expect.anything()
+    ));
   });
 });
