@@ -33,9 +33,10 @@ const AddCondition = ({ request, performAction }) => {
     const numericCost = Number(cost);
     return Number.isFinite(numericCost) && numericCost >= 0 ? numericCost : undefined;
   };
-  const hasInvalidCost = cost => !!(showCost && cost?.trim()) && getCost(cost) === undefined;
+  const hasInvalidCost = values => showCost && (values.costInputInvalid
+    || (!!values.cost?.trim() && getCost(values.cost) === undefined));
   const hasUnavailableSelection = value => !!value && !hasCondition(value);
-  const canSubmit = values => !isLoading && !hasUnavailableSelection(values.loanCondition) && !hasInvalidCost(values.cost)
+  const canSubmit = values => !isLoading && !hasUnavailableSelection(values.loanCondition) && !hasInvalidCost(values)
     && (hasCondition(values.loanCondition) || getCost(values.cost) !== undefined);
 
   const onSubmit = async values => {
@@ -69,7 +70,7 @@ const AddCondition = ({ request, performAction }) => {
   };
 
   const validate = values => {
-    if (hasInvalidCost(values.cost)) {
+    if (hasInvalidCost(values)) {
       return { cost: <FormattedMessage id="ui-rs.actions.add-condition.invalidCost" /> };
     }
     if (canSubmit(values)) return {};
@@ -153,11 +154,27 @@ const AddCondition = ({ request, performAction }) => {
                   <Layout className="padding-top-gutter">
                     <Field
                       name="cost"
-                      label={<FormattedMessage id="ui-rs.flow.loanConditions.cost" />}
-                      component={TextField}
-                      type="number"
-                      step="0.01"
-                      min="0"
+                      render={({ input, meta }) => {
+                        const handleCostInput = event => {
+                          const { value, validity } = event.currentTarget;
+                          form.batch(() => {
+                            // Browsers expose malformed numbers as empty values.
+                            form.change('costInputInvalid', validity.badInput);
+                            input.onChange(value);
+                          });
+                        };
+                        return (
+                          <TextField
+                            input={{ ...input, onChange: handleCostInput }}
+                            meta={meta}
+                            onInput={handleCostInput}
+                            label={<FormattedMessage id="ui-rs.flow.loanConditions.cost" />}
+                            type="number"
+                            step="0.01"
+                            min="0"
+                          />
+                        );
+                      }}
                     />
                   </Layout>
                 )}

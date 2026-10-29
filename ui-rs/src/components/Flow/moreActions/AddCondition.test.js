@@ -61,6 +61,16 @@ describe('AddCondition Directory conditions', () => {
       if (operatorNote) {
         fireEvent.change(note(), { target: { value: operatorNote } });
         const costField = screen.getByRole('spinbutton');
+        const validity = jest.spyOn(costField, 'validity', 'get').mockReturnValue({ badInput: true });
+        fireEvent.input(costField, { target: { value: '' } });
+        fireEvent.blur(costField);
+        expect(screen.getByText('ui-rs.actions.add-condition.invalidCost')).toBeInTheDocument();
+        expect(confirm()).toBeDisabled();
+        await act(async () => fireEvent.submit(note().closest('form')));
+        expect(performAction).not.toHaveBeenCalled();
+        validity.mockRestore();
+        fireEvent.input(costField, { target: { value: '' } });
+        expect(confirm()).toBeEnabled();
         fireEvent.change(costField, { target: { value: '-1' } });
         fireEvent.blur(costField);
         expect(screen.getByText('ui-rs.actions.add-condition.invalidCost')).toBeInTheDocument();
