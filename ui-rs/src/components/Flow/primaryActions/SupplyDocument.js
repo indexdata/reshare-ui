@@ -3,7 +3,6 @@ import { Form, Field } from 'react-final-form';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useIsActionPending } from '@projectreshare/stripes-reshare';
 import { Button, Layout, TextField } from '@folio/stripes/components';
-import { required } from '@folio/stripes/util';
 import { noteParam } from '../../AddNoteField';
 import DocumentUpload from '../DocumentUpload';
 import OptionalParams from '../OptionalParams';
@@ -25,15 +24,13 @@ const SupplyDocument = ({ performAction, request, withNote = false }) => {
     }
   };
 
-  const validate = values => ({
-    deliveryUrl: required(values.deliveryUrl?.trim()),
-  });
-
+  // The URL field has focus when the page opens. A required-field message
+  // shown when it loses focus would move the More options list under a click
+  // in progress, so an empty URL only disables the button.
   return (
     <Form
       onSubmit={onSubmit}
-      validate={validate}
-      render={({ handleSubmit, submitting, invalid }) => (
+      render={({ handleSubmit, submitting, values }) => (
         <form onSubmit={handleSubmit} autoComplete="off">
           <FormattedMessage id="ui-rs.actions.supply-document.prompt" />
           <Layout className="display-flex flex-align-items-start">
@@ -46,7 +43,7 @@ const SupplyDocument = ({ performAction, request, withNote = false }) => {
               autoFocus
             />
             <Layout className="margin-start-gutter">
-              <Button buttonStyle="primary mega" type="submit" disabled={submitting || invalid || actionPending || uploading}>
+              <Button buttonStyle="primary mega" type="submit" disabled={submitting || !values.deliveryUrl?.trim() || actionPending || uploading}>
                 <FormattedMessage id="stripes-reshare.actions.supply-document" />
               </Button>
             </Layout>
