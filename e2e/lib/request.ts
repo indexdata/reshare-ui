@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { checkA11y } from './axe';
-import { item, patron, peer } from './env';
+import { item, patron, peer, pickupLocation } from './env';
 
 // Wait for live updates; reloading would hide a broken event stream.
 export async function expectState(page: Page, state: string | RegExp) {
@@ -49,9 +49,30 @@ export function usDate(daysFromNow: number): string {
   return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
-// The borrower asks the peer for a copy of a chapter, landing on its flow page.
+// Submit the create form and land on the new request's flow page.
+async function submitCreate(page: Page): Promise<string> {
+  await page.getByRole('button', { name: 'Create patron request' }).click();
+  await page.waitForURL(/\/requests\/(?!create)[^/]+\/flow/);
+  return page.url().match(/\/requests\/([^/]+)\/flow/)![1];
+}
+
+// The borrower asks the peer for a loan to the pickup branch. Returns the
+// request id, which is what the scan boxes take.
+export async function createLoanRequest(page: Page, title: string): Promise<string> {
+  await page.goto('/request/requests/create');
+  await page.locator('[name="patronInfo.patronId"]').fill(patron.id);
+  await page.locator('[name="systemInstanceIdentifier"]').fill(`return-${peer.symbol}::${item.id}`);
+  await page.locator('[name="bibliographicInfo.title"]').fill(title);
+  await page.locator('[name="bibliographicInfo.author"]').fill(item.author);
+  await page.locator('[name="requesterPickupLocationId"]').selectOption({ label: pickupLocation.name });
+  await chooseFirstTier(page);
+  await checkA11y(page, 'create form, loan filled in');
+  return submitCreate(page);
+}
+
+// The borrower asks the peer for a copy of a chapter. Returns the request id.
 // A copy waits at the lender in Will supply until a person acts.
-export async function createCopyRequest(page: Page, title: string, chapter: string) {
+export async function createCopyRequest(page: Page, title: string, chapter: string): Promise<string> {
   await page.goto('/request/requests/create');
   await page.locator('[name="patronInfo.patronId"]').fill(patron.id);
   // stripes lays the label over its radio input, so the label takes the click
@@ -65,6 +86,5 @@ export async function createCopyRequest(page: Page, title: string, chapter: stri
   await page.locator('[name="bibliographicInfo.titleOfComponent"]').fill(chapter);
   await page.locator('[name="bibliographicInfo.pagesRequested"]').fill('1-10');
   await checkA11y(page, 'create form, copy filled in');
-  await page.getByRole('button', { name: 'Create patron request' }).click();
-  await page.waitForURL(/\/requests\/(?!create)[^/]+\/flow/);
+  return submitCreate(page);
 }

@@ -1,7 +1,6 @@
 import { test, expect, step } from '../../lib/tenants';
-import { peer, item, patron, pickupLocation } from '../../lib/env';
-import { chooseFirstTier, clickAction, expectState, openFromList, scan, showTab, usDate } from '../../lib/request';
-import { checkA11y } from '../../lib/axe';
+import { item, pickupLocation } from '../../lib/env';
+import { clickAction, createLoanRequest, expectState, openFromList, scan, showTab, usDate } from '../../lib/request';
 
 // Set due dates in the UI to reach overdue without waiting for a scheduler.
 test('loan with a renewal', async ({ ownPage: borrower, peerPage: lender }) => {
@@ -10,17 +9,7 @@ test('loan with a renewal', async ({ ownPage: borrower, peerPage: lender }) => {
   let requestId = '';
 
   await step('borrower creates the request', async () => {
-    await borrower.goto('/request/requests/create');
-    await borrower.locator('[name="patronInfo.patronId"]').fill(patron.id);
-    await borrower.locator('[name="systemInstanceIdentifier"]').fill(`return-${peer.symbol}::${item.id}`);
-    await borrower.locator('[name="bibliographicInfo.title"]').fill(title);
-    await borrower.locator('[name="bibliographicInfo.author"]').fill(item.author);
-    await borrower.locator('[name="requesterPickupLocationId"]').selectOption({ label: pickupLocation.name });
-    await chooseFirstTier(borrower);
-    await checkA11y(borrower, 'create form, loan filled in');
-    await borrower.getByRole('button', { name: 'Create patron request' }).click();
-    await borrower.waitForURL(/\/requests\/(?!create)[^/]+\/flow/);
-    requestId = borrower.url().match(/\/requests\/([^/]+)\/flow/)![1];
+    requestId = await createLoanRequest(borrower, title);
     // the branch went to the broker by id and comes back resolved by name
     await showTab(borrower, 'Details');
     await expect(borrower.getByText(pickupLocation.name, { exact: true })).toBeVisible();
@@ -49,6 +38,12 @@ test('loan with a renewal', async ({ ownPage: borrower, peerPage: lender }) => {
     await expectState(borrower, 'Received');
   });
 
+  // check-out and check-in leave the state as it is; the callout reports the LMS call succeeded
+  await step('borrower checks the item out to the patron', async () => {
+    await clickAction(borrower, 'Check out to patron');
+    await expect(borrower.getByText('Success: Check out to patron')).toBeVisible();
+  });
+
   await step('lender marks the loan overdue', async () => {
     await expectState(lender, 'Received');
     await clickAction(lender, /overdue/i);
@@ -67,6 +62,11 @@ test('loan with a renewal', async ({ ownPage: borrower, peerPage: lender }) => {
     await clickAction(lender, 'Accept renewal');
     await expectState(lender, 'Renewed');
     await expectState(borrower, 'Renewed');
+  });
+
+  await step('borrower checks in the item', async () => {
+    await clickAction(borrower, 'Check in item');
+    await expect(borrower.getByText('Success: Check in item')).toBeVisible();
   });
 
   await step('borrower returns the item and lender receives it', async () => {

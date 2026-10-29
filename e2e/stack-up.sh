@@ -71,12 +71,14 @@ if ! result=$(jq -c '.[]' seed/directory.json | curl --connect-timeout 2 --max-t
   echo "directory import failed: $result" >&2
   exit 1
 fi
-# Import leaves copyright types unset, and a copy request needs them.
+# Import leaves copyright types, loan conditions and unfilled reasons unset; a
+# copy request needs the first, and the Add conditions and Cannot Supply
+# dialogs offer only what the institution's entry holds.
 for symbol in US-TEST1 US-TEST2; do
   curl --connect-timeout 2 --max-time 10 -sS --fail-with-body -o /dev/null -X PATCH \
     -H 'Content-Type: application/json' \
     -H 'X-Okapi-Permissions: ["directory.consortium.all"]' \
-    --data '{"illConfig":{"availableCopyrightTypes":[{"code":"US-CCG","defaultDesc":"CCG (US)"},{"code":"US-CCL","defaultDesc":"CCL (US code)"}]}}' \
+    --data '{"illConfig":{"availableCopyrightTypes":[{"code":"US-CCG","defaultDesc":"CCG (US)"},{"code":"US-CCL","defaultDesc":"CCL (US code)"}],"loanConditions":[{"code":"LibraryUseOnly","defaultDesc":"Use in library only"}],"unfilledReasons":[{"code":"NotHeld","defaultDesc":"Not held"}]}}' \
     "$directory/entries/by-symbol/ISIL:$symbol"
 done
 
