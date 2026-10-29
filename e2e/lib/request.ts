@@ -56,7 +56,8 @@ export async function createCopyRequest(page: Page, title: string, chapter: stri
   await page.locator('[name="patronInfo.patronId"]').fill(patron.id);
   // stripes lays the label over its radio input, so the label takes the click
   await page.locator('label', { hasText: /^Copy$/ }).click();
-  await page.locator('[name="serviceInfo.copyrightCompliance[\'#text\']"]').selectOption('US-CCG');
+  // whichever the directory offers; index 0 is blank
+  await page.locator('[name="serviceInfo.copyrightCompliance[\'#text\']"]').selectOption({ index: 1 });
   await chooseFirstTier(page);
   await page.locator('[name="systemInstanceIdentifier"]').fill(`return-${peer.symbol}::${item.id}`);
   await page.locator('[name="bibliographicInfo.title"]').fill(title);

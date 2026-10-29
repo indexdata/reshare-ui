@@ -170,7 +170,8 @@ contains:
 - `test1` and `test2`: institutions inside the same broker, each with pickup
   branches, a UI bundle and a mock-Okapi endpoint. They move only when driven.
   Each branch carries its tenant, as the institution does, and has a Shipping
-  address.
+  address. The directory import leaves copyright types unset, so `stack:up`
+  then gives both institutions `US-CCG` and `US-CCL` through a PATCH.
 - `mock` (`ISIL:US-MOCK`): an external supplier served by illmock. Requests to it
   exercise ISO 18626 HTTP traffic.
 
