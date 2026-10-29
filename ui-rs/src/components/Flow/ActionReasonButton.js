@@ -3,14 +3,14 @@ import { Form, Field } from 'react-final-form';
 import { FormattedMessage } from 'react-intl';
 import { useIsActionPending } from '@projectreshare/stripes-reshare';
 import { Button, Icon, Layout, Loading, MessageBanner, Modal, ModalFooter, TextArea } from '@folio/stripes/components';
-import useConsortiumReasons from '#/util/useConsortiumReasons';
+import useTenantReasons from '#/util/useTenantReasons';
 
 import actionMeta from './actionMeta';
 import DirectoryReasonField from './DirectoryReasonField';
 
 const ActionReasonButton = ({ action, reasonConfigField, reasonField, request, performAction }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { reasons, isLoading, isError } = useConsortiumReasons({ field: reasonConfigField, enabled: isOpen });
+  const { reasons, isLoading, isError } = useTenantReasons({ field: reasonConfigField, enabled: isOpen });
   const actionPending = !!useIsActionPending(request.id);
   const icon = actionMeta[action]?.icon;
 

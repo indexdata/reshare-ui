@@ -18,6 +18,8 @@ jest.mock('@projectreshare/stripes-reshare', () => ({
 }));
 
 const request = { id: 'pr-1', requesterRequestId: 'REQ-1' };
+const ownedPath = 'directory/entries/owned';
+const ownedKey = [ownedPath, { limit: '1000' }];
 const consortiumPath = 'directory/entries/by-id/consortium-1';
 const reasons = [
   { code: 'UserRequest', defaultDesc: 'User requested cancellation' },
@@ -27,9 +29,9 @@ const institution = {
   id: 'inst-1',
   type: 'Institution',
   parent: 'consortium-1',
-  illConfig: { cancellationReasons: [{ code: 'Wrong', defaultDesc: 'Institution reason' }] },
+  illConfig: { cancellationReasons: reasons },
 };
-const consortium = { id: 'consortium-1', type: 'Consortium', illConfig: { cancellationReasons: reasons } };
+const consortium = { id: 'consortium-1', type: 'Consortium', illConfig: { cancellationReasons: [{ code: 'Wrong', defaultDesc: 'Consortium reason' }] } };
 const messages = {
   'stripes-reshare.actions.cancel-request': 'Cancel request',
   'ui-rs.actions.cancel-request.confirmButton': 'Confirm',
@@ -61,7 +63,7 @@ describe('CancelRequest', () => {
     });
   });
 
-  it('loads consortium reasons only when opened and does not send until confirmed', async () => {
+  it('loads tenant reasons only when opened and does not send until confirmed', async () => {
     renderCancellation();
     expect(mockOkapi).not.toHaveBeenCalled();
     expect(screen.queryByText('ui-rs.actions.addNote')).not.toBeInTheDocument();
@@ -73,8 +75,9 @@ describe('CancelRequest', () => {
       ['UserRequest', 'User requested cancellation'],
       ['DuplicateRequest', 'Duplicate request'],
     ]);
-    expect(screen.queryByText('Institution reason')).not.toBeInTheDocument();
+    expect(screen.queryByText('Consortium reason')).not.toBeInTheDocument();
     expect(noteField()).toBeInTheDocument();
+    expect(mockOkapi.calledUrls()).toEqual([`${ownedPath}?limit=1000`]);
   });
 
   it.each([
@@ -95,6 +98,15 @@ describe('CancelRequest', () => {
     open();
     expect(screen.getByRole('combobox')).toHaveValue('');
     expect(noteField()).toHaveValue('');
+  });
+
+  it('uses tenant reasons without a consortium parent', async () => {
+    mockOkapi.setResponses({ [ownedPath]: { items: [{ ...institution, parent: null }] } });
+    renderCancellation();
+    open();
+    await ready();
+    expect(screen.getByRole('combobox')).toBeInTheDocument();
+    expect(mockOkapi.calledUrls()).toEqual([`${ownedPath}?limit=1000`]);
   });
 
   it('does not include a reason that was cleared', async () => {
@@ -123,11 +135,11 @@ describe('CancelRequest', () => {
   });
 
   it.each([
-    { ...consortium, illConfig: { cancellationReasons: [] } },
-    { ...consortium, illConfig: {} },
-    { ...consortium, illConfig: null },
+    { ...institution, illConfig: { cancellationReasons: [] } },
+    { ...institution, illConfig: {} },
+    { ...institution, illConfig: null },
   ])('hides the dropdown when no reasons are configured (%j)', async entry => {
-    mockOkapi.setResponses({ 'directory/entries/owned': { items: [institution] }, [consortiumPath]: entry });
+    mockOkapi.setResponses({ [ownedPath]: { items: [{ ...institution, ...entry }] }, [consortiumPath]: consortium });
     renderCancellation();
     open();
     await ready();
@@ -137,7 +149,8 @@ describe('CancelRequest', () => {
     await waitFor(() => expect(mockPerformAction).toHaveBeenCalledWith('cancel-request', {}));
   });
 
-  it.each([{ items: [] }, { items: [{ ...institution, parent: null }] }])('allows cancellation when institution or parent is missing (%j)', async ({ items }) => {
+  it('allows cancellation when the institution is missing', async () => {
+    const items = [];
     mockOkapi.setResponses({ 'directory/entries/owned': { items } });
     renderCancellation();
     open();
@@ -146,7 +159,8 @@ describe('CancelRequest', () => {
     expect(mockOkapi.calledUrls()).toHaveLength(1);
   });
 
-  it.each(['directory/entries/owned', consortiumPath])('allows cancellation after lookup failure at %s', async path => {
+  it('allows cancellation after the tenant lookup fails', async () => {
+    const path = ownedPath;
     mockOkapi.setResponses({
       'directory/entries/owned': { items: [institution] },
       [consortiumPath]: consortium,
@@ -161,28 +175,22 @@ describe('CancelRequest', () => {
     await waitFor(() => expect(mockPerformAction).toHaveBeenCalledWith('cancel-request', { note: 'Without reason' }));
   });
 
-  it('disables confirmation until both directory lookups finish', async () => {
+  it('disables confirmation until the tenant directory lookup finishes', async () => {
     let resolveOwned;
-    let resolveConsortium;
     mockOkapi.setResponses({
       'directory/entries/owned': () => new Promise(resolve => { resolveOwned = resolve; }),
-      [consortiumPath]: () => new Promise(resolve => { resolveConsortium = resolve; }),
     });
     renderCancellation();
     open();
     expect(confirm()).toBeDisabled();
     await act(async () => resolveOwned({ items: [institution] }));
-    await waitFor(() => expect(resolveConsortium).toBeDefined());
-    expect(confirm()).toBeDisabled();
-    await act(async () => resolveConsortium(consortium));
     await ready();
   });
 
   it('reuses fresh cached directory data without retrieving it again', async () => {
     const { queryClient } = renderCancellation();
     await act(async () => {
-      queryClient.setQueryData(['directory/entries/owned', { limit: '1000' }], { items: [institution] });
-      queryClient.setQueryData([consortiumPath], consortium);
+      queryClient.setQueryData(ownedKey, { items: [institution] });
       // React Query schedules notifications to the mounted, disabled observers.
       await new Promise(resolve => setTimeout(resolve, 0));
     });
@@ -193,21 +201,20 @@ describe('CancelRequest', () => {
   });
 
   it('displays stale cached reasons while refreshing them in the background', async () => {
-    let resolveConsortium;
+    let resolveOwned;
     mockOkapi.setResponses({
-      [consortiumPath]: () => new Promise(resolve => { resolveConsortium = resolve; }),
+      [ownedPath]: () => new Promise(resolve => { resolveOwned = resolve; }),
     });
     const { queryClient } = renderCancellation();
     await act(async () => {
-      queryClient.setQueryData(['directory/entries/owned', { limit: '1000' }], { items: [institution] });
-      queryClient.setQueryData([consortiumPath], consortium, { updatedAt: Date.now() - 3 * 60 * 1000 });
+      queryClient.setQueryData(ownedKey, { items: [institution] }, { updatedAt: Date.now() - 6 * 60 * 1000 });
       await new Promise(resolve => setTimeout(resolve, 0));
     });
     open();
     expect(confirm()).toBeEnabled();
     expect(screen.getByRole('option', { name: 'Duplicate request' })).toBeInTheDocument();
-    expect(mockOkapi.calledUrls()).toEqual([consortiumPath]);
-    await act(async () => resolveConsortium({ ...consortium, illConfig: { cancellationReasons: reasons.slice(0, 1) } }));
+    expect(mockOkapi.calledUrls()).toEqual([`${ownedPath}?limit=1000`]);
+    await act(async () => resolveOwned({ items: [{ ...institution, illConfig: { cancellationReasons: reasons.slice(0, 1) } }] }));
     await waitFor(() => expect(screen.queryByRole('option', { name: 'Duplicate request' })).not.toBeInTheDocument());
   });
 
@@ -235,7 +242,7 @@ describe('CancelRequest', () => {
     setReason('DuplicateRequest');
     setNote('Keep this note');
     await act(async () => {
-      queryClient.setQueryData([consortiumPath], { ...consortium, illConfig: { cancellationReasons: remaining } });
+      queryClient.setQueryData(ownedKey, { items: [{ ...institution, illConfig: { cancellationReasons: remaining } }] });
       await new Promise(resolve => setTimeout(resolve, 0));
     });
     if (remaining.length) expect(screen.getByRole('combobox')).toHaveValue('');
@@ -243,7 +250,7 @@ describe('CancelRequest', () => {
 
     // Restoring the old list must not restore a selection the user can no longer see.
     await act(async () => {
-      queryClient.setQueryData([consortiumPath], consortium);
+      queryClient.setQueryData(ownedKey, { items: [institution] });
       await new Promise(resolve => setTimeout(resolve, 0));
     });
     expect(screen.getByRole('combobox')).toHaveValue('');
@@ -258,7 +265,7 @@ describe('CancelRequest', () => {
     await ready();
     setReason('UserRequest');
     await act(async () => {
-      queryClient.setQueryData([consortiumPath], { ...consortium, illConfig: { cancellationReasons: [reasons[0]] } });
+      queryClient.setQueryData(ownedKey, { items: [{ ...institution, illConfig: { cancellationReasons: [reasons[0]] } }] });
       await new Promise(resolve => setTimeout(resolve, 0));
     });
     expect(screen.getByRole('combobox')).toHaveValue('UserRequest');
@@ -324,5 +331,6 @@ describe('CancelRequest', () => {
     fireEvent.click(openers[0]);
     await ready();
     expect(mockPerformAction).not.toHaveBeenCalled();
+    expect(mockOkapi.calledUrls()).toEqual([`${ownedPath}?limit=1000`]);
   });
 });

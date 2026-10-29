@@ -1,5 +1,5 @@
-import useConsortiumReasons from './useConsortiumReasons';
+import useTenantReasons from './useTenantReasons';
 
-const useCancellationReasons = ({ enabled }) => useConsortiumReasons({ field: 'cancellationReasons', enabled });
+const useCancellationReasons = ({ enabled }) => useTenantReasons({ field: 'cancellationReasons', enabled });
 
 export default useCancellationReasons;
