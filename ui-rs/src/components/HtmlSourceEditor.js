@@ -223,10 +223,19 @@ const HtmlSourceEditor = ({
     const current = editor.state.doc.toString();
     const next = input.value ?? '';
     if (current === next) return;
-    const change = changeBetween(current, next);
+    const { main } = editor.state.selection;
+    // A change that keeps the text either side of the selection is taken as replacing
+    // it. The minimal diff would misplace an insert that repeats the text after the
+    // cursor, as a placeholder inserted before another one does.
+    const before = current.slice(0, main.from);
+    const after = current.slice(main.to);
+    const replacesSelection = next.length >= before.length + after.length
+      && next.startsWith(before) && next.endsWith(after);
+    const change = replacesSelection
+      ? { from: main.from, to: main.to, insert: next.slice(before.length, next.length - after.length) }
+      : changeBetween(current, next);
     const changes = editor.state.changes(change);
     // Collapse a replaced selection after the insert; map other selections normally.
-    const { main } = editor.state.selection;
     const touched = main.from <= change.to && main.to >= change.from;
     editor.dispatch({
       changes,

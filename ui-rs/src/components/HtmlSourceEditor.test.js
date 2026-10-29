@@ -72,6 +72,15 @@ describe('HtmlSourceEditor', () => {
     expect(onSelectionChange).toHaveBeenLastCalledWith({ start: 13, end: 13 });
   });
 
+  it('leaves the cursor after an insert that repeats the text following it', () => {
+    const { view, rerender } = renderEditor('<p>{{.Title}}</p>');
+    act(() => view.dispatch({ selection: { anchor: 3 } }));
+
+    rerender('<p>{{.Author}}{{.Title}}</p>');
+
+    expect(view.state.selection.main.head).toBe('<p>{{.Author}}'.length);
+  });
+
   it('keeps carriage returns, so offsets match the stored body', () => {
     const { view } = renderEditor('<p>\r\nHi</p>');
 
