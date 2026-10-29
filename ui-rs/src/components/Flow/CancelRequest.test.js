@@ -325,10 +325,14 @@ describe('CancelRequest', () => {
       <ActionAccordion request={request} actions={[{ name: 'cancel-request', primary, parameters: ['note'] }]} />,
       { messages }
     );
-    const openers = screen.getAllByRole('button', { name: 'Cancel request' });
-    expect(openers).toHaveLength(primary ? 2 : 1);
+    const opener = screen.getByRole('button', { name: 'Cancel request' });
+    if (primary) {
+      expect(screen.queryByText('ui-rs.flow.actions.moreOptions')).not.toBeInTheDocument();
+    } else {
+      expect(screen.getByText('ui-rs.flow.actions.moreOptions')).toBeInTheDocument();
+    }
     expect(screen.queryByText('ui-rs.actions.addNote')).not.toBeInTheDocument();
-    fireEvent.click(openers[0]);
+    fireEvent.click(opener);
     await ready();
     expect(mockPerformAction).not.toHaveBeenCalled();
     expect(mockOkapi.calledUrls()).toEqual([`${ownedPath}?limit=1000`]);
