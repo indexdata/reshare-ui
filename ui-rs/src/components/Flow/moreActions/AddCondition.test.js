@@ -76,7 +76,7 @@ describe('AddCondition Directory conditions', () => {
         'add-condition',
         {
           loanCondition: condition.code,
-          note: operatorNote ? `${condition.defaultDesc}\n\n${operatorNote}` : condition.defaultDesc,
+          note: operatorNote ? `${condition.defaultDesc} -- ${operatorNote}` : condition.defaultDesc,
         },
         expect.anything()
       ));

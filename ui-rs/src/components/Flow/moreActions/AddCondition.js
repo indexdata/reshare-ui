@@ -47,7 +47,7 @@ const AddCondition = ({ request, performAction }) => {
       const description = selectedCondition.defaultDesc?.trim() ? selectedCondition.defaultDesc : selectedCondition.code;
       payload.loanCondition = loanCondition;
       // Preserve the supplier's description in both parties' notification notes.
-      payload.note = note ? `${description}\n\n${note}` : description;
+      payload.note = note ? `${description} -- ${note}` : description;
     }
     const numericCost = getCost(cost);
     if (numericCost !== undefined) {
