@@ -73,6 +73,18 @@ if ! result=$(jq -c '.[]' seed/directory.json | curl --connect-timeout 2 --max-t
 fi
 
 ./stack-health.sh --retry
+
+# Import needs a healthy broker and directory entries to resolve owners.
+echo "Importing seed/requests.ts into the broker..."
+if ! result=$(node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --input-type=module \
+      -e "import { ndjson } from './seed/requests.ts'; process.stdout.write(ndjson())" \
+    | curl --connect-timeout 2 --max-time 30 -sS --fail-with-body -X POST \
+      -H 'Content-Type: application/x-ndjson' \
+      --data-binary @- "http://localhost:8080/import?conflictPolicy=update") \
+  || ! jq -e '.patronRequests.failed == 0 and .errors == []' <<<"$result" >/dev/null; then
+  echo "request import failed: $result" >&2
+  exit 1
+fi
 echo
 echo "Stack is up: test1 UI http://localhost:3000 (okapi :9130)  test2 UI http://localhost:3002 (okapi :9131)"
 echo "Stop with: yarn stack:down (discards all DB state — the stack is throwaway)"
