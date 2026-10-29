@@ -9,7 +9,7 @@ const actionMeta = {
   'cannot-supply': { icon: 'times-circle-solid' },
   'reject-cancel': { icon: 'times-circle-solid' },
   'reject-condition': { icon: 'times-circle-solid' },
-  'cancel-request': { icon: 'times-circle-solid' },
+  'cancel-request': { icon: 'times-circle-solid', primaryOnly: true },
   'accept-cancel': { icon: 'check-circle' },
   'accept-condition': { icon: 'check-circle' },
   'will-supply': { icon: 'check-circle' },
