@@ -201,7 +201,7 @@ const SourceToggle = ({ checked, onChange }) => (
   />
 );
 
-const BodyField = ({ isHtml, storedBody, editorRef, editorSelectionRef }) => {
+const BodyField = ({ isHtml, storedBody, editorRef, editorSelectionRef, onFocus }) => {
   const form = useForm();
   const [sourceMode, setSourceMode] = useState(false);
   const [confirmWysiwyg, setConfirmWysiwyg] = useState(false);
@@ -221,6 +221,7 @@ const BodyField = ({ isHtml, storedBody, editorRef, editorSelectionRef }) => {
           component={TextArea}
           rows={10}
           label={label}
+          onFocus={onFocus}
         />
         <ConfirmationModal
           open={confirmWysiwyg}
@@ -246,6 +247,7 @@ const BodyField = ({ isHtml, storedBody, editorRef, editorSelectionRef }) => {
             meta={meta}
             required
             label={label}
+            onFocus={onFocus}
             onChangeSelection={(range) => {
               if (range && editorRef.current) {
                 editorSelectionRef.current = {
@@ -289,6 +291,7 @@ const BodyField = ({ isHtml, storedBody, editorRef, editorSelectionRef }) => {
 const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, submitting, editing }) => {
   const intl = useIntl();
   const [placeholderTarget, setPlaceholderTarget] = useState(null);
+  const placeholderFieldRef = useRef('body');
   const bodyEditorRef = useRef(null);
   const bodyEditorSelectionRef = useRef(null);
   // Presets seed the form; stored templates contribute any locally used labels.
@@ -436,7 +439,14 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
             dismissible
             footer={footer}
           >
-            <form id="template-form" onSubmit={handleSubmit}>
+            <form
+              id="template-form"
+              onSubmit={handleSubmit}
+              onFocusCapture={(event) => {
+                const field = event.target.closest?.('#template-subject, #template-body');
+                if (field) placeholderFieldRef.current = field.id === 'template-subject' ? 'subject' : 'body';
+              }}
+            >
               {!editing && <PresetPicker presets={presets ?? []} bodyIsMarkup={bodyIsMarkup} />}
               <Row>
                 <Col xs={12} md={6}>
@@ -491,12 +501,10 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
                     component={TextField}
                     label={<FormattedMessage id="ui-rs.settings.templates.field.subject" />}
                   />
-                  {!isPullslip && (
-                    <PlaceholderButton
-                      id="template-subject-placeholder"
-                      onClick={() => openPlaceholderPicker('subject')}
-                    />
-                  )}
+                  <PlaceholderButton
+                    id="template-placeholder"
+                    onClick={() => openPlaceholderPicker(isPullslip ? 'body' : placeholderFieldRef.current)}
+                  />
                   {isPullslip && (
                     <div id="template-subject-help" className={css.help}>
                       <FormattedMessage id="ui-rs.settings.templates.field.subjectHelp" />
@@ -545,10 +553,7 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
                     storedBody={initialValues?.body}
                     editorRef={bodyEditorRef}
                     editorSelectionRef={bodyEditorSelectionRef}
-                  />
-                  <PlaceholderButton
-                    id="template-body-placeholder"
-                    onClick={() => openPlaceholderPicker('body')}
+                    onFocus={() => { placeholderFieldRef.current = 'body'; }}
                   />
                 </Col>
               </Row>
