@@ -45,8 +45,13 @@ const tiers = [
 const tieredEntries = { items: [{ ...institution, tiers }, westBranch, eastBranch] };
 const tierMessages = { 'ui-rs.information.tierOption': '{name} ({cost})' };
 
-const renderCreate = ({ owned = ownedEntries, ...options } = {}) => {
-  mockOkapi.setResponses({ 'directory/entries/owned': owned });
+// Stands in for the directory's OpenAPI spec, the source of default copyright types.
+const directorySpec = { components: { schemas: { IllConfig: { properties: { availableCopyrightTypes: {
+  'x-default-data': { 'UK-FairDealing': 'Fair Dealing (UK)', 'US-CCL': 'CCL (US code)' },
+} } } } } };
+
+const renderCreate = ({ owned = ownedEntries, spec = directorySpec, ...options } = {}) => {
+  mockOkapi.setResponses({ 'directory/entries/owned': owned, 'directory/openapi.json': spec });
   return renderWithRs(
     <CalloutContext.Provider value={{ sendCallout }}>
       <Route path="/requests/create" component={CreateRoute} />
@@ -87,7 +92,7 @@ const fillRequiredFields = () => {
 };
 
 describe('CreateRoute', () => {
-  quietQueryLog(/^(Boom|Forbidden)$/); // failure tests reject the POST or the owned lookup on purpose
+  quietQueryLog(/^(Boom|Forbidden)$/); // failure tests reject the POST, owned lookup or spec on purpose
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -340,27 +345,38 @@ describe('CreateRoute', () => {
       }
     );
 
-    it.each([undefined, {}, { availableCopyrightTypes: null }, { availableCopyrightTypes: [] }])(
-      'blocks Copy submission without configured types (%p)', async illConfig => {
-        renderCreate({ owned: ownedWith(illConfig), messages: { 'ui-rs.requestform.copyright.empty': 'Translated empty configuration' } });
-        await formRendered();
-        chooseServiceType('Copy');
-        expect(copyrightField()).toBeDisabled();
-        expect(optionLabels(fieldName)).toEqual([]);
-        expect(screen.getByText('Translated empty configuration')).toBeInTheDocument();
-        fillRequiredFields();
-        fireEvent.click(document.querySelector('button[type="submit"]'));
-        await waitFor(() => expect(copyrightField()).toHaveAttribute('aria-invalid', 'true'));
-        expect(mockOkapi.post).not.toHaveBeenCalled();
-      }
-    );
+    it.each([
+      ['no illConfig', ownedWith(undefined)],
+      ['an empty list', ownedWith({ availableCopyrightTypes: [] })],
+      ['only a branch with types', { items: [{ ...westBranch, illConfig: { availableCopyrightTypes: copyrightTypes } }] }],
+    ])('offers the directory default types when the institution has none configured (%s)', async (_description, owned) => {
+      renderCreate({ owned });
+      await formRendered();
+      fillRequiredFields();
+      chooseServiceType('Copy');
+      expect(copyrightField()).toBeEnabled();
+      expect(optionLabels(fieldName)).toEqual(['Fair Dealing (UK)', 'CCL (US code)']);
+      setField(fieldName, 'US-CCL');
+      fireEvent.click(document.querySelector('button[type="submit"]'));
+      await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
+      expect(mockOkapi.post.mock.calls[0][1].json.illRequest.serviceInfo.copyrightCompliance).toEqual({ '#text': 'US-CCL' });
+    });
 
-    it('does not use branch types when no institution is returned', async () => {
-      renderCreate({ owned: { items: [{ ...westBranch, illConfig: { availableCopyrightTypes: copyrightTypes } }] } });
+    it('reports a load error and blocks Copy submission when the directory defaults cannot be loaded', async () => {
+      renderCreate({
+        owned: ownedWith({ availableCopyrightTypes: [] }),
+        spec: () => { throw new Error('Forbidden'); },
+        messages: { 'ui-rs.requestform.copyright.loadError': 'Translated directory failure' },
+      });
       await formRendered();
       chooseServiceType('Copy');
       expect(copyrightField()).toBeDisabled();
       expect(optionLabels(fieldName)).toEqual([]);
+      expect(screen.getByText('Translated directory failure')).toBeInTheDocument();
+      fillRequiredFields();
+      fireEvent.click(document.querySelector('button[type="submit"]'));
+      await waitFor(() => expect(copyrightField()).toHaveAttribute('aria-invalid', 'true'));
+      expect(mockOkapi.post).not.toHaveBeenCalled();
     });
 
     it('distinguishes a failed directory lookup from empty configuration', async () => {
@@ -404,6 +420,16 @@ describe('CreateRoute', () => {
       chooseServiceType('Loan');
       chooseServiceType('Copy');
       expect(copyrightField()).toHaveValue('');
+    });
+
+    it('keeps the draft and switches to the defaults when a refresh empties the configured types', async () => {
+      const { queryClient } = renderCreate();
+      await formRendered();
+      fillRequiredFields();
+      chooseServiceType('Copy');
+      act(() => queryClient.setQueriesData('directory/entries/owned', ownedWith({ availableCopyrightTypes: [] })));
+      await waitFor(() => expect(optionLabels(fieldName)).toEqual(['Fair Dealing (UK)', 'CCL (US code)']));
+      expect(fieldByName('bibliographicInfo.title')).toHaveValue('Test Title');
     });
 
     it('revalidates a selected code removed by a directory refresh without overwriting it', async () => {
