@@ -346,7 +346,7 @@
   "actions.cannot-supply.confirm": "Are you sure you want to <strong>respond \"Cannot Supply\"</strong> to request {id} for the item <strong>\"{item}\"</strong>?",
   "actions.cannot-supply.reason": "Reason item cannot be supplied:",
   "actions.cannot-supply.selectReason": "Select a reason",
-  "actions.cannot-supply.noReasons": "No unfilled reasons are configured for your Consortium. A reason must be configured before you can respond \"Cannot Supply\".",
+  "actions.cannot-supply.noReasons": "No unfilled reasons are configured for your institution. A reason must be configured before you can respond \"Cannot Supply\".",
   "actions.cannot-supply.reasonsError": "Unfilled reasons could not be loaded. Close this dialog and try again before responding \"Cannot Supply\".",
   "actions.cannot-supply.success": "Responded \"Cannot supply\".",
   "actions.cannot-supply.error": "Error, could not respond \"Cannot supply\". {errMsg}",

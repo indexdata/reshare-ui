@@ -22,22 +22,27 @@ const request = {
   requesterRequestId: 'REQ-1',
   illRequest: { bibliographicInfo: { title: 'Test title' } },
 };
+const ownedPath = 'directory/entries/owned';
+const ownedKey = [ownedPath, { limit: '1000' }];
 const consortiumPath = 'directory/entries/by-id/consortium-1';
 const reasons = [
-  { code: 'CustomCode', defaultDesc: 'Consortium custom reason' },
-  { code: 'NotHeld', defaultDesc: 'Consortium description for not held' },
+  { code: 'CustomCode', defaultDesc: 'Institution custom reason' },
+  { code: 'NotHeld', defaultDesc: 'Institution description for not held' },
 ];
 const institution = {
   id: 'inst-1',
   type: 'Institution',
   parent: 'consortium-1',
-  illConfig: { unfilledReasons: [{ code: 'Wrong', defaultDesc: 'Institution reason' }] },
+  illConfig: {
+    unfilledReasons: reasons,
+    cancellationReasons: [{ code: 'Wrong', defaultDesc: 'Cancellation reason' }],
+  },
 };
 const consortium = {
   id: 'consortium-1',
   type: 'Consortium',
   illConfig: {
-    unfilledReasons: reasons,
+    unfilledReasons: [{ code: 'Wrong', defaultDesc: 'Consortium reason' }],
     cancellationReasons: [{ code: 'Wrong', defaultDesc: 'Cancellation reason' }],
   },
 };
@@ -75,20 +80,30 @@ describe('CannotSupply', () => {
     });
   });
 
-  it('loads only on opening and displays consortium unfilled reasons in configured order', async () => {
+  it('loads only on opening and displays tenant unfilled reasons in configured order', async () => {
     renderCannotSupply();
     expect(mockOkapi).not.toHaveBeenCalled();
     open();
     const select = await ready();
     expect(Array.from(select.options, option => [option.value, option.text])).toEqual([
       ['', 'Select a reason'],
-      ['CustomCode', 'Consortium custom reason'],
-      ['NotHeld', 'Consortium description for not held'],
+      ['CustomCode', 'Institution custom reason'],
+      ['NotHeld', 'Institution description for not held'],
     ]);
     expect(select).toBeRequired();
     expect(select).toHaveValue('');
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
     expect(mockPerformAction).not.toHaveBeenCalled();
+    expect(mockOkapi.calledUrls()).toEqual([`${ownedPath}?limit=1000`]);
+  });
+
+  it('uses tenant reasons without a consortium parent', async () => {
+    mockOkapi.setResponses({ [ownedPath]: { items: [{ ...institution, parent: null }] } });
+    renderCannotSupply();
+    open();
+    await ready();
+    expect(screen.getByRole('combobox')).toBeInTheDocument();
+    expect(mockOkapi.calledUrls()).toEqual([`${ownedPath}?limit=1000`]);
   });
 
   it('requires a reason even when a note is entered and after the selection is cleared', async () => {
@@ -143,9 +158,9 @@ describe('CannotSupply', () => {
     { illConfig: { unfilledReasons: [] } },
     { illConfig: {} },
     { illConfig: null },
-    {},
-  ])('blocks submission when no consortium reasons are configured (%j)', async entry => {
-    mockOkapi.setResponses({ 'directory/entries/owned': { items: [institution] }, [consortiumPath]: entry });
+    { illConfig: undefined },
+  ])('blocks submission when no tenant reasons are configured (%j)', async entry => {
+    mockOkapi.setResponses({ [ownedPath]: { items: [{ ...institution, ...entry }] }, [consortiumPath]: consortium });
     renderCannotSupply();
     open();
     await screen.findByText('ui-rs.actions.cannot-supply.noReasons');
@@ -156,7 +171,8 @@ describe('CannotSupply', () => {
     expect(mockPerformAction).not.toHaveBeenCalled();
   });
 
-  it.each([{ items: [] }, { items: [{ ...institution, parent: null }] }])('blocks submission when the institution or parent is missing (%j)', async ({ items }) => {
+  it('blocks submission when the institution is missing', async () => {
+    const items = [];
     mockOkapi.setResponses({ 'directory/entries/owned': { items } });
     renderCannotSupply();
     open();
@@ -165,7 +181,8 @@ describe('CannotSupply', () => {
     expect(confirm()).toBeDisabled();
   });
 
-  it.each(['directory/entries/owned', consortiumPath])('blocks submission and displays lookup failures at %s', async path => {
+  it('blocks submission and displays tenant lookup failures', async () => {
+    const path = ownedPath;
     mockOkapi.setResponses({
       'directory/entries/owned': { items: [institution] },
       [consortiumPath]: consortium,
@@ -178,21 +195,16 @@ describe('CannotSupply', () => {
     expect(mockPerformAction).not.toHaveBeenCalled();
   });
 
-  it('blocks submission until both directory lookups finish', async () => {
+  it('blocks submission until the tenant directory lookup finishes', async () => {
     let resolveOwned;
-    let resolveConsortium;
     mockOkapi.setResponses({
       'directory/entries/owned': () => new Promise(resolve => { resolveOwned = resolve; }),
-      [consortiumPath]: () => new Promise(resolve => { resolveConsortium = resolve; }),
     });
     renderCannotSupply();
     open();
     expect(confirm()).toBeDisabled();
     expect(screen.queryByText('ui-rs.actions.cannot-supply.noReasons')).not.toBeInTheDocument();
     await act(async () => resolveOwned({ items: [institution] }));
-    await waitFor(() => expect(resolveConsortium).toBeDefined());
-    expect(confirm()).toBeDisabled();
-    await act(async () => resolveConsortium(consortium));
     await ready();
     setReason('CustomCode');
     expect(confirm()).toBeEnabled();
@@ -205,12 +217,12 @@ describe('CannotSupply', () => {
     setReason('CustomCode');
     setNote('Keep this note');
     await act(async () => {
-      queryClient.setQueryData([consortiumPath], { ...consortium, illConfig: { unfilledReasons: remaining } });
+      queryClient.setQueryData(ownedKey, { items: [{ ...institution, illConfig: { unfilledReasons: remaining } }] });
       await new Promise(resolve => setTimeout(resolve, 0));
     });
     expect(confirm()).toBeDisabled();
     await act(async () => {
-      queryClient.setQueryData([consortiumPath], consortium);
+      queryClient.setQueryData(ownedKey, { items: [institution] });
       await new Promise(resolve => setTimeout(resolve, 0));
     });
     expect(screen.getByRole('combobox')).toHaveValue('');
@@ -224,7 +236,7 @@ describe('CannotSupply', () => {
     await ready();
     setReason('CustomCode');
     await act(async () => {
-      queryClient.setQueryData([consortiumPath], { ...consortium, illConfig: { unfilledReasons: [reasons[0]] } });
+      queryClient.setQueryData(ownedKey, { items: [{ ...institution, illConfig: { unfilledReasons: [reasons[0]] } }] });
       await new Promise(resolve => setTimeout(resolve, 0));
     });
     expect(screen.getByRole('combobox')).toHaveValue('CustomCode');
