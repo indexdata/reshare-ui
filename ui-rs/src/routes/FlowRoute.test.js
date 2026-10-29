@@ -46,7 +46,7 @@ const conditionNotifications = [
     fromSymbol: 'ISIL:SUP',
     condition: 'libraryuseonly',
     receipt: 'ACCEPTED',
-    note: 'accepted-row-note',
+    note: 'Supplier-specific library restriction\n\naccepted-row-note',
     createdAt: '2026-01-04T12:00:00Z',
   },
   {
@@ -187,7 +187,8 @@ describe('FlowRoute', () => {
 
     expect(screen.getByText('ui-rs.flow.loanConditions.status')).toBeInTheDocument();
 
-    const acceptedRow = rowContaining('accepted-row-note');
+    const acceptedRow = rowContaining(/accepted-row-note/);
+    expect(acceptedRow.getByText(/Supplier-specific library restriction/)).toHaveTextContent('accepted-row-note');
     expect(acceptedRow.getByText('ui-rs.flow.loanConditions.status.accepted')).toBeInTheDocument();
 
     const rejectedRow = rowContaining('rejected-row-note');

@@ -16,14 +16,14 @@ const useOwnedEntries = ({ enabled = true } = {}) => {
   const entries = useMemo(() => query.data?.items ?? [], [query.data]);
   const byId = useMemo(() => new Map(entries.map(entry => [entry.id, entry])), [entries]);
 
-  return { entries, byId, isSettled: query.isSuccess || query.isError, isError: query.isError };
+  return { entries, byId, isSettled: query.isSuccess || query.isError, isError: query.isError, isFetching: query.isFetching };
 };
 
-const useTenantInstitution = () => {
-  const { entries, isSettled, isError } = useOwnedEntries();
+const useTenantInstitution = ({ enabled = true } = {}) => {
+  const { entries, isSettled, isError, isFetching } = useOwnedEntries({ enabled });
   const institution = useMemo(() => entries.find(entry => entry.type === 'Institution'), [entries]);
 
-  return { institution, isSettled, isError };
+  return { institution, isSettled, isError, isFetching };
 };
 
 // Candidates for a request's requesterPickupLocationId, which the broker accepts
