@@ -8,7 +8,6 @@ import { Button, Col, Icon, Label, Layout, Loading, MessageBanner, Modal, ModalF
 
 import { useTenantInstitution } from '#/util/useOwnedEntries';
 
-import { useInvalidateNotifications } from '../../chat/useNotifications';
 import actionMeta from '../actionMeta';
 
 const AddCondition = ({ request, performAction }) => {
@@ -22,7 +21,6 @@ const AddCondition = ({ request, performAction }) => {
   const isLoading = isOpen && (!isSettled || isFetching);
   const hasCondition = value => !isLoading && !isError && conditions.some(({ code }) => code === value);
   const stripes = useStripes();
-  const invalidateNotifications = useInvalidateNotifications(request?.id);
   const actionPending = !!useIsActionPending(request.id);
   const icon = actionMeta['add-condition']?.icon;
   const showCost = stripes.config?.reshare?.showCost
@@ -61,7 +59,6 @@ const AddCondition = ({ request, performAction }) => {
         success: 'ui-rs.actions.add-condition.success',
         error: 'ui-rs.actions.add-condition.error',
       });
-      await invalidateNotifications();
       setIsOpen(false);
       return undefined;
     } catch (err) {

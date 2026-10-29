@@ -72,6 +72,7 @@ describe('usePerformAction', () => {
     expect(invalidateQueriesSpy).toHaveBeenCalledWith('broker/patron_requests/request-123');
     expect(invalidateQueriesSpy).toHaveBeenCalledWith('broker/patron_requests/request-123/actions');
     expect(invalidateQueriesSpy).toHaveBeenCalledWith('broker/patron_requests/request-123/events');
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith('broker/patron_requests/request-123/notifications');
     expect(invalidateQueriesSpy).toHaveBeenCalledWith('broker/patron_requests');
   });
 

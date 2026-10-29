@@ -56,10 +56,10 @@ export default (hookReqId) => {
       }
       return result;
     } finally {
-      const { record, actions, events, transaction } = requestKeys(id);
+      const { record, actions, events, notifications, transaction } = requestKeys(id);
       // A fetch already running would be reused by the refetch, and its
       // pre-action response would clear the invalidation, so cancel it first.
-      [record, actions, events, transaction, ...transactionEventsKeys(id, queryClient), LIST_KEY]
+      [record, actions, events, notifications, transaction, ...transactionEventsKeys(id, queryClient), LIST_KEY]
         .forEach((key) => {
           queryClient.cancelQueries(key);
           queryClient.invalidateQueries(key);
