@@ -442,6 +442,14 @@
   "settings.templates.placeholders.loading": "Loading placeholders…",
   "settings.templates.placeholders.unavailable": "Placeholders are currently unavailable.",
   "settings.templates.placeholders.insert": "Insert selected",
+  "settings.templates.preview.open": "Preview",
+  "settings.templates.preview.heading": "Preview",
+  "settings.templates.preview.refresh": "Refresh",
+  "settings.templates.preview.updating": "Updating…",
+  "settings.templates.preview.samples": "Rendered with the built-in sample requests",
+  "settings.templates.preview.errorLine": "Line {line}: {message}",
+  "settings.templates.preview.errorSample": "With the {sample} sample: {error}",
+  "settings.templates.view.source": "Source",
   "settings.templates.wysiwyg.heading": "Return to the editor?",
   "settings.templates.wysiwyg.message": "The editor cannot represent every kind of markup. Tables, inline styles and unsupported tags may be removed from this body.",
   "settings.templates.wysiwyg.confirm": "Use the editor",
@@ -774,5 +782,7 @@
   "settings.scheduledActions.params.templateLabelPlaceholder": "Select a template…",
   "settings.scheduledActions.params.templateLabelNone": "No email template for staff exists yet. Create one under Settings > Resource Sharing > Message templates, with purpose Email and audience Staff.",
   "settings.scheduledActions.params.interval": "Age requests older than (e.g. 168h)",
+  "htmlSourceEditor.search": "Search",
+  "htmlSourceEditor.lint.syntax": "HTML or CSS syntax error",
   "SENTINEL": "SENTINEL"
 }

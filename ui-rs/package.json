@@ -19,6 +19,13 @@
     "test": "jest"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-html": "^6.4.12",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/lint": "^6.9.7",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.15",
     "@folio/stripes-data-transfer-components": "~7.1.0",
     "@projectreshare/stripes-reshare": "~3.0.0",
     "classnames": "^2.2.6",
@@ -36,6 +43,7 @@
     "@folio/stripes": "^10.0.0",
     "moment": "^2.29.0",
     "react": "*",
+    "react-dom": "*",
     "react-intl": "^6.4.7 || ^7.0.0",
     "react-query": "^3.9.0",
     "react-router": "^5.2.0",

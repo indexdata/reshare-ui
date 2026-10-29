@@ -6,3 +6,20 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  height: 75vh;
+  margin-bottom: 1rem;
+}
+
+.previewFrame {
+  flex: 1;
+  min-height: 0;
+}
+
+.bodySource {
+  margin: 0;
+  overflow-x: auto;
+}

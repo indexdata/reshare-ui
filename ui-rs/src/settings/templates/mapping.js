@@ -1,7 +1,8 @@
 // Form values <-> API bodies. The broker's Create and Update shapes differ:
 // UpdateTemplate has no `purpose`, so a template's purpose is fixed at creation.
 
-const cleanLabels = (labels) => (labels ?? [])
+// Labels as the broker stores and matches them: trimmed, with blank rows dropped.
+export const cleanLabels = (labels) => (labels ?? [])
   .map(label => (label ?? '').trim())
   .filter(Boolean);
 

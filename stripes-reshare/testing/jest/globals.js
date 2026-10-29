@@ -39,3 +39,10 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
     dispatchEvent: () => false,
   });
 }
+
+// jsdom implements neither URL.createObjectURL nor revokeObjectURL; PDF views make
+// object URLs for the blobs they show.
+if (typeof URL.createObjectURL === 'undefined') {
+  URL.createObjectURL = () => 'blob:jsdom';
+  URL.revokeObjectURL = () => {};
+}

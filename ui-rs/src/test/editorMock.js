@@ -45,6 +45,7 @@ const Editor = ({ input = {}, id, label, value, readOnly, onChange, onChangeSele
         lastEditor.onChange(nextValue, null, source);
       },
       setSelection: (index, length = 0) => lastEditor.setSelection(index, length),
+      focus: () => document.getElementById(id)?.focus(),
     };
     editorInstance.current = { getEditor: () => quill };
   }

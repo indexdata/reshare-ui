@@ -2,18 +2,41 @@ import React, { useContext, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useMutation, useQueryClient } from 'react-query';
 import {
+  Accordion,
   Button,
   Col,
   ConfirmationModal,
   Editor,
   KeyValue,
+  MessageBanner,
   Pane,
   Row,
 } from '@folio/stripes/components';
 import { CalloutContext } from '@folio/stripes/core';
 import { DirectLink, useOkapiKy, useOkapiQuery, useCloseDirect } from '@projectreshare/stripes-reshare';
 
+import PdfFrame from '#/components/PdfFrame';
+import { PreviewError } from './PreviewWorkspace';
+import { useTemplatePreview } from './templatePreview';
 import css from './ViewTemplate.css';
+
+// Key by template ID to discard the previous template's PDF on navigation.
+const SavedPreview = ({ template }) => {
+  const intl = useIntl();
+  const { pdf, error } = useTemplatePreview(template);
+  return (
+    <div id="template-body-preview" className={css.preview}>
+      {error && <MessageBanner type="error"><PreviewError error={error} /></MessageBanner>}
+      <div className={css.previewFrame}>
+        <PdfFrame
+          pdf={pdf}
+          title={intl.formatMessage({ id: 'ui-rs.settings.templates.preview.heading' })}
+          thumbnails={false}
+        />
+      </div>
+    </div>
+  );
+};
 
 const ViewTemplate = ({ match }) => {
   const { id } = match.params;
@@ -25,6 +48,7 @@ const ViewTemplate = ({ match }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const { data, isSuccess } = useOkapiQuery(`broker/templates/${id}`);
+  const isPullslipHtml = data?.purpose === 'pullslip' && data?.contentType === 'html';
 
   const remover = useMutation({
     mutationFn: () => okapiKy.delete(`broker/templates/${id}`),
@@ -99,11 +123,24 @@ const ViewTemplate = ({ match }) => {
       <Row>
         <Col xs={12}>
           <KeyValue label={<FormattedMessage id="ui-rs.settings.templates.field.body" />} />
+          {/* Quill strips pull slip tables and styles; show the PDF and source instead. */}
+          {isPullslipHtml && (
+            <>
+              <SavedPreview key={id} template={data} />
+              <Accordion
+                id="template-body-source-view"
+                label={<FormattedMessage id="ui-rs.settings.templates.view.source" />}
+                closedByDefault
+              >
+                <pre id="template-body-view" className={css.bodySource}>{data.body}</pre>
+              </Accordion>
+            </>
+          )}
           {/* Rendered through the editor rather than injected as raw HTML: staff-authored
               markup is untrusted and nothing in the tree sanitizes it. */}
-          {isHtml
+          {!isPullslipHtml && (isHtml
             ? <Editor id="template-body-view" value={data.body} readOnly onChange={() => {}} />
-            : <pre id="template-body-view" className={css.bodyText}>{data.body}</pre>}
+            : <pre id="template-body-view" className={css.bodyText}>{data.body}</pre>)}
         </Col>
       </Row>
       <ConfirmationModal
