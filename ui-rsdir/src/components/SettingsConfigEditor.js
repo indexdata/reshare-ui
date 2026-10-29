@@ -25,11 +25,15 @@ const STRING_MAP = 'stringmap';
 const SYMBOL_LIST = 'symbollist';
 const SUB_FIELD = 'subfield';
 const OBJECT_ARRAY = 'objectarray';
+const CODE_DESCRIPTION = 'codedescription';
 const INTEGER_PATTERN = /^-?\d+$/;
 
 const normalizedValueType = valueType => valueType?.toLowerCase?.() || 'string';
 
 const isObject = value => value && typeof value === 'object' && !Array.isArray(value);
+
+const sameCodeDescription = (left, right) => isObject(left) && isObject(right) &&
+  left.code === right.code && left.defaultDesc === right.defaultDesc;
 
 const hasOwnValue = (source, fieldName) => isObject(source) &&
   Object.prototype.hasOwnProperty.call(source, fieldName) &&
@@ -59,6 +63,14 @@ const isCodeDescriptionArray = field => {
 
 const validateFieldDefinition = (field, path = field.fieldName) => {
   const type = normalizedValueType(field.valueType);
+  if (type === CODE_DESCRIPTION && path !== field.fieldName) {
+    throw new Error(`SettingsConfigEditor field "${path}" supports codeDescription only on top-level fields.`);
+  }
+  if (type === CODE_DESCRIPTION && (
+    typeof field.availableValuesField !== 'string' || !field.availableValuesField.trim()
+  )) {
+    throw new Error(`SettingsConfigEditor field "${path}" requires an availableValuesField.`);
+  }
   if (field.defaultOnly !== undefined && typeof field.defaultOnly !== 'boolean') {
     throw new Error(`SettingsConfigEditor field "${path}" requires defaultOnly to be a boolean.`);
   }
@@ -160,6 +172,10 @@ const sourceWithLockedSelection = (value, field, initializeChild) => {
 const toEditorValue = (value, field, onlyPresent = false) => {
   const type = normalizedValueType(field.valueType);
 
+  if (type === CODE_DESCRIPTION) {
+    return isObject(value) ? { ...value } : null;
+  }
+
   if (type === STRING_ARRAY) {
     return Array.isArray(value) ? [...value] : [];
   }
@@ -218,6 +234,10 @@ const toEditorValue = (value, field, onlyPresent = false) => {
 
 const valueForPatch = (value, field, onlyPresent = false) => {
   const type = normalizedValueType(field.valueType);
+
+  if (type === CODE_DESCRIPTION) {
+    return isObject(value) ? { ...value } : null;
+  }
 
   if (type === STRING_ARRAY) {
     return Array.isArray(value) ? [...value] : [];
@@ -378,7 +398,9 @@ const SettingsConfigEditor = ({
   const [selectedDefaults, setSelectedDefaults] = useState({});
   const [customObjectForms, setCustomObjectForms] = useState({});
   const [pendingSelection, setPendingSelection] = useState(null);
+  const [pendingSave, setPendingSave] = useState(null);
   const editingFieldsRef = useRef({});
+  const savingFieldsRef = useRef({});
   const activeResourcePathRef = useRef(resourcePath);
   const previousResourcePathRef = useRef(resourcePath);
   activeResourcePathRef.current = resourcePath;
@@ -386,6 +408,10 @@ const SettingsConfigEditor = ({
   useEffect(() => {
     setPendingSelection(null);
   }, [configKey, resourcePath, resource?.lmsConfig?.vendor, resource?.catalogConfig?.profile]);
+
+  useEffect(() => {
+    setPendingSave(null);
+  }, [configKey, resourcePath]);
 
   const booleanOptions = useMemo(() => [
     { label: '', value: '' },
@@ -413,6 +439,7 @@ const SettingsConfigEditor = ({
 
     if (isNewResource) {
       editingFieldsRef.current = {};
+      savingFieldsRef.current = {};
       setEditingFields({});
       setSavingFields({});
       setFieldErrors({});
@@ -571,6 +598,16 @@ const SettingsConfigEditor = ({
     contextForField(field, parentContext).path,
   );
 
+  // Each card saves independently, so only committed available values grant eligibility.
+  const availableCodeDescriptions = field => {
+    const available = resource?.[configKey]?.[field.availableValuesField];
+    return Array.isArray(available) ? available : [];
+  };
+
+  const codeDescriptionChoices = (field, path) => (
+    configFieldDefaultData(openApiQuery.data, configKey, path) || []
+  ).filter(item => availableCodeDescriptions(field).some(value => value?.code === item.code));
+
   const setDraftFieldValue = (field, parentContext, nextValue) => {
     const path = contextForField(field, parentContext).path;
     setValues(current => valueWithPathUpdated(current, path, nextValue));
@@ -644,6 +681,7 @@ const SettingsConfigEditor = ({
 
   const cancelEditingField = field => {
     setPendingSelection(null);
+    setPendingSave(null);
     setValues(current => ({
       ...current,
       [field.fieldName]: committedTopLevelValue(field),
@@ -1040,6 +1078,15 @@ const SettingsConfigEditor = ({
       errors[path] = requiredMessage();
     }
 
+    if (type === CODE_DESCRIPTION && value !== null && value !== undefined &&
+      !sameCodeDescription(value, originalValue) &&
+      !codeDescriptionChoices(field, path).some(item => sameCodeDescription(item, value))) {
+      errors[path] = intl.formatMessage({
+        id: 'ui-rsdir.settingsConfig.codeDescription.invalid',
+        defaultMessage: 'Select an available predefined entry or clear the value.',
+      });
+    }
+
     if ((type === 'integer' || type === 'number') && !isEmptyFieldValue(value, field)) {
       const numericValue = type === 'integer' ? Number(value) : Number.parseFloat(value);
       let isValidNumericValue = Number.isFinite(numericValue);
@@ -1125,7 +1172,28 @@ const SettingsConfigEditor = ({
       resource?.[configKey]?.[field.fieldName]);
   };
 
-  const saveField = field => {
+  const saveLockFieldNames = affectedFieldNames => {
+    const locked = new Set(affectedFieldNames);
+    fieldMapping.forEach(field => {
+      if (normalizedValueType(field.valueType) === CODE_DESCRIPTION && (
+        affectedFieldNames.includes(field.fieldName) || affectedFieldNames.includes(field.availableValuesField)
+      )) {
+        locked.add(field.fieldName);
+        locked.add(field.availableValuesField);
+      }
+    });
+    return [...locked];
+  };
+
+  const setFieldsSaving = (fieldNames, isSaving) => {
+    savingFieldsRef.current = {
+      ...savingFieldsRef.current,
+      ...Object.fromEntries(fieldNames.map(name => [name, isSaving])),
+    };
+    setSavingFields(savingFieldsRef.current);
+  };
+
+  const saveField = (field, confirmedSave) => {
     const { fieldName } = field;
     const savedResourcePath = resourcePath;
     const validationErrors = validationErrorsForField(field);
@@ -1138,16 +1206,38 @@ const SettingsConfigEditor = ({
       return;
     }
 
-    setSavingFields(current => ({ ...current, [fieldName]: true }));
-    setFieldErrors(current => omitRootPath(current, fieldName));
-
     const patchValue = valueForPatch(values[fieldName], field);
+    const impact = field.getSaveImpact?.({ nextValue: patchValue, resource });
+    const configPatch = { ...impact?.additionalValues, [fieldName]: patchValue };
+    const affectedFieldNames = Object.keys(configPatch);
+    const affectedFields = fieldMapping.filter(item => affectedFieldNames.includes(item.fieldName));
+    const lockedFieldNames = saveLockFieldNames(affectedFieldNames);
+    if (lockedFieldNames.some(name => savingFieldsRef.current[name])) return;
+
+    const discardedDrafts = affectedFields.filter(item => (
+      item.fieldName !== fieldName && editingFields[item.fieldName] &&
+      JSON.stringify(valueForPatch(values[item.fieldName], item)) !==
+      JSON.stringify(valueForPatch(committedTopLevelValue(item), item))
+    )).map(item => item.fieldName);
+    // Refresh confirmation if the draft or committed values change while the modal is open.
+    const confirmationKey = JSON.stringify({
+      configPatch,
+      originalValues: affectedFieldNames.map(name => resource?.[configKey]?.[name]),
+      discardedDrafts,
+    });
+    if (impact && confirmedSave?.confirmationKey !== confirmationKey) {
+      setPendingSave({ field, impact, confirmationKey, lockedFieldNames, hasUnsavedChanges: discardedDrafts.length > 0 });
+      return;
+    }
+
+    setPendingSave(null);
+    // Lock dependencies synchronously; only PATCH fields are updated or closed on success.
+    setFieldsSaving(lockedFieldNames, true);
+    setFieldErrors(current => omitRootPath(current, fieldName));
 
     ky.patch(savedResourcePath, {
       json: {
-        [configKey]: {
-          [fieldName]: patchValue,
-        },
+        [configKey]: configPatch,
       },
     })
       .then(parseJsonResponse)
@@ -1157,7 +1247,7 @@ const SettingsConfigEditor = ({
           ...currentResource,
           [configKey]: {
             ...currentResource?.[configKey],
-            [fieldName]: patchValue,
+            ...configPatch,
           },
         };
 
@@ -1172,10 +1262,14 @@ const SettingsConfigEditor = ({
         setResource(nextResource);
         setValues(current => ({
           ...current,
-          [fieldName]: toEditorValue(nextResource?.[configKey]?.[fieldName], field),
+          ...Object.fromEntries(affectedFields.map(item => [
+            item.fieldName, toEditorValue(nextResource?.[configKey]?.[item.fieldName], item),
+          ])),
         }));
-        clearTransientState(fieldName);
-        setFieldEditing(fieldName, false);
+        affectedFieldNames.forEach(name => {
+          clearTransientState(name);
+          setFieldEditing(name, false);
+        });
         callout.sendCallout({
           type: 'success',
           message: successMessage,
@@ -1193,7 +1287,7 @@ const SettingsConfigEditor = ({
       })
       .finally(() => {
         if (activeResourcePathRef.current === savedResourcePath) {
-          setSavingFields(current => ({ ...current, [fieldName]: false }));
+          setFieldsSaving(lockedFieldNames, false);
         }
       });
   };
@@ -2114,12 +2208,114 @@ const SettingsConfigEditor = ({
     );
   };
 
+  const renderCodeDescriptionStatus = (field, path) => {
+    if (availableCodeDescriptions(field).length === 0) {
+      return (
+        <div role="status">
+          {field.emptyChoicesMessage ||
+            <FormattedMessage
+              id="ui-rsdir.settingsConfig.codeDescription.defineAvailable"
+              defaultMessage="Define available entries before selecting a default."
+            />
+          }
+        </div>
+      );
+    }
+
+    const defaults = configFieldDefaultData(openApiQuery.data, configKey, path);
+    if (!Array.isArray(defaults)) {
+      return (
+        <div role="status">
+          {openApiQuery.isFetching ?
+            <FormattedMessage id="ui-rsdir.settingsConfig.defaults.loading" defaultMessage="Loading predefined entries…" /> :
+            <>
+              <FormattedMessage id="ui-rsdir.settingsConfig.defaults.unavailable" defaultMessage="Predefined entries are unavailable." />
+              <Button onClick={() => openApiQuery.refetch()}>
+                <FormattedMessage id="ui-rsdir.settingsConfig.defaults.retry" defaultMessage="Retry" />
+              </Button>
+            </>
+          }
+        </div>
+      );
+    }
+
+    if (codeDescriptionChoices(field, path).length === 0) {
+      return (
+        <div role="status">
+          <FormattedMessage
+            id="ui-rsdir.settingsConfig.codeDescription.noMatches"
+            defaultMessage="No available entries match the predefined options."
+          />
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const renderCodeDescriptionInput = (field, parentField) => {
+    const path = pathForField(field, parentField);
+    const controlPath = controlPathForField(field, parentField);
+    const value = draftFieldValue(field, parentField);
+    const choices = codeDescriptionChoices(field, path);
+    const isSaving = savingFields[topFieldName(field, parentField)];
+    const isPublishedChoice = choices.some(item => sameCodeDescription(item, value));
+    // Retain a legacy draft only as the current value, never as a selectable addition.
+    const currentOption = value && !isPublishedChoice ? [{
+      label: `${value.code}: ${objectDescription(path, value)}`,
+      value: 'current',
+      disabled: true,
+    }] : [];
+    const updateValue = nextValue => {
+      setDraftFieldValue(field, parentField, nextValue);
+      setFieldErrors(current => omitRootPath(current, path));
+    };
+
+    return (
+      <div>
+        <Select
+          aria-label={labelForPath(path)}
+          dataOptions={[
+            { label: '', value: '' },
+            ...currentOption,
+            ...choices.map(item => ({ label: `${item.code}: ${objectDescription(path, item)}`, value: `code:${item.code}` })),
+          ]}
+          disabled={isSaving || choices.length === 0}
+          id={`${controlIdPrefix}-${controlPath}`}
+          onChange={event => {
+            if (event.target.value === '') {
+              updateValue(null);
+              return;
+            }
+            const selected = choices.find(item => `code:${item.code}` === event.target.value);
+            if (selected) updateValue({ ...selected });
+          }}
+          value={value ? (isPublishedChoice ? `code:${value.code}` : 'current') : ''}
+        />
+        {value &&
+          <Button
+            disabled={isSaving}
+            id={`clear-${controlIdPrefix}-${controlPath}`}
+            onClick={() => updateValue(null)}
+          >
+            <FormattedMessage id="ui-rsdir.settingsConfig.codeDescription.clear" defaultMessage="Clear" />
+          </Button>
+        }
+        {fieldErrors[path] && <div role="alert">{fieldErrors[path]}</div>}
+      </div>
+    );
+  };
+
   const renderFieldInput = (field, parentField) => {
     const { validChoices = [] } = field;
     const type = normalizedValueType(field.valueType);
     const path = pathForField(field, parentField);
     const controlPath = controlPathForField(field, parentField);
     const isSaving = savingFields[topFieldName(field, parentField)];
+
+    if (type === CODE_DESCRIPTION) {
+      return renderCodeDescriptionInput(field, parentField);
+    }
 
     if (type === STRING_ARRAY) {
       return renderStringArrayInput(field, parentField);
@@ -2171,6 +2367,11 @@ const SettingsConfigEditor = ({
       return renderOverrideValue(field, field.overrideValue, pathForField(field, parentField));
     }
     const type = normalizedValueType(field.valueType);
+
+    if (type === CODE_DESCRIPTION) {
+      const value = committedFieldValue(field, parentField);
+      return value ? `${value.code}: ${objectDescription(pathForField(field, parentField), value)}` : null;
+    }
 
     if (type === STRING_ARRAY) {
       return renderStringArrayValues(field, false, parentField);
@@ -2252,6 +2453,24 @@ const SettingsConfigEditor = ({
 
   return (
     <div>
+      {pendingSave &&
+        <ConfirmationModal
+          bodyTag="div"
+          open
+          heading={pendingSave.impact.heading}
+          confirmLabel={pendingSave.impact.confirmLabel}
+          cancelLabel={<FormattedMessage id="stripes-components.cancel" defaultMessage="Cancel" />}
+          isConfirmButtonDisabled={pendingSave.lockedFieldNames.some(name => savingFields[name])}
+          onCancel={() => setPendingSave(null)}
+          onConfirm={() => saveField(pendingSave.field, pendingSave)}
+          message={
+            <div>
+              <p>{pendingSave.impact.message}</p>
+              {pendingSave.hasUnsavedChanges && <p>{pendingSave.impact.discardChangesMessage}</p>}
+            </div>
+          }
+        />
+      }
       {pendingSelection &&
         <ConfirmationModal
           bodyTag="div"
@@ -2318,6 +2537,9 @@ const SettingsConfigEditor = ({
         const isEditing = editingFields[fieldName];
         const isSaving = savingFields[fieldName];
         const isSubField = normalizedValueType(field.valueType) === SUB_FIELD;
+        const isCodeDescription = normalizedValueType(field.valueType) === CODE_DESCRIPTION;
+        const cannotEdit = isCodeDescription && !committedTopLevelValue(field) &&
+          codeDescriptionChoices(field, fieldName).length === 0;
 
         return (
           <Card
@@ -2328,7 +2550,7 @@ const SettingsConfigEditor = ({
             headerEnd={!field.disabled &&
               <Button
                 buttonStyle={isEditing ? 'primary' : undefined}
-                disabled={isSaving}
+                disabled={isSaving || (!isEditing && cannotEdit)}
                 id={`${isEditing ? 'save' : 'edit'}-${controlIdPrefix}-${fieldName}`}
                 onClick={() => (isEditing ? saveField(field) : editField(field))}
               >
@@ -2357,6 +2579,7 @@ const SettingsConfigEditor = ({
               </div> :
               isSubField ? renderSubField(field, false) : renderFieldDisplay(field)
             )}
+            {!field.disabled && isCodeDescription && renderCodeDescriptionStatus(field, fieldName)}
           </Card>
         );
       })}

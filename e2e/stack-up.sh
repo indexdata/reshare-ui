@@ -71,8 +71,28 @@ if ! result=$(jq -c '.[]' seed/directory.json | curl --connect-timeout 2 --max-t
   echo "directory import failed: $result" >&2
   exit 1
 fi
+# Import leaves copyright types unset, and a copy request needs them.
+for symbol in US-TEST1 US-TEST2; do
+  curl --connect-timeout 2 --max-time 10 -sS --fail-with-body -o /dev/null -X PATCH \
+    -H 'Content-Type: application/json' \
+    -H 'X-Okapi-Permissions: ["directory.consortium.all"]' \
+    --data '{"illConfig":{"availableCopyrightTypes":[{"code":"US-CCG","defaultDesc":"CCG (US)"},{"code":"US-CCL","defaultDesc":"CCL (US code)"}]}}' \
+    "$directory/entries/by-symbol/ISIL:$symbol"
+done
 
 ./stack-health.sh --retry
+
+# Import needs a healthy broker and directory entries to resolve owners.
+echo "Importing seed/requests.ts into the broker..."
+if ! result=$(node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --input-type=module \
+      -e "import { ndjson } from './seed/requests.ts'; process.stdout.write(ndjson())" \
+    | curl --connect-timeout 2 --max-time 30 -sS --fail-with-body -X POST \
+      -H 'Content-Type: application/x-ndjson' \
+      --data-binary @- "http://localhost:8080/import?conflictPolicy=update") \
+  || ! jq -e '.patronRequests.failed == 0 and .errors == []' <<<"$result" >/dev/null; then
+  echo "request import failed: $result" >&2
+  exit 1
+fi
 echo
 echo "Stack is up: test1 UI http://localhost:3000 (okapi :9130)  test2 UI http://localhost:3002 (okapi :9131)"
 echo "Stop with: yarn stack:down (discards all DB state — the stack is throwaway)"

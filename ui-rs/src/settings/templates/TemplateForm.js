@@ -215,13 +215,13 @@ const BodyField = ({
   onInsertPlaceholder,
   onPreview,
   diagnostics,
+  onFocus,
 }) => {
   const form = useForm();
   const [sourceMode, setSourceMode] = useState(false);
   const [confirmWysiwyg, setConfirmWysiwyg] = useState(false);
   const [quillWouldRewrite, setQuillWouldRewrite] = useState(false);
   const label = <FormattedMessage id="ui-rs.settings.templates.field.body" />;
-  const placeholderButton = <PlaceholderButton id="template-body-placeholder" onClick={onInsertPlaceholder} />;
 
   if (!isHtml) {
     return (
@@ -233,8 +233,8 @@ const BodyField = ({
           component={TextArea}
           rows={10}
           label={label}
+          onFocus={onFocus}
         />
-        {placeholderButton}
       </>
     );
   }
@@ -250,7 +250,9 @@ const BodyField = ({
       editorRef={sourceEditorRef}
       stateRef={sourceStateRef}
       diagnostics={diagnostics}
-      toolbar={(
+      // A pull slip has no subject, so this replaces the form's shared placeholder
+      // button and goes with the editor into the preview workspace.
+      toolbar={isPullslip && (
         <>
           <PlaceholderButton
             id="template-body-placeholder"
@@ -299,6 +301,7 @@ const BodyField = ({
             meta={meta}
             required
             label={label}
+            onFocus={onFocus}
             onChangeSelection={(range) => {
               if (range && editorRef.current) {
                 editorSelectionRef.current = {
@@ -335,7 +338,6 @@ const BodyField = ({
           </Button>
         </div>
       )}
-      {placeholderButton}
     </>
   );
 };
@@ -351,6 +353,7 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
     refocusRef.current();
     refocusRef.current = null;
   }, [placeholderTarget, previewOpen]);
+  const placeholderFieldRef = useRef('body');
   const bodyEditorRef = useRef(null);
   const sourceEditorRef = useRef(null);
   // Preserve cursor and undo history when moving the editor into or out of preview.
@@ -499,6 +502,7 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
             sourceEditorRef={sourceEditorRef}
             sourceStateRef={sourceStateRef}
             onInsertPlaceholder={() => openPlaceholderPicker('body')}
+            onFocus={() => { placeholderFieldRef.current = 'body'; }}
             {...props}
           />
         );
@@ -536,7 +540,14 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
             dismissible
             footer={previewOpen ? undefined : footer}
           >
-            <form id="template-form" onSubmit={handleSubmit}>
+            <form
+              id="template-form"
+              onSubmit={handleSubmit}
+              onFocusCapture={(event) => {
+                const field = event.target.closest?.('#template-subject, #template-body');
+                if (field) placeholderFieldRef.current = field.id === 'template-subject' ? 'subject' : 'body';
+              }}
+            >
               {!editing && <PresetPicker presets={presets ?? []} bodyIsMarkup={bodyIsMarkup} />}
               <Row>
                 <Col xs={12} md={6}>
@@ -591,10 +602,11 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
                     component={TextField}
                     label={<FormattedMessage id="ui-rs.settings.templates.field.subject" />}
                   />
-                  {!isPullslip && (
+                  {/* An HTML pull slip has its own in the body's toolbar. */}
+                  {!canPreview && (
                     <PlaceholderButton
-                      id="template-subject-placeholder"
-                      onClick={() => openPlaceholderPicker('subject')}
+                      id="template-placeholder"
+                      onClick={() => openPlaceholderPicker(isPullslip ? 'body' : placeholderFieldRef.current)}
                     />
                   )}
                   {isPullslip && (

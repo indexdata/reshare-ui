@@ -32,10 +32,32 @@ The optional editor callback `getSelectionChangeImpact({ fieldName, nextValue, r
 | `maxValue` | number | No | Inclusive maximum for an `integer` or `number` field. |
 | `nullOnEmpty` | boolean | No | For a `string` field, serializes an exact empty string as `null`. |
 | `validChoices` | array | No | Renders a scalar field as a select containing these choices plus an empty choice. Values are converted to strings in the editor. |
+| `availableValuesField` | string | For `codeDescription` | Names the sibling configuration array whose saved codes restrict predefined choices. |
+| `emptyChoicesMessage` | React node | No | For `codeDescription`, replaces the message shown when the available-values array is empty or missing. |
 | `defaultDesc` | string | No | Displays a blue circle “i” tooltip before the field label, using this value when no translated description is available. Manual help takes precedence over OpenAPI help. |
 | `getSaveErrorMessage` | function | No | Receives a failed PATCH error and may return a field-specific React node or string. Returning `undefined` uses the error's default message. |
+| `getSaveImpact` | function | No | For a top-level card, receives `{ nextValue, resource }` after validation, with `nextValue` serialized for the API. Return `undefined` for an ordinary save, or `{ heading, message, confirmLabel, discardChangesMessage?, additionalValues }` to confirm and include sibling configuration values in the same PATCH. Text properties are React nodes and should use translations. Additional values are already serialized; the primary field's value takes precedence. |
 
 Use `valueType`, not `type`, when declaring a field type.
+
+Save-impact confirmation leaves drafts and saved data unchanged until confirmation.
+Cancel retains the edits. A confirmed save disables all affected fields, then updates
+their values and closes their editors on success, including any open sibling drafts.
+`discardChangesMessage` appears when an affected sibling has unsaved changes. Failure
+retains all drafts and requires confirmation again on retry. The hook runs again on
+confirmation; changed drafts or committed values require a refreshed confirmation.
+Navigating to another entry dismisses the pending modal.
+
+ILL available copyright types use this hook when an edit removes the last occurrence
+of the saved default's code from the saved available list. Confirmation patches the
+new list and `defaultCopyrightType: null` together. Matching uses codes only. A default
+already absent from the saved available list is preserved without prompting.
+
+A `codeDescription` field and its `availableValuesField` share save locks in both
+directions, even when the PATCH changes only one field. While either saves, both
+editors are disabled. Only fields actually included in the PATCH are updated or
+closed on success; other drafts are retained and checked against the updated
+configuration on their next save. Failed saves release both locks.
 
 For `lmsConfig`, `catalogConfig`, `holdingsPolicy`, and `illConfig`, the editor also fetches `directory/openapi.json` and resolves descriptions from the corresponding resource schemas (`LmsConfig`, `CatalogConfig`, `HoldingsPolicy`, and `IllConfig`). Nested properties, array items, local references, and `allOf` are supported. Descriptions on a property take precedence over referenced descriptions. API descriptions are displayed as plain text, including any literal placeholders. Fields without a manual or schema description have no help icon. The shared specification cache stays fresh for 30 minutes. Description loading or failure alone does not block editing; the LMS and catalog routes additionally require the host-profile metadata described below.
 
@@ -202,6 +224,34 @@ Represents a nested JSON object. It requires a `subMap` containing the mappings 
 ```
 
 The example maps `holdingsFormat.marc.mainField`. A required `subField` is empty only when all of its mapped descendants are empty.
+
+### `codeDescription`
+
+Represents one `{ code, defaultDesc }` object or `null` on a top-level card. Requires `availableValuesField`,
+the name of a sibling configuration array. Choices come from this property's OpenAPI
+`x-default-data`, filtered by exact, case-sensitive code membership in the **saved**
+available-values array. Descriptions in that array do not affect eligibility.
+
+```js
+{
+  fieldName: 'defaultCopyrightType',
+  valueType: 'codeDescription',
+  availableValuesField: 'availableCopyrightTypes',
+}
+```
+
+The single-select shows `code: description`; selecting saves the published pair,
+and clearing saves `null`. Display descriptions support the same optional translations
+as predefined object-array entries. Existing pairs remain visible and can be saved
+unchanged even when no longer eligible. After clearing or replacing an existing pair,
+only eligible published pairs can be selected. Cancel restores the saved value.
+
+An empty available-values array disables selection and displays `emptyChoicesMessage`
+(or a generic message). Missing or malformed metadata also prevents new selections
+and offers Retry once loading finishes. A saved value can still be cleared with the
+separate Clear button. Saving available values updates eligibility without changing
+the saved default unless a `getSaveImpact` hook explicitly clears it after confirmation;
+saving a new default rechecks eligibility.
 
 ### `objectArray`
 

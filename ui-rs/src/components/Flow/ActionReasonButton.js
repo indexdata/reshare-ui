@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
 import { Form, Field } from 'react-final-form';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { FormattedMessage } from 'react-intl';
 import { useIsActionPending } from '@projectreshare/stripes-reshare';
-import { Button, Col, Icon, Label, Layout, Modal, ModalFooter, RadioButton, Row, TextArea } from '@folio/stripes/components';
-import { required } from '@folio/stripes/util';
+import { Button, Icon, Layout, Loading, MessageBanner, Modal, ModalFooter, TextArea } from '@folio/stripes/components';
+import useTenantReasons from '#/util/useTenantReasons';
 
 import actionMeta from './actionMeta';
+import DirectoryReasonField from './DirectoryReasonField';
 
-const ActionReasonButton = ({ action, reasons, reasonField, reasonTranslationPrefix, request, performAction }) => {
+const ActionReasonButton = ({ action, reasonConfigField, reasonField, request, performAction }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const intl = useIntl();
+  const { reasons, isLoading, isError } = useTenantReasons({ field: reasonConfigField, enabled: isOpen });
   const actionPending = !!useIsActionPending(request.id);
   const icon = actionMeta[action]?.icon;
 
   const onSubmit = async values => {
+    if (actionPending || isLoading || isError || !reasons.some(({ code }) => code === values[reasonField])) return undefined;
+
     try {
       await performAction(action, values, {
         success: `ui-rs.actions.${action}.success`,
@@ -28,61 +31,66 @@ const ActionReasonButton = ({ action, reasons, reasonField, reasonTranslationPre
 
   return (
     <>
-      <Button buttonStyle="dropdownItem" onClick={() => setIsOpen(true)}>
+      <Button buttonStyle="dropdownItem" onClick={() => setIsOpen(true)} disabled={actionPending}>
         <Icon icon={icon}><FormattedMessage id={`ui-rs.actions.${action}`} /></Icon>
       </Button>
-      <Modal
-        label={<FormattedMessage id={`ui-rs.actions.${action}`} />}
-        open={isOpen}
-        onClose={() => setIsOpen(false)}
-        dismissible
-      >
+      {isOpen &&
         <Form
           onSubmit={onSubmit}
-          render={({ handleSubmit, submitting, pristine, form }) => (
-            <form onSubmit={handleSubmit}>
-              <FormattedMessage id={`ui-rs.actions.${action}.confirm`} values={{ id: request.requesterRequestId || request.id, item: request.illRequest?.bibliographicInfo?.title }} />
-              <Layout className="padding-top-gutter">
-                <Label><FormattedMessage id={`ui-rs.actions.${action}.reason`} /></Label>
-              </Layout>
-              <Row>
-                <Field
+          render={({ handleSubmit, submitting, invalid, values, form }) => (
+            <Modal
+              label={<FormattedMessage id={`ui-rs.actions.${action}`} />}
+              open
+              dismissible={!submitting}
+              // Stripes retains the initial Escape handler, so read live form state.
+              onClose={() => { if (!form.getState().submitting) setIsOpen(false); }}
+            >
+              <form onSubmit={handleSubmit}>
+                <FormattedMessage id={`ui-rs.actions.${action}.confirm`} values={{ id: request.requesterRequestId || request.id, item: request.illRequest?.bibliographicInfo?.title }} />
+                {isLoading && <Loading />}
+                {isError &&
+                  <MessageBanner type="warning">
+                    <FormattedMessage id={`ui-rs.actions.${action}.reasonsError`} />
+                  </MessageBanner>
+                }
+                {!isLoading && !isError && reasons.length === 0 &&
+                  <MessageBanner type="warning">
+                    <FormattedMessage id={`ui-rs.actions.${action}.noReasons`} />
+                  </MessageBanner>
+                }
+                <DirectoryReasonField
                   name={reasonField}
-                  validate={required}
-                  render={({ input }) => reasons.map(value => (
-                    <Col key={value} xs={12}>
-                      <RadioButton
-                        checked={input.value === value}
-                        fullWidth
-                        label={intl.formatMessage({ id: `${reasonTranslationPrefix}.${value}`, defaultMessage: value })}
-                        marginBottom0
-                        onChange={() => input.onChange(value)}
-                        value={value}
-                      />
-                    </Col>
-                  ))}
+                  labelId={`ui-rs.actions.${action}.reason`}
+                  placeholderId={`ui-rs.actions.${action}.selectReason`}
+                  reasons={reasons}
+                  disabled={submitting || isLoading || isError}
+                  required
                 />
-              </Row>
-              <Layout className="padding-top-gutter">
-                <Label><FormattedMessage id="ui-rs.actions.addNote" /></Label>
-              </Layout>
-              <Row>
-                <Col xs={11}>
-                  <Field name="note" component={TextArea} autoFocus />
-                </Col>
-              </Row>
-              <ModalFooter>
-                <Button buttonStyle="danger" onClick={form.submit} disabled={submitting || pristine || actionPending}>
-                  <FormattedMessage id={`ui-rs.actions.${action}`} />
-                </Button>
-                <Button onClick={() => setIsOpen(false)}>
-                  <FormattedMessage id="ui-rs.button.goBack" />
-                </Button>
-              </ModalFooter>
-            </form>
+                <Layout className="padding-top-gutter">
+                  <Field
+                    name="note"
+                    component={TextArea}
+                    label={<FormattedMessage id="ui-rs.actions.addNote" />}
+                    disabled={submitting}
+                  />
+                </Layout>
+                <ModalFooter>
+                  <Button
+                    buttonStyle="danger"
+                    type="submit"
+                    disabled={submitting || invalid || actionPending || isLoading || isError || !reasons.some(({ code }) => code === values[reasonField])}
+                  >
+                    <FormattedMessage id={`ui-rs.actions.${action}`} />
+                  </Button>
+                  <Button disabled={submitting} onClick={() => setIsOpen(false)}>
+                    <FormattedMessage id="ui-rs.button.goBack" />
+                  </Button>
+                </ModalFooter>
+              </form>
+            </Modal>
           )}
         />
-      </Modal>
+      }
     </>
   );
 };

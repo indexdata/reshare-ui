@@ -17,8 +17,10 @@ import { required } from '@folio/stripes/util';
 import { Pluggable, useStripes } from '@folio/stripes/core';
 import { formatTierOption, tiersOfType } from '#/util/tiers';
 
+const COPYRIGHT_FIELD = "serviceInfo.copyrightCompliance['#text']";
+
 const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect, requireTier = false }) => {
-  const { copyrightTypes, publicationTypes, locations, tiers = [], patronLookup } = selectOptions;
+  const { copyrightTypes, defaultCopyrightCode, copyrightLoadError, publicationTypes, locations, tiers = [], patronLookup } = selectOptions;
   const { values } = useFormState();
   const form = useForm();
   const intl = useIntl();
@@ -26,6 +28,29 @@ const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect, requireTie
   const isCopyReq = serviceType === 'Copy';
   const pickupLocationRequired = !isCopyReq && locations.length > 0;
   const stripes = useStripes();
+  const copyrightCode = values?.serviceInfo?.copyrightCompliance?.['#text'];
+  const copyrightIsAvailable = copyrightTypes.some(option => option.value === copyrightCode);
+  const copyrightOptions = copyrightCode && !copyrightIsAvailable ? [
+    { label: copyrightCode, value: copyrightCode, disabled: true },
+    ...copyrightTypes,
+  ] : copyrightTypes;
+
+  // Apply a default only on the first Copy view. A later clear or staff choice
+  // survives service-type switches and directory refreshes.
+  const copyrightInitialized = useRef(false);
+  useEffect(() => {
+    if (!isCopyReq || copyrightInitialized.current) return;
+    copyrightInitialized.current = true;
+    const currentCode = form.getState().values?.serviceInfo?.copyrightCompliance?.['#text'];
+    if (!currentCode && defaultCopyrightCode) form.change(COPYRIGHT_FIELD, defaultCopyrightCode);
+  }, [isCopyReq, defaultCopyrightCode, form]);
+
+  const validateCopyright = value => required(value) || (
+    copyrightTypes.some(option => option.value === value) ? undefined : intl.formatMessage({
+      id: 'ui-rs.requestform.copyright.invalid',
+      defaultMessage: 'Select a copyright type currently available for this institution.',
+    })
+  );
 
   // With no tiers for the service type, the request goes out with no level or cost.
   const tierOptions = useMemo(
@@ -162,15 +187,32 @@ const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect, requireTie
         }
         {isCopyReq &&
         <Col xs={3}>
+          {/* Re-register validation when eligibility changes, retaining the field value. */}
           <Field
-            name="serviceInfo.copyrightCompliance['#text']"
+            key={JSON.stringify(copyrightTypes.map(option => option.value))}
+            name={COPYRIGHT_FIELD}
             label={<FormattedMessage id="ui-rs.information.copyrightType" />}
             placeholder=" "
             component={Select}
-            dataOptions={copyrightTypes}
+            dataOptions={copyrightOptions}
+            disabled={copyrightTypes.length === 0}
             required
-            validate={required}
+            validate={validateCopyright}
           />
+          {copyrightTypes.length === 0 &&
+            <div role="status">
+              {copyrightLoadError ?
+                <FormattedMessage
+                  id="ui-rs.requestform.copyright.loadError"
+                  defaultMessage="Copyright types could not be loaded from the directory."
+                /> :
+                <FormattedMessage
+                  id="ui-rs.requestform.copyright.empty"
+                  defaultMessage="No copyright types are available for this institution. Define available copyright types in the directory before submitting a copy request."
+                />
+              }
+            </div>
+          }
         </Col>
         }
       </Row>

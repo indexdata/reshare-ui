@@ -72,7 +72,11 @@ const PatronRequests = ({
   const match = useRouteMatch();
   const stripes = useStripes();
   const sendCallout = useIntlCallout();
-  const [offset, setOffset] = useState(0);
+  // Reset to the first page when location.search changes. Done during render, not in an
+  // effect, so no frame shows the new result at the old offset.
+  const [paging, setPaging] = useState({ search: location.search, offset: 0 });
+  if (paging.search !== location.search) setPaging({ search: location.search, offset: 0 });
+  const { offset } = paging;
 
   const pageData = requestsQuery?.data?.pages?.[offset / perPage];
   const requests = Array.isArray(pageData)
@@ -84,9 +88,10 @@ const PatronRequests = ({
   const fetchMore = async (_askAmount, index) => {
     // Advance the visible page only once its data has loaded; on a failed page
     // fetch, keep the current page's results on screen (the error surfaces via
-    // the isRefetchError callout) instead of flipping to an empty page.
+    // the isRefetchError callout) instead of flipping to an empty page. A fetch that
+    // resolves after the search has moved on stamps the old location and is discarded.
     const { isError } = await requestsQuery.fetchNextPage({ pageParam: index });
-    if (!isError) setOffset(index);
+    if (!isError) setPaging({ search: location.search, offset: index });
   };
 
   // A refetch or pagination failure (as opposed to a cold-load failure) keeps the

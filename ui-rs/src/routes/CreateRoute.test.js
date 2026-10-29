@@ -1,7 +1,7 @@
 import React from 'react';
 import { Route } from 'react-router-dom';
 import { createMemoryHistory } from 'history';
-import { fireEvent, waitFor } from '@folio/jest-config-stripes/testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@folio/jest-config-stripes/testing-library/react';
 
 import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
@@ -23,7 +23,13 @@ const { CalloutContext } = require('@folio/stripes/core');
 const sendCallout = jest.fn();
 
 // The institution is not offered unless explicitly flagged as a pickup location.
-const institution = { id: 'inst-1', name: 'Our Library', type: 'Institution' };
+const copyrightTypes = [
+  { code: 'AU-GenBus', defaultDesc: 'General Business (Australia)' },
+  { code: 'US-CCG', defaultDesc: 'CCG (US)' },
+];
+const institution = {
+  id: 'inst-1', name: 'Our Library', type: 'Institution', illConfig: { availableCopyrightTypes: copyrightTypes },
+};
 const westBranch = { id: 'branch-w', name: 'West Branch', type: 'Branch', parent: 'inst-1', illConfig: { isPickupLocation: true } };
 const eastBranch = { id: 'branch-e', name: 'East Branch', type: 'Branch', parent: 'inst-1', illConfig: { isPickupLocation: true } };
 const ownedEntries = { items: [institution, westBranch, eastBranch] };
@@ -285,6 +291,142 @@ describe('CreateRoute', () => {
     const { json } = mockOkapi.post.mock.calls[0][1];
     expect(json.illRequest.serviceInfo.serviceType).toBe('Loan');
     expect(json).not.toHaveProperty('requesterPickupLocationId');
+  });
+
+  describe('copyright', () => {
+    const fieldName = "serviceInfo.copyrightCompliance['#text']";
+    const copyrightField = () => fieldByName(fieldName);
+    const ownedWith = illConfig => ({ items: [{ ...institution, illConfig }, westBranch, eastBranch] });
+
+    it('uses only institution codes and descriptions, deduplicates codes, and submits the default code', async () => {
+      const available = [
+        { code: 'CustomPolicy', defaultDesc: 'Institution copyright policy' },
+        { code: 'CustomPolicy', defaultDesc: 'Duplicate description' },
+        { code: 'CodeOnly', defaultDesc: '' },
+        { code: '', defaultDesc: 'Unusable' },
+        null,
+      ];
+      renderCreate({ owned: { items: [
+        { ...westBranch,
+          illConfig: { ...westBranch.illConfig,
+            availableCopyrightTypes: [{ code: 'BranchOnly', defaultDesc: 'Branch policy' }],
+            defaultCopyrightType: { code: 'BranchOnly' } } },
+        { ...institution,
+          illConfig: { availableCopyrightTypes: available,
+            defaultCopyrightType: { code: 'CustomPolicy', defaultDesc: 'Different default description' } } },
+      ] } });
+      await formRendered();
+      expect(copyrightField()).toBeUndefined();
+      chooseServiceType('Copy');
+      expect(optionLabels(fieldName)).toEqual(['Institution copyright policy', 'CodeOnly']);
+      expect(copyrightField()).toHaveValue('CustomPolicy');
+      expect(mockOkapi.calledUrls().filter(url => url.startsWith('directory/entries/owned'))).toHaveLength(1);
+      fillRequiredFields();
+      fireEvent.click(document.querySelector('button[type="submit"]'));
+      await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
+      expect(mockOkapi.post.mock.calls[0][1].json.illRequest.serviceInfo.copyrightCompliance).toEqual({ '#text': 'CustomPolicy' });
+    });
+
+    it.each([undefined, null, { code: 'Missing' }, { code: 'us-ccg' }])(
+      'leaves the field empty and required when the default is %p', async defaultCopyrightType => {
+        renderCreate({ owned: ownedWith({ availableCopyrightTypes: copyrightTypes, defaultCopyrightType }) });
+        await formRendered();
+        chooseServiceType('Copy');
+        expect(copyrightField()).toHaveValue('');
+        fillRequiredFields();
+        fireEvent.click(document.querySelector('button[type="submit"]'));
+        await waitFor(() => expect(copyrightField()).toHaveAttribute('aria-invalid', 'true'));
+        expect(mockOkapi.post).not.toHaveBeenCalled();
+      }
+    );
+
+    it.each([undefined, {}, { availableCopyrightTypes: null }, { availableCopyrightTypes: [] }])(
+      'blocks Copy submission without configured types (%p)', async illConfig => {
+        renderCreate({ owned: ownedWith(illConfig), messages: { 'ui-rs.requestform.copyright.empty': 'Translated empty configuration' } });
+        await formRendered();
+        chooseServiceType('Copy');
+        expect(copyrightField()).toBeDisabled();
+        expect(optionLabels(fieldName)).toEqual([]);
+        expect(screen.getByText('Translated empty configuration')).toBeInTheDocument();
+        fillRequiredFields();
+        fireEvent.click(document.querySelector('button[type="submit"]'));
+        await waitFor(() => expect(copyrightField()).toHaveAttribute('aria-invalid', 'true'));
+        expect(mockOkapi.post).not.toHaveBeenCalled();
+      }
+    );
+
+    it('does not use branch types when no institution is returned', async () => {
+      renderCreate({ owned: { items: [{ ...westBranch, illConfig: { availableCopyrightTypes: copyrightTypes } }] } });
+      await formRendered();
+      chooseServiceType('Copy');
+      expect(copyrightField()).toBeDisabled();
+      expect(optionLabels(fieldName)).toEqual([]);
+    });
+
+    it('distinguishes a failed directory lookup from empty configuration', async () => {
+      renderCreate({
+        owned: () => { throw new Error('Forbidden'); },
+        messages: { 'ui-rs.requestform.copyright.loadError': 'Translated directory failure' },
+      });
+      await formRendered();
+      chooseServiceType('Copy');
+      expect(copyrightField()).toBeDisabled();
+      expect(screen.getByText('Translated directory failure')).toBeInTheDocument();
+      fillRequiredFields();
+      fireEvent.click(document.querySelector('button[type="submit"]'));
+      await waitFor(() => expect(copyrightField()).toHaveAttribute('aria-invalid', 'true'));
+      expect(mockOkapi.post).not.toHaveBeenCalled();
+    });
+
+    it('keeps staff choices and deliberate clears across service switches and directory refreshes', async () => {
+      const { queryClient } = renderCreate({ owned: ownedWith({
+        availableCopyrightTypes: copyrightTypes, defaultCopyrightType: copyrightTypes[0],
+      }) });
+      await formRendered();
+      chooseServiceType('Copy');
+      expect(copyrightField()).toHaveValue('AU-GenBus');
+      setField(fieldName, 'US-CCG');
+      chooseServiceType('Loan');
+      chooseServiceType('Copy');
+      expect(copyrightField()).toHaveValue('US-CCG');
+      const extra = { code: 'NewPolicy', defaultDesc: 'New institution policy' };
+      act(() => queryClient.setQueriesData('directory/entries/owned', ownedWith({
+        availableCopyrightTypes: [...copyrightTypes, extra], defaultCopyrightType: extra,
+      })));
+      await waitFor(() => expect(optionLabels(fieldName)).toContain(extra.defaultDesc));
+      expect(copyrightField()).toHaveValue('US-CCG');
+      setField(fieldName, '');
+      act(() => queryClient.setQueriesData('directory/entries/owned', ownedWith({
+        availableCopyrightTypes: copyrightTypes, defaultCopyrightType: copyrightTypes[0],
+      })));
+      await waitFor(() => expect(optionLabels(fieldName)).toHaveLength(2));
+      expect(copyrightField()).toHaveValue('');
+      chooseServiceType('Loan');
+      chooseServiceType('Copy');
+      expect(copyrightField()).toHaveValue('');
+    });
+
+    it('revalidates a selected code removed by a directory refresh without overwriting it', async () => {
+      const { queryClient } = renderCreate({ messages: {
+        'ui-rs.requestform.copyright.invalid': 'Translated unavailable code',
+      } });
+      await formRendered();
+      fillRequiredFields();
+      chooseServiceType('Copy');
+      setField(fieldName, 'US-CCG');
+      act(() => queryClient.setQueriesData('directory/entries/owned', ownedWith({
+        availableCopyrightTypes: [copyrightTypes[0]], defaultCopyrightType: copyrightTypes[0],
+      })));
+      await waitFor(() => expect(copyrightField().querySelector('option[value="US-CCG"]')).toBeDisabled());
+      expect(copyrightField()).toHaveValue('US-CCG');
+      fireEvent.click(document.querySelector('button[type="submit"]'));
+      expect(await screen.findByText('Translated unavailable code')).toBeInTheDocument();
+      expect(mockOkapi.post).not.toHaveBeenCalled();
+      setField(fieldName, 'AU-GenBus');
+      fireEvent.click(document.querySelector('button[type="submit"]'));
+      await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
+      expect(mockOkapi.post.mock.calls[0][1].json.illRequest.serviceInfo.copyrightCompliance).toEqual({ '#text': 'AU-GenBus' });
+    });
   });
 
   describe('tiers', () => {

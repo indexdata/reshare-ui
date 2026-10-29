@@ -8,16 +8,59 @@ import SettingsConfigEditor from '../components/SettingsConfigEditor';
 const STALE_QUERY_TIME = 2 * 60 * 1000;
 const entryPath = id => `directory/entries/by-id/${id}`;
 const fieldLabelId = fieldName => `ui-rsdir.illConfig.${fieldName}`;
+const codeDescriptionArray = fieldName => ({
+  fieldName,
+  valueType: 'objectArray',
+  defaultOnly: fieldName === 'availableCopyrightTypes',
+  objectMap: [
+    { fieldName: 'code', valueType: 'string', required: true },
+    { fieldName: 'defaultDesc', valueType: 'string', required: true },
+  ],
+});
+
+const copyrightSaveImpact = ({ nextValue, resource }) => {
+  const config = resource?.illConfig;
+  const code = config?.defaultCopyrightType?.code;
+  if (typeof code !== 'string' ||
+    !config.availableCopyrightTypes?.some(item => item.code === code) ||
+    nextValue.some(item => item.code === code)) return undefined;
+
+  return {
+    heading: <FormattedMessage id="ui-rsdir.illConfig.clearDefault.heading" defaultMessage="Clear default copyright type?" />,
+    message: (
+      <FormattedMessage
+        id="ui-rsdir.illConfig.clearDefault.message"
+        defaultMessage="Saving these changes will remove {code} from the available copyright types and clear the current default copyright type."
+        values={{ code }}
+      />
+    ),
+    confirmLabel: <FormattedMessage id="ui-rsdir.illConfig.clearDefault.confirm" defaultMessage="Save and clear default" />,
+    discardChangesMessage: (
+      <FormattedMessage
+        id="ui-rsdir.illConfig.clearDefault.discardChanges"
+        defaultMessage="Unsaved changes to the default copyright type will also be discarded."
+      />
+    ),
+    additionalValues: { defaultCopyrightType: null },
+  };
+};
+
 export const fieldMap = [
-  ...['loanConditions', 'availableCopyrightTypes', 'unfilledReasons', 'cancellationReasons'].map(fieldName => ({
-    fieldName,
-    valueType: 'objectArray',
-    defaultOnly: fieldName === 'availableCopyrightTypes',
-    objectMap: [
-      { fieldName: 'code', valueType: 'string', required: true },
-      { fieldName: 'defaultDesc', valueType: 'string', required: true },
-    ],
-  })),
+  codeDescriptionArray('loanConditions'),
+  { ...codeDescriptionArray('availableCopyrightTypes'), getSaveImpact: copyrightSaveImpact },
+  {
+    fieldName: 'defaultCopyrightType',
+    valueType: 'codeDescription',
+    availableValuesField: 'availableCopyrightTypes',
+    emptyChoicesMessage: (
+      <FormattedMessage
+        id="ui-rsdir.illConfig.defaultCopyrightType.defineAvailable"
+        defaultMessage="Define available Copyright types before selecting a default"
+      />
+    ),
+  },
+  codeDescriptionArray('unfilledReasons'),
+  codeDescriptionArray('cancellationReasons'),
   {
     fieldName: 'loadBalancingPolicy',
     valueType: 'string',

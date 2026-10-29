@@ -8,9 +8,10 @@ import React from 'react';
 //   jest.mock('@folio/stripes-components/lib/TextArea', () => require('../test/textAreaMock').default);
 // Note this module path is the final-form-aware (formField-wrapped) export, so the
 // stub receives final-form's `input`/`meta` and wires the input handlers itself.
-const TextArea = ({ input = {}, id, label }) => (
+const TextArea = ({ input = {}, id, label, disabled }) => (
   <textarea
     id={id}
+    disabled={disabled}
     name={input.name}
     aria-label={typeof label === 'string' ? label : undefined}
     value={input.value ?? ''}

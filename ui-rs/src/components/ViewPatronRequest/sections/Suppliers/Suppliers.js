@@ -16,7 +16,7 @@ const reasonUnfilledCode = (reason) => ReasonUnfilled.find(
   code => code.toLowerCase() === reason.toLowerCase()
 ) ?? reason;
 
-const SupplierCard = ({ supplier, position }) => {
+const SupplierCard = ({ supplier, position, cancellationReason }) => {
   const { reasonUnfilled, note } = supplier;
 
   return (
@@ -60,6 +60,14 @@ const SupplierCard = ({ supplier, position }) => {
             )}
           </KeyValue>
         </Col>
+        {supplier.lastStatus?.toLowerCase() === 'cancelled' && (
+          <Col xs={6}>
+            <KeyValue
+              label={<FormattedMessage id="ui-rs.suppliers.cancellationReason" />}
+              value={cancellationReason}
+            />
+          </Col>
+        )}
         {reasonUnfilled && (
           <Col xs={6}>
             <KeyValue label={<FormattedMessage id="ui-rs.suppliers.reasonUnfilled" />}>
@@ -112,7 +120,12 @@ const Suppliers = ({ record = {} }) => {
     // ordinal itself: ordinals are 0-based and carry on past the existing rota
     // when the locator runs again on retry.
     body = suppliers.map((supplier, i) => (
-      <SupplierCard key={supplier.id} supplier={supplier} position={i + 1} />
+      <SupplierCard
+        key={supplier.id}
+        supplier={supplier}
+        position={i + 1}
+        cancellationReason={record.cancellationReason}
+      />
     ));
   }
 

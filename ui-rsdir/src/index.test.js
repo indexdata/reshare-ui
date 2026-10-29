@@ -47,7 +47,7 @@ const responses = (overrides = {}) => ({
 });
 
 // Mount at the module route and expose history for navigation assertions.
-const renderDirectory = (initialEntries) => {
+const renderDirectory = (initialEntries, { messages } = {}) => {
   const history = createMemoryHistory({ initialEntries });
   return {
     history,
@@ -55,7 +55,7 @@ const renderDirectory = (initialEntries) => {
       <CalloutContext.Provider value={{ sendCallout }}>
         <Route path="/directory" component={RSDir} />
       </CalloutContext.Provider>,
-      { history }
+      { history, messages }
     ),
   };
 };
@@ -428,6 +428,91 @@ describe('directory entries', () => {
       expect(screen.getByText('1.5')).toBeInTheDocument();
     }
   );
+
+  it('selects and clears a default copyright object through the ILL route', async () => {
+    const [code, defaultDesc] = Object.entries(
+      directoryOpenApi.components.schemas.IllConfig.properties.defaultCopyrightType['x-default-data']
+    )[0];
+    const availableCopyrightTypes = [{ code, defaultDesc: 'Customized available description' }];
+    let savedEntry = { ...entry, illConfig: { ...entry.illConfig, availableCopyrightTypes } };
+    const saveEntry = async (_path, { json }) => {
+      savedEntry = { ...savedEntry, illConfig: { ...savedEntry.illConfig, ...json.illConfig } };
+      return { text: async () => JSON.stringify(savedEntry) };
+    };
+    mockOkapi.patch.mockImplementationOnce(saveEntry).mockImplementationOnce(saveEntry);
+    mockOkapi.setResponses(responses({
+      'directory/entries/by-id/e1': () => savedEntry,
+    }));
+    renderDirectory(['/directory/entries/e1/illconfig']);
+    await screen.findByText('1.5');
+    await waitFor(() => expect(document.getElementById('edit-ill-config-defaultCopyrightType')).toBeEnabled());
+    fireEvent.click(document.getElementById('edit-ill-config-defaultCopyrightType'));
+    const input = screen.getByRole('combobox', { name: 'defaultCopyrightType' });
+    expect(within(input).getAllByRole('option').map(option => option.value)).toEqual(['', `code:${code}`]);
+    fireEvent.change(input, { target: { value: `code:${code}` } });
+    fireEvent.click(document.getElementById('save-ill-config-defaultCopyrightType'));
+    await waitFor(() => expect(mockOkapi.patch).toHaveBeenCalledWith(
+      'directory/entries/by-id/e1', { json: { illConfig: { defaultCopyrightType: { code, defaultDesc } } } }
+    ));
+    await waitFor(() => expect(document.getElementById('edit-ill-config-defaultCopyrightType')).toBeEnabled());
+    expect(screen.getByText(`${code}: ${defaultDesc}`)).toBeInTheDocument();
+    fireEvent.click(document.getElementById('edit-ill-config-defaultCopyrightType'));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    fireEvent.click(document.getElementById('save-ill-config-defaultCopyrightType'));
+    await waitFor(() => expect(mockOkapi.patch).toHaveBeenCalledWith(
+      'directory/entries/by-id/e1', { json: { illConfig: { defaultCopyrightType: null } } }
+    ));
+    expect(screen.getByText('1.5')).toBeInTheDocument();
+  });
+
+  it('translates every removal warning message and clears the default with the available types in one save', async () => {
+    const pairs = Object.entries(directoryOpenApi.components.schemas.IllConfig.properties.defaultCopyrightType['x-default-data'])
+      .slice(0, 2).map(([code, defaultDesc]) => ({ code, defaultDesc }));
+    let savedEntry = {
+      ...entry,
+      illConfig: { ...entry.illConfig, availableCopyrightTypes: pairs, defaultCopyrightType: pairs[0] },
+    };
+    mockOkapi.setResponses(responses({ 'directory/entries/by-id/e1': () => savedEntry }));
+    mockOkapi.patch.mockImplementationOnce(async (_path, { json }) => {
+      savedEntry = { ...savedEntry, illConfig: { ...savedEntry.illConfig, ...json.illConfig } };
+      return { text: async () => JSON.stringify(savedEntry) };
+    });
+    renderDirectory(['/directory/entries/e1/illconfig'], { messages: {
+      'ui-rsdir.illConfig.clearDefault.heading': 'Translated heading',
+      'ui-rsdir.illConfig.clearDefault.message': 'Translated warning for {code}',
+      'ui-rsdir.illConfig.clearDefault.confirm': 'Translated confirmation',
+      'ui-rsdir.illConfig.clearDefault.discardChanges': 'Translated discard warning',
+      'stripes-components.cancel': 'Translated cancellation',
+    } });
+    await screen.findByText('1.5');
+    await waitFor(() => expect(document.getElementById('edit-ill-config-defaultCopyrightType')).toBeEnabled());
+    fireEvent.click(document.getElementById('edit-ill-config-defaultCopyrightType'));
+    fireEvent.change(screen.getByRole('combobox', { name: 'defaultCopyrightType' }), {
+      target: { value: `code:${pairs[1].code}` },
+    });
+    fireEvent.click(document.getElementById('edit-ill-config-availableCopyrightTypes'));
+    fireEvent.click(document.getElementById('remove-ill-config-availableCopyrightTypes-0'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    fireEvent.click(document.getElementById('save-ill-config-availableCopyrightTypes'));
+    const dialog = within(screen.getByRole('dialog'));
+    expect(dialog.getByText('Translated heading')).toBeInTheDocument();
+    expect(dialog.getByText(`Translated warning for ${pairs[0].code}`)).toBeInTheDocument();
+    expect(dialog.getByText('Translated discard warning')).toBeInTheDocument();
+    expect(dialog.getByRole('button', { name: 'Translated confirmation' })).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole('button', { name: 'Translated cancellation' }));
+    expect(mockOkapi.patch).not.toHaveBeenCalled();
+    fireEvent.click(document.getElementById('save-ill-config-availableCopyrightTypes'));
+    fireEvent.click(screen.getByRole('button', { name: 'Translated confirmation' }));
+    await waitFor(() => expect(document.getElementById('edit-ill-config-availableCopyrightTypes')).toBeEnabled());
+    expect(mockOkapi.patch).toHaveBeenCalledTimes(1);
+    expect(mockOkapi.patch).toHaveBeenCalledWith('directory/entries/by-id/e1', {
+      json: { illConfig: { availableCopyrightTypes: [pairs[1]], defaultCopyrightType: null } },
+    });
+    expect(savedEntry.illConfig.defaultCopyrightType).toBeNull();
+    fireEvent.click(document.getElementById('edit-ill-config-defaultCopyrightType'));
+    expect(screen.getByRole('combobox', { name: 'defaultCopyrightType' })).toHaveValue('');
+    expect(screen.getByText('1.5')).toBeInTheDocument();
+  });
 
   it.each(['deficit', 'proportional'])('views and changes the ILL load balancing policy from %s', async policy => {
     mockOkapi.setResponses(responses({

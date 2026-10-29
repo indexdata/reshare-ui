@@ -1,39 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { Form, Field, useForm, useFormState } from 'react-final-form';
-import { FormattedMessage, useIntl } from 'react-intl';
-import { Button, Icon, Layout, Loading, MessageBanner, Modal, ModalFooter, Select, TextArea } from '@folio/stripes/components';
+import React, { useState } from 'react';
+import { Form, Field } from 'react-final-form';
+import { FormattedMessage } from 'react-intl';
+import { Button, Icon, Layout, Loading, MessageBanner, Modal, ModalFooter, TextArea } from '@folio/stripes/components';
 import { useIsActionPending } from '@projectreshare/stripes-reshare';
 import useCancellationReasons from '#/util/useCancellationReasons';
 import actionMeta from './actionMeta';
-
-const CancellationReasonField = ({ reasons, disabled }) => {
-  const intl = useIntl();
-  const form = useForm();
-  const { values: { reason } } = useFormState({ subscription: { values: true } });
-
-  useEffect(() => {
-    if (reason && !reasons.some(({ code }) => code === reason)) {
-      form.change('reason', undefined);
-    }
-  }, [form, reason, reasons]);
-
-  if (reasons.length === 0) return null;
-
-  return (
-    <Layout className="padding-top-gutter">
-      <Field
-        name="reason"
-        component={Select}
-        label={<FormattedMessage id="ui-rs.actions.cancel-request.reason" />}
-        dataOptions={[
-          { value: '', label: intl.formatMessage({ id: 'ui-rs.actions.cancel-request.noReason' }) },
-          ...reasons.map(({ code, defaultDesc }) => ({ value: code, label: defaultDesc })),
-        ]}
-        disabled={disabled}
-      />
-    </Layout>
-  );
-};
+import DirectoryReasonField from './DirectoryReasonField';
 
 const CancelRequest = ({ request, performAction }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -83,7 +55,13 @@ const CancelRequest = ({ request, performAction }) => {
                     <FormattedMessage id="ui-rs.actions.cancel-request.reasonsError" />
                   </MessageBanner>
                 }
-                <CancellationReasonField reasons={reasons} disabled={submitting} />
+                <DirectoryReasonField
+                  name="reason"
+                  labelId="ui-rs.actions.cancel-request.reason"
+                  placeholderId="ui-rs.actions.cancel-request.noReason"
+                  reasons={reasons}
+                  disabled={submitting}
+                />
                 <Layout className="padding-top-gutter">
                   <Field
                     name="note"
