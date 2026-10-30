@@ -432,6 +432,21 @@ describe('CreateRoute', () => {
       expect(fieldByName('bibliographicInfo.title')).toHaveValue('Test Title');
     });
 
+    it('keeps the default types and selection when an owned-entries refetch fails', async () => {
+      const { queryClient } = renderCreate({ owned: ownedWith({ availableCopyrightTypes: [] }) });
+      await formRendered();
+      fillRequiredFields();
+      chooseServiceType('Copy');
+      setField(fieldName, 'US-CCL');
+      mockOkapi.setResponses({ 'directory/entries/owned': () => { throw new Error('Forbidden'); }, 'directory/openapi.json': directorySpec });
+      await act(() => queryClient.refetchQueries('directory/entries/owned'));
+      expect(queryClient.getQueryState(['directory/entries/owned', { limit: '1000' }]).status).toBe('error');
+      expect(optionLabels(fieldName)).toEqual(['Fair Dealing (UK)', 'CCL (US code)']);
+      fireEvent.click(document.querySelector('button[type="submit"]'));
+      await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
+      expect(mockOkapi.post.mock.calls[0][1].json.illRequest.serviceInfo.copyrightCompliance).toEqual({ '#text': 'US-CCL' });
+    });
+
     it('revalidates a selected code removed by a directory refresh without overwriting it', async () => {
       const { queryClient } = renderCreate({ messages: {
         'ui-rs.requestform.copyright.invalid': 'Translated unavailable code',

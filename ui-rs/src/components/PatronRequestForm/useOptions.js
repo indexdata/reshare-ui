@@ -29,14 +29,14 @@ const defaultCopyrightItems = spec => {
 const useOptions = () => {
   const { pickupLocations, isSettled } = usePickupLocations();
   const { tiers } = useTiers();
-  const { institution, isSuccess: institutionLoaded, isError: institutionLoadError } = useTenantInstitution();
+  const { institution, hasData: institutionLoaded, isError: institutionLoadError } = useTenantInstitution();
   // Mirrors the broker's rule for an NCIP patron lookup; an unset lookupUserEnabled means on.
   const lmsConfig = institution?.lmsConfig;
   const patronLookup = !!lmsConfig?.address && lmsConfig.lookupUserEnabled !== false;
   const availableCopyrightTypes = institution?.illConfig?.availableCopyrightTypes;
   const configuredCopyrightTypes = useMemo(() => toCopyrightOptions(availableCopyrightTypes), [availableCopyrightTypes]);
   // An institution that has configured no copyright types gets the directory's defaults;
-  // a failed lookup does not, so it still reads as a load error. The spec is fetched up
+  // a failed initial lookup does not, so it still reads as a load error. The spec is fetched up
   // front rather than on demand so a refresh that empties the configured list doesn't
   // unsettle the options and unmount a form mid-draft.
   const needsDefaultCopyrightTypes = institutionLoaded && configuredCopyrightTypes.length === 0;
