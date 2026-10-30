@@ -30,7 +30,7 @@ test('a pull slip body is edited as source, with placeholders inserted at the cu
   for (let i = 0; i < '</p>'.length; i++) await page.keyboard.press('ArrowLeft');
   await page.locator('#template-body-placeholder').click();
   const picker = page.getByRole('dialog', { name: 'Insert placeholders' });
-  await picker.getByRole('checkbox', { name: /\{\{\.Title\}\}/ }).check();
+  await picker.getByRole('checkbox', { name: '{{.Title}}', exact: true }).check();
   await picker.getByRole('button', { name: 'Insert selected' }).click();
 
   await expect(editor(page)).toHaveText('<p>{{.Title}}</p>');
@@ -39,11 +39,12 @@ test('a pull slip body is edited as source, with placeholders inserted at the cu
   await expect(editor(page)).toHaveText('<p>{{.Title}}!</p>');
 
   // HTML the editor cannot parse is marked on its own, with no preview open,
-  // and a template action inside an attribute value is not an error.
-  await setBody(page, '<p class=box">{{.Title}}</p>');
-  await expect(page.locator('.cm-lintRange-error')).toBeVisible();
-  await setBody(page, '<p title="{{printf "%s" .Title}}">{{.Title}}</p>');
-  await expect(page.locator('.cm-lintRange-error')).toHaveCount(0);
+  // and a template action inside an attribute value is not an error. One body
+  // holds both: an edit drops the old marks at once and the linter runs only
+  // after a delay, so a bare check for no marks would pass before it ran.
+  await setBody(page, '<p title="{{printf "%s" .Title}}">{{.Title}}</p>\n<p class=box">x</p>');
+  await expect(page.locator('.cm-lintRange-error')).toHaveCount(1);
+  await expect(editor(page).locator('.cm-line').nth(1).locator('.cm-lintRange-error')).toHaveCount(1);
 
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await expect(page.locator('.cm-search')).toBeVisible();
@@ -68,7 +69,7 @@ test('the preview renders the samples and marks a template error at its line', a
   // The slips from the last body that rendered stay up.
   await expect(workspace.locator('iframe[src^="blob:"]')).toBeVisible();
 
-  await workspace.getByRole('button', { name: /close/i }).click();
+  await workspace.getByRole('button', { name: 'Close Preview', exact: true }).click();
   await expect(workspace).toHaveCount(0);
   await expect(editor(page)).toHaveText('<p>\n{{.Nope}}\n</p>', lines);
 });
