@@ -86,6 +86,8 @@ const renderRerequest = ({ history, owned = { items: [institution, ...branches] 
     'broker/patron_requests/req-1': () => broker.request,
     'broker/patron_requests/req-1/actions': () => broker.actions,
     'directory/entries/owned': owned,
+    // A spec without default copyright types keeps an empty configuration empty.
+    'directory/openapi.json': {},
   });
   const memoryHistory = history ?? createMemoryHistory({ initialEntries: ['/requests/req-1/rerequest?foo=bar'] });
   const rendered = renderWithRs(

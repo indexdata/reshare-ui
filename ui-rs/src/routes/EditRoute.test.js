@@ -89,6 +89,8 @@ const renderEdit = ({ request = editableRequest(), owned = { items: [institution
     'broker/patron_requests/req-1': request,
     'broker/state_model/models/default': defaultModel,
     'directory/entries/owned': owned,
+    // A spec without default copyright types keeps an empty configuration empty.
+    'directory/openapi.json': {},
   });
   return renderWithRs(
     <CalloutContext.Provider value={{ sendCallout }}>
