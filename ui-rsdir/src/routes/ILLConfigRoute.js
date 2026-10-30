@@ -133,6 +133,11 @@ export const fieldMap = [
     valueType: 'integer',
     minValue: 0,
   },
+  {
+    fieldName: 'maxRequestsPerPatron',
+    valueType: 'integer',
+    minValue: 0,
+  },
 ];
 
 const ILLConfigRoute = () => {

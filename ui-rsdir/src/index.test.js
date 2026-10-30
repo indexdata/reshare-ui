@@ -26,7 +26,7 @@ const entry = {
   name: 'fixture-entry',
   type: 'Institution',
   symbols: [{ authority: 'ISIL', symbol: 'FIX-1' }],
-  illConfig: { minimumCost: 1.5 },
+  illConfig: { minimumCost: 1.5, maxRequestsPerPatron: 37 },
   lmsConfig: { address: 'fixture-lms-address' },
   closures: [
     { id: 'c1', entry: 'e1', startDate: '2026-03-02', endDate: '2026-06-01', reason: 'fixture-closure' },
@@ -609,6 +609,25 @@ describe('directory entries', () => {
     await waitFor(() => expect(mockOkapi.patch).toHaveBeenCalledWith(
       'directory/entries/by-id/e1',
       { json: { illConfig: { minimumCost: expected } } }
+    ));
+  });
+
+  it.each([
+    { label: 'saves a non-negative integer', value: '25', expected: 25 },
+    { label: 'clears the value', value: '', expected: null },
+  ])('$label for the ILL maximum active requests per patron', async ({ value, expected }) => {
+    renderDirectory(['/directory/entries/e1/illconfig']);
+
+    expect(await screen.findByText('37')).toBeInTheDocument();
+    fireEvent.click(document.getElementById('edit-ill-config-maxRequestsPerPatron'));
+    const input = screen.getByRole('spinbutton', { name: 'maxRequestsPerPatron' });
+    expect(input).toHaveAttribute('min', '0');
+
+    fireEvent.change(input, { target: { value } });
+    fireEvent.click(document.getElementById('save-ill-config-maxRequestsPerPatron'));
+    await waitFor(() => expect(mockOkapi.patch).toHaveBeenCalledWith(
+      'directory/entries/by-id/e1',
+      { json: { illConfig: { maxRequestsPerPatron: expected } } }
     ));
   });
 
