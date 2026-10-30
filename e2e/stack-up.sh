@@ -25,7 +25,7 @@ fi
 
 if $build; then
   platform_dir="${PLATFORM_DIR:-../platform-rs-dev}"
-  echo "Building UI bundles from $platform_dir into e2e/bundle..."
+  echo "Building the UI bundle from $platform_dir into e2e/bundle..."
   # stripes build leaves earlier chunks behind, so clear first — otherwise the
   # directory accumulates orphans and grepping it tells you about old builds.
   # Contents, not the directory itself: nginx bind-mounts bundle/ and would keep
@@ -34,16 +34,49 @@ if $build; then
   find bundle -mindepth 1 -delete
   # One bundle per tenant: tenant and okapi URL are compiled in. The ports
   # pair up with the server blocks in mock-okapi/mock-okapi.conf.
-  for pair in test1:9130 test2:9131; do
-    (
-      e2e_dir="$PWD"
-      cd "$platform_dir"
-      export STRIPES_TRANSPILE_TOKENS="@projectreshare"
-      export NODE_OPTIONS="--max-old-space-size=4096 ${NODE_OPTIONS:-}"
-      export E2E_BUNDLE_TENANT="${pair%%:*}" E2E_BUNDLE_OKAPI_URL="http://localhost:${pair##*:}"
-      yarn stripes build "$e2e_dir/stripes.e2e.config.js" "$e2e_dir/bundle/$E2E_BUNDLE_TENANT"
-    )
-  done
+  (
+    e2e_dir="$PWD"
+    cd "$platform_dir"
+    export STRIPES_TRANSPILE_TOKENS="@projectreshare"
+    export NODE_OPTIONS="--max-old-space-size=4096 ${NODE_OPTIONS:-}"
+    export E2E_BUNDLE_TENANT=test1 E2E_BUNDLE_OKAPI_URL=http://localhost:9130
+    yarn stripes build "$e2e_dir/stripes.e2e.config.js" "$e2e_dir/bundle/test1"
+  )
+  # test2's bundle is test1's with the values stripes.e2e.config.js derives
+  # from the tenant swapped, which saves a second build of the same code. The
+  # config is inlined into one chunk as JS literals. Each must occur exactly
+  # once, so a build that prints them differently fails here rather than
+  # serving test1's config on test2's port. The patched chunk keeps a name
+  # whose hash no longer matches its contents, which nothing checks. Its
+  # source map still shows test1's values.
+  cp -R bundle/test1 bundle/test2
+  node - bundle/test2 <<'EOF'
+const fs = require('fs');
+const path = require('path');
+const dir = process.argv[2];
+const swaps = [
+  ['"http://localhost:9130"', '"http://localhost:9131"'],
+  ['tenant:"test1"', 'tenant:"test2"'],
+  ['"ReShare E2E test1"', '"ReShare E2E test2"'],
+];
+const files = fs.readdirSync(dir).filter((f) => f.endsWith('.js'))
+  .map((f) => path.join(dir, f))
+  .filter((f) => fs.readFileSync(f, 'utf8').includes(swaps[0][0]));
+if (files.length !== 1) {
+  console.error(`expected the okapi URL in one chunk of ${dir}, found ${files.length}`);
+  process.exit(1);
+}
+let js = fs.readFileSync(files[0], 'utf8');
+for (const [from, to] of swaps) {
+  const n = js.split(from).length - 1;
+  if (n !== 1) {
+    console.error(`expected ${from} once in ${files[0]}, found ${n}`);
+    process.exit(1);
+  }
+  js = js.replace(from, to);
+}
+fs.writeFileSync(files[0], js);
+EOF
 fi
 $build_only && exit 0
 
