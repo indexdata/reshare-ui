@@ -157,6 +157,7 @@
   "illConfig.noteFieldSeparator" : "Note field separator",
   "illConfig.supplierPatronPattern" : "Supplier patron pattern",
   "illConfig.duplicateCheckWindowHours" : "Duplicate check window (hours)",
+  "illConfig.maxRequestsPerPatron" : "Maximum active requests per patron",
   "illConfig.defaultLoanPeriod" : "Default loan period (days)",
   "lmsConfig.edit.success" : "LMS configuration updated successfully",
   "lmsConfig.empty" : "No LMS configuration has been saved for this entry.",
