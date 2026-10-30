@@ -9,7 +9,7 @@ const GO_DURATION = /^([0-9]*\.?[0-9]+(s|m|h))+$/;
 const AgeRequestsParams = () => {
   const intl = useIntl();
   const validateInterval = (value) => (
-    !value || GO_DURATION.test(value.trim())
+    value && GO_DURATION.test(value.trim())
       ? undefined
       : intl.formatMessage({ id: 'ui-rs.settings.scheduledActions.validate.interval' })
   );
@@ -20,6 +20,7 @@ const AgeRequestsParams = () => {
         <Field
           id="scheduled-action-age-interval"
           name="actionParams.interval"
+          required
           component={TextField}
           validate={validateInterval}
           label={<FormattedMessage id="ui-rs.settings.scheduledActions.params.interval" />}

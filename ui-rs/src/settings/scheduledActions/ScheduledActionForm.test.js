@@ -178,6 +178,7 @@ describe('ScheduledActionForm', () => {
     expect(screen.queryByLabelText(ATTACH_PDF)).toBeNull();
 
     fillRequired();
+    fireEvent.change(byId('scheduled-action-age-interval'), { target: { value: '24h' } });
     fireEvent.click(save());
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     const values = onSubmit.mock.calls[0][0];
@@ -251,7 +252,7 @@ describe('ScheduledActionForm', () => {
     await waitFor(() => expect(save()).toBeDisabled());
   });
 
-  it('in hourly mode, save gates on a query and a valid minute (no days/hours)', async () => {
+  it('in hourly mode, save gates on a query, aging interval and valid minute (no days/hours)', async () => {
     await renderForm(jest.fn());
     fireEvent.change(byId('scheduled-action-actionName'), { target: { value: 'request-aging' } });
     await waitFor(() => expect(byId('scheduled-action-age-interval')).toBeInTheDocument());
@@ -264,6 +265,8 @@ describe('ScheduledActionForm', () => {
     expect(save()).toBeDisabled();
     fireEvent.change(byId('scheduled-action-title'), { target: { value: 'Aging' } });
     fireEvent.change(byId('scheduled-action-batchQuery'), { target: { value: 'state==REQ' } });
+    await waitFor(() => expect(save()).toBeDisabled());
+    fireEvent.change(byId('scheduled-action-age-interval'), { target: { value: '24h' } });
     await waitFor(() => expect(save()).not.toBeDisabled());
 
     fireEvent.change(byId('scheduled-action-minute'), { target: { value: '60' } });
@@ -277,6 +280,7 @@ describe('ScheduledActionForm', () => {
     await waitFor(() => expect(byId('scheduled-action-age-interval')).toBeInTheDocument());
     fireEvent.change(byId('scheduled-action-title'), { target: { value: 'Aging' } });
     fireEvent.change(byId('scheduled-action-batchQuery'), { target: { value: 'state==REQ' } });
+    fireEvent.change(byId('scheduled-action-age-interval'), { target: { value: '24h' } });
 
     fireEvent.change(byId('scheduled-action-frequency'), { target: { value: 'minutely' } });
     await waitFor(() => expect(byId('scheduled-action-interval')).toBeInTheDocument());
