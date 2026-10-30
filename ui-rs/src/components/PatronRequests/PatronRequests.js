@@ -31,6 +31,13 @@ import AppNameContext from '#/AppNameContext';
 import Filters from './Filters';
 import Search from './Search';
 
+// Columns the broker can order by (see sortMap). Both sides share the list; a name for a
+// column an app does not show has no effect.
+const sortableFields = [
+  'hrid', 'dateCreated', 'lastUpdated', 'state', 'serviceType',
+  'requesterSymbol', 'supplierSymbol', 'title',
+];
+
 const appDetails = {
   request: {
     title: 'Requests',
@@ -338,6 +345,8 @@ const PatronRequests = ({
                     onRowClick={(_e, rowData) => history.push(`${match.url}/${rowData.id}${location.search}`)}
                     pageAmount={perPage}
                     pagingType={MCLPagingTypes.PREV_NEXT}
+                    showSortIndicator
+                    sortableFields={sortableFields}
                     sortOrder={sortOrder.replace(/^-/, '').replace(/,.*/, '')}
                     sortDirection={sortOrder.startsWith('-') ? 'descending' : 'ascending'}
                     totalCount={totalCount}
