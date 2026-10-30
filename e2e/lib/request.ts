@@ -2,11 +2,29 @@ import { expect, type Page } from '@playwright/test';
 import { checkA11y } from './axe';
 import { item, patron, peer, pickupLocation } from './env';
 
+// A flow page accordion, by the id its toggle button carries.
+export function accordion(page: Page, id: string) {
+  return page.locator(`#accordion-toggle-button-${id}`).locator('xpath=ancestor::section[1]');
+}
+
 // Wait for live updates; reloading would hide a broken event stream.
 export async function expectState(page: Page, state: string | RegExp) {
-  const status = page.locator('#accordion-toggle-button-requestInfo').locator('xpath=ancestor::section[1]');
-  await expect(status.getByText(state, { exact: true }).first()).toBeVisible({ timeout: 30_000 });
+  await expect(accordion(page, 'requestInfo').getByText(state, { exact: true }).first()).toBeVisible({ timeout: 30_000 });
   await checkA11y(page, `state ${state}`);
+}
+
+// The supplier the request is currently with. It changes when the broker
+// moves a request on to the next supplier in its rota.
+export async function expectSupplier(page: Page, symbol: string) {
+  // the value of a key-value pair is the sibling of its label
+  const value = accordion(page, 'requestInfo').getByText('Supplier', { exact: true }).locator('xpath=following-sibling::*[1]');
+  await expect(value).toHaveText(symbol, { timeout: 30_000 });
+}
+
+// The mock catalog's convention for a holding, see the README. Several joined
+// with ';' give the request a rota; the broker orders it, not this string.
+export function holding(symbol: string, id: string = item.id) {
+  return `return-${symbol}::${id}`;
 }
 
 // Open a request from a list by searching for its title first, so that it is
@@ -58,10 +76,10 @@ async function submitCreate(page: Page): Promise<string> {
 
 // The borrower asks the peer for a loan to the pickup branch. Returns the
 // request id, which is what the scan boxes take.
-export async function createLoanRequest(page: Page, title: string): Promise<string> {
+export async function createLoanRequest(page: Page, title: string, identifier = holding(peer.symbol)): Promise<string> {
   await page.goto('/request/requests/create');
   await page.locator('[name="patronInfo.patronId"]').fill(patron.id);
-  await page.locator('[name="systemInstanceIdentifier"]').fill(`return-${peer.symbol}::${item.id}`);
+  await page.locator('[name="systemInstanceIdentifier"]').fill(identifier);
   await page.locator('[name="bibliographicInfo.title"]').fill(title);
   await page.locator('[name="bibliographicInfo.author"]').fill(item.author);
   await page.locator('[name="requesterPickupLocationId"]').selectOption({ label: pickupLocation.name });
@@ -72,7 +90,7 @@ export async function createLoanRequest(page: Page, title: string): Promise<stri
 
 // The borrower asks the peer for a copy of a chapter. Returns the request id.
 // A copy waits at the lender in Will supply until a person acts.
-export async function createCopyRequest(page: Page, title: string, chapter: string): Promise<string> {
+export async function createCopyRequest(page: Page, title: string, chapter: string, identifier = holding(peer.symbol)): Promise<string> {
   await page.goto('/request/requests/create');
   await page.locator('[name="patronInfo.patronId"]').fill(patron.id);
   // stripes lays the label over its radio input, so the label takes the click
@@ -80,7 +98,7 @@ export async function createCopyRequest(page: Page, title: string, chapter: stri
   // whichever the directory offers; index 0 is blank
   await page.locator('[name="serviceInfo.copyrightCompliance[\'#text\']"]').selectOption({ index: 1 });
   await chooseFirstTier(page);
-  await page.locator('[name="systemInstanceIdentifier"]').fill(`return-${peer.symbol}::${item.id}`);
+  await page.locator('[name="systemInstanceIdentifier"]').fill(identifier);
   await page.locator('[name="bibliographicInfo.title"]').fill(title);
   await page.locator('[name="bibliographicInfo.author"]').fill(item.author);
   await page.locator('[name="bibliographicInfo.titleOfComponent"]').fill(chapter);

@@ -11,8 +11,8 @@ const PEER_UI = process.env.E2E_PEER_BASE_URL ?? 'http://localhost:3002';
 const TENANT = process.env.E2E_TENANT ?? 'test1';
 // The in-broker peer moves only when driven; illmock answers automatically.
 const PEER_TENANT = process.env.E2E_PEER_TENANT ?? 'test2';
-const ILLMOCK_SYMBOL = process.env.E2E_ILLMOCK_SYMBOL ?? 'ISIL:US-MOCK';
-// mirrors the symbols seed/directory.json gives each tenant's institution
+// mirror the symbols seed/directory.json gives illmock and each tenant's institution
+const ILLMOCK_SYMBOL = 'ISIL:US-MOCK';
 const symbolOf = (tenant) => `ISIL:US-${tenant.toUpperCase()}`;
 
 const bare = (symbol) => symbol.slice(symbol.indexOf(':') + 1);

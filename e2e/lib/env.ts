@@ -36,3 +36,9 @@ export const pickupLocation = {
 export const patron = {
   id: process.env.E2E_PATRON_ID ?? 'p12345',
 };
+// The captive stack's external supplier, driven by illmock, under the symbol
+// seed/directory.json gives it. Only captive specs use it; a rota that ends
+// here cannot run against an existing system.
+export const illmock = {
+  symbol: 'ISIL:US-MOCK',
+};
