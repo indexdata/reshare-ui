@@ -11,7 +11,6 @@ import PatronRequestFormPane from '#/components/PatronRequestForm/PatronRequestF
 import submissionError from '#/components/PatronRequestForm/submissionError';
 import useOptions from '#/components/PatronRequestForm/useOptions';
 import { brokerToForm, formToRevision } from '#/components/PatronRequestForm/formMapping';
-import handleSISelect from '#/components/PatronRequestForm/handleSISelect';
 
 const RerequestRoute = ({ match }) => {
   const id = match.params?.id;
@@ -99,8 +98,8 @@ const RerequestRoute = ({ match }) => {
   };
 
   return (
-    <Form onSubmit={submit} initialValues={initialValues.current} mutators={{ handleSISelect }}>
-      {({ form }) => (
+    <Form onSubmit={submit} initialValues={initialValues.current}>
+      {() => (
         <PatronRequestFormPane
           titleId="ui-rs.rerequestPatronRequest"
           submitDisabled={actionPending || !canRerequest}
@@ -119,7 +118,7 @@ const RerequestRoute = ({ match }) => {
               }
             </MessageBanner>
           }
-          <PatronRequestForm selectOptions={options} onSISelect={form.mutators.handleSISelect} requireTier />
+          <PatronRequestForm selectOptions={options} requireTier />
         </PatronRequestFormPane>
       )}
     </Form>

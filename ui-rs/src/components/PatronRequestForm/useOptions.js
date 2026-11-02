@@ -3,8 +3,7 @@ import uniqBy from 'lodash/uniqBy';
 import { PublicationType, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import { usePickupLocations, useTenantInstitution, useTiers } from '#/util/useOwnedEntries';
 
-// Lowercased to match the publication types handleSISelect writes.
-const publicationTypes = PublicationType.map(code => ({ label: code, value: code.toLowerCase() }));
+const publicationTypes = PublicationType.map(code => ({ label: code, value: code }));
 
 const toCopyrightOptions = items => uniqBy(
   (Array.isArray(items) ? items : [])

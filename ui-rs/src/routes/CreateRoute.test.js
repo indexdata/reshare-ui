@@ -50,11 +50,34 @@ const directorySpec = { components: { schemas: { IllConfig: { properties: { avai
   'x-default-data': { 'UK-FairDealing': 'Fair Dealing (UK)', 'US-CCL': 'CCL (US code)' },
 } } } } } };
 
+const catalog = {
+  '101': {
+    bibliographicInfo: {
+      supplierUniqueRecordId: 'cat-101',
+      title: 'First Record',
+      subtitle: 'A Subtitle',
+      author: 'First Author',
+      bibliographicItemId: [{ bibliographicItemIdentifier: '9780000000101', bibliographicItemIdentifierCode: { '#text': 'ISBN' } }],
+    },
+    publicationInfo: { publicationType: { '#text': 'book' }, publisher: 'First Press' },
+  },
+  '202': { bibliographicInfo: { title: 'Second Record', author: 'Second Author' } },
+};
+const prefillFromCatalog = url => {
+  const record = catalog[new URL(url, 'http://okapi').searchParams.get('identifier')];
+  if (!record) throw new Error('catalog record not found');
+  return record;
+};
+
 const renderCreate = ({ owned = ownedEntries, spec = directorySpec, ...options } = {}) => {
-  mockOkapi.setResponses({ 'directory/entries/owned': owned, 'directory/openapi.json': spec });
+  mockOkapi.setResponses({
+    'directory/entries/owned': owned,
+    'directory/openapi.json': spec,
+    'broker/patron_requests/prefill': prefillFromCatalog,
+  });
   return renderWithRs(
     <CalloutContext.Provider value={{ sendCallout }}>
-      <Route path="/requests/create" component={CreateRoute} />
+      <Route path="/requests/create/:prefillId?" component={CreateRoute} />
     </CalloutContext.Provider>,
     { initialEntries: ['/requests/create'], ...options }
   );
@@ -92,7 +115,7 @@ const fillRequiredFields = () => {
 };
 
 describe('CreateRoute', () => {
-  quietQueryLog(/^(Boom|Forbidden)$/); // failure tests reject the POST, owned lookup or spec on purpose
+  quietQueryLog(/^(Boom|Forbidden|catalog record not found)$/);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -467,6 +490,57 @@ describe('CreateRoute', () => {
       fireEvent.click(document.querySelector('button[type="submit"]'));
       await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
       expect(mockOkapi.post.mock.calls[0][1].json.illRequest.serviceInfo.copyrightCompliance).toEqual({ '#text': 'AU-GenBus' });
+    });
+  });
+
+  describe('catalog lookup', () => {
+    const lookUp = id => {
+      setField('bibliographicInfo.supplierUniqueRecordId', id);
+      fireEvent.click(screen.getByRole('button', { name: 'ui-rs.requestform.populateById' }));
+    };
+
+    it('fills catalog fields and clears values missing from the next record', async () => {
+      renderCreate();
+      await formRendered();
+
+      lookUp('101');
+      await waitFor(() => expect(fieldByName('bibliographicInfo.title')).toHaveValue('First Record'));
+      expect(mockOkapi.calledUrls()).toContain('broker/patron_requests/prefill?identifier=101');
+      expect(fieldByName('bibliographicInfo.author')).toHaveValue('First Author');
+      expect(fieldByName('identifiers.ISBN')).toHaveValue('9780000000101');
+      expect(fieldByName("publicationInfo.publicationType['#text']")).toHaveValue('Book');
+      expect(fieldByName('bibliographicInfo.supplierUniqueRecordId')).toHaveValue('cat-101');
+
+      lookUp('202');
+      await waitFor(() => expect(fieldByName('bibliographicInfo.title')).toHaveValue('Second Record'));
+      expect(fieldByName('bibliographicInfo.subtitle')).toHaveValue('');
+      expect(fieldByName('identifiers.ISBN')).toHaveValue('');
+      expect(fieldByName("publicationInfo.publicationType['#text']")).toHaveValue('');
+      expect(fieldByName('bibliographicInfo.supplierUniqueRecordId')).toHaveValue('202');
+      expect(sendCallout).not.toHaveBeenCalled();
+    });
+
+    it('shows the broker error without changing form values', async () => {
+      renderCreate();
+      await formRendered();
+      setField('bibliographicInfo.title', 'Typed Title');
+
+      lookUp('999');
+      await waitFor(() => expect(sendCallout).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'error',
+        message: expect.objectContaining({ props: expect.objectContaining({
+          id: 'ui-rs.requestform.prefill.error',
+          values: expect.objectContaining({ message: 'catalog record not found' }),
+        }) }),
+      })));
+      expect(fieldByName('bibliographicInfo.title')).toHaveValue('Typed Title');
+      expect(fieldByName('bibliographicInfo.supplierUniqueRecordId')).toHaveValue('999');
+    });
+
+    it('populates the form from the route id on load', async () => {
+      renderCreate({ initialEntries: ['/requests/create/101'] });
+      await waitFor(() => expect(fieldByName('bibliographicInfo.title')).toHaveValue('First Record'));
+      expect(fieldByName('bibliographicInfo.supplierUniqueRecordId')).toHaveValue('cat-101');
     });
   });
 
