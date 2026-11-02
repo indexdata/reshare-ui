@@ -4,6 +4,7 @@ import { Field, useForm, useFormState } from 'react-final-form';
 import {
   AccordionSet,
   Accordion,
+  Button,
   Col,
   Row,
   Datepicker,
@@ -16,10 +17,11 @@ import {
 import { required } from '@folio/stripes/util';
 import { Pluggable, useStripes } from '@folio/stripes/core';
 import { formatTierOption, tiersOfType } from '#/util/tiers';
+import usePrefill from './usePrefill';
 
 const COPYRIGHT_FIELD = "serviceInfo.copyrightCompliance['#text']";
 
-const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect, requireTier = false }) => {
+const PatronRequestForm = ({ prefillId, selectOptions, requireTier = false }) => {
   const { copyrightTypes, defaultCopyrightCode, copyrightLoadError, publicationTypes, locations, tiers = [], patronLookup } = selectOptions;
   const { values } = useFormState();
   const form = useForm();
@@ -28,6 +30,8 @@ const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect, requireTie
   const isCopyReq = serviceType === 'Copy';
   const pickupLocationRequired = !isCopyReq && locations.length > 0;
   const stripes = useStripes();
+  const { prefill, isLoading: isPrefilling } = usePrefill();
+  const recordId = values?.bibliographicInfo?.supplierUniqueRecordId;
   const copyrightCode = values?.serviceInfo?.copyrightCompliance?.['#text'];
   const copyrightIsAvailable = copyrightTypes.some(option => option.value === copyrightCode);
   const copyrightOptions = copyrightCode && !copyrightIsAvailable ? [
@@ -72,6 +76,12 @@ const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect, requireTie
       form.change('billingInfo.maximumCosts', undefined);
     });
   }, [serviceType, form]);
+
+  // Depend only on the route id: prefill changes on every render,
+  // so including it would repeatedly restart the lookup.
+  useEffect(() => {
+    prefill(prefillId);
+  }, [prefillId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <AccordionSet>
@@ -224,29 +234,28 @@ const PatronRequestForm = ({ autopopulate, selectOptions, onSISelect, requireTie
           endpoint={stripes.config?.reshare?.sharedIndex?.query}
           searchButtonStyle="primary marginBottom0"
           searchLabel={<FormattedMessage id="ui-rs.requestform.populateFromSI" />}
-          selectInstance={onSISelect}
+          disabled={isPrefilling}
+          selectInstance={prefill}
         />}
       >
         <Row>
           <Col xs={8}>
             <Field
-              name="systemInstanceIdentifier"
-              label={<FormattedMessage id="ui-rs.information.systemInstanceIdentifier" />}
+              name="bibliographicInfo.supplierUniqueRecordId"
+              label={<FormattedMessage id="ui-rs.information.supplierUniqueRecordId" />}
               component={TextField}
+              disabled={isPrefilling}
               endControl={
                 // TextField endControl still has right padding as of Sunflower; offset it
                 // when using Button rather than IconButton so the button sits flush.
                 <span style={{ marginRight: '-6px' }}>
-                  <Pluggable
-                    type="rs-siquery"
-                    endpoint={stripes.config?.reshare?.sharedIndex?.query}
-                    searchButtonStyle="noRadius primary marginBottom0"
-                    searchLabel={<FormattedMessage id="ui-rs.requestform.populateById" />}
-                    selectInstance={onSISelect}
-                    specifiedId={values?.systemInstanceIdentifier}
-                    autopopulate={autopopulate}
-                    disabled={!values?.systemInstanceIdentifier}
-                  />
+                  <Button
+                    buttonStyle="noRadius primary marginBottom0"
+                    disabled={isPrefilling || !recordId?.trim()}
+                    onClick={() => prefill(recordId)}
+                  >
+                    <FormattedMessage id="ui-rs.requestform.populateById" />
+                  </Button>
                 </span>
               }
             />

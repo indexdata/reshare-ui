@@ -49,7 +49,7 @@
   "information.isbn": "ISBN",
   "information.issn": "ISSN",
   "information.oclcNumber": "OCLC-Nummer",
-  "information.systemInstanceIdentifier": "System-ID",
+  "information.supplierUniqueRecordId": "System-ID",
   "information.titleOfComponent": "Aufsatztitel",
   "information.authorOfComponent": "Aufsatzautor",
   "information.issue": "Heft",

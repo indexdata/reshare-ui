@@ -1,4 +1,5 @@
 import omit from 'lodash/omit';
+import { PublicationType } from '@projectreshare/stripes-reshare';
 import { ID_ARRAYS, extractIdentifiers } from '#/util/bibIdentifiers';
 import patronEmail, { withPatronEmail } from '#/util/patronEmail';
 import { findMatchingTier, tierMaximumCosts, tierToServiceLevel } from '#/util/tiers';
@@ -14,11 +15,23 @@ const rebuildIds = (entries, { idKey, codeKey, codes }, identifiers) => [
   })),
 ];
 
+// Older requests used lowercase codes; select options now use ISO casing.
+const withIsoPublicationType = publicationInfo => {
+  const code = publicationInfo?.publicationType?.['#text'];
+  if (!code || typeof code !== 'string') return publicationInfo;
+  const isoCode = PublicationType.find(iso => iso.toLowerCase() === code.toLowerCase()) || code;
+  return {
+    ...publicationInfo,
+    publicationType: { ...publicationInfo.publicationType, '#text': isoCode },
+  };
+};
+
 // Lift the displayed codes into the form's `identifiers` fields, keeping the raw
 // arrays in bibliographicInfo for rebuildIds to merge back into.
 const brokerToForm = (request, { tiers = [] } = {}) => {
   const illRequest = request?.illRequest ?? {};
-  const { supplierUniqueRecordId, ...bibliographicInfo } = illRequest.bibliographicInfo ?? {};
+  const bibliographicInfo = illRequest.bibliographicInfo ?? {};
+  const publicationInfo = withIsoPublicationType(illRequest.publicationInfo);
 
   const identifiers = extractIdentifiers(bibliographicInfo);
   const tier = findMatchingTier(illRequest, tiers);
@@ -27,10 +40,10 @@ const brokerToForm = (request, { tiers = [] } = {}) => {
   return {
     ...illRequest,
     bibliographicInfo,
+    ...(publicationInfo && { publicationInfo }),
     identifiers,
     ...(tier && { tier: tier.id }),
     ...(email && { patronEmail: email }),
-    ...(supplierUniqueRecordId && { systemInstanceIdentifier: supplierUniqueRecordId }),
     ...(request?.internalNote && { internalNote: request.internalNote }),
     ...(request?.requesterPickupLocationId && { requesterPickupLocationId: request.requesterPickupLocationId }),
   };
@@ -41,16 +54,12 @@ const formToBroker = (submittedRecord, { operation = CREATE, tiers = [] } = {}) 
     internalNote,
     requesterPickupLocationId,
     identifiers = {},
-    systemInstanceIdentifier,
     tier: tierId,
     patronEmail: email,
     ...illRequestFields
   } = submittedRecord;
 
-  const bibliographicInfo = {
-    ...illRequestFields.bibliographicInfo,
-    supplierUniqueRecordId: systemInstanceIdentifier,
-  };
+  const bibliographicInfo = { ...illRequestFields.bibliographicInfo };
   Object.entries(ID_ARRAYS).forEach(([arrayKey, spec]) => {
     const entries = rebuildIds(illRequestFields.bibliographicInfo?.[arrayKey], spec, identifiers);
     // Omit the key entirely rather than sending an empty array.

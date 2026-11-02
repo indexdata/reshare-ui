@@ -61,7 +61,7 @@
   "information.isbn": "ISBN",
   "information.issn": "ISSN",
   "information.oclcNumber": "OCLC number",
-  "information.systemInstanceIdentifier": "System identifier",
+  "information.supplierUniqueRecordId": "System identifier",
   "information.titleOfComponent": "Title of chapter/article/paper",
   "information.authorOfComponent": "Author of chapter/article/paper",
   "information.issue": "Issue",
@@ -176,6 +176,8 @@
 
   "requestform.populateById": "Use to fill form",
   "requestform.populateFromSI": "Search shared catalog",
+  "requestform.prefill.notFound": "No catalog record found for {identifier}",
+  "requestform.prefill.error": "Catalog lookup for {identifier} failed: {message}",
   "requestform.copyright.invalid": "Select a copyright type currently available for this institution.",
   "requestform.copyright.loadError": "Copyright types could not be loaded from the directory.",
   "requestform.copyright.empty": "No copyright types are available for this institution. Define available copyright types in the directory before submitting a copy request.",

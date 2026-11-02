@@ -43,7 +43,7 @@ const ResourceSharing = (props) => {
           />
 
           {appName === 'request' &&
-            <Route path={`${path}/requests/create`} component={CreateRoute} />
+            <Route path={`${path}/requests/create/:prefillId?`} component={CreateRoute} />
           }
           {appName === 'request' &&
             <Route path={`${path}/requests/:id/edit`} component={EditRoute} />

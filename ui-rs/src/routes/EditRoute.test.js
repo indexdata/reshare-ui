@@ -84,9 +84,10 @@ const madeUnder = (serviceLevel, maximumCosts) => editableRequest({
   },
 });
 
-const renderEdit = ({ request = editableRequest(), owned = { items: [institution, ...branches] }, history } = {}) => {
+const renderEdit = ({ request = editableRequest(), owned = { items: [institution, ...branches] }, prefill, history } = {}) => {
   mockOkapi.setResponses({
     'broker/patron_requests/req-1': request,
+    ...(prefill && { 'broker/patron_requests/prefill': prefill }),
     'broker/state_model/models/default': defaultModel,
     'directory/entries/owned': owned,
     // A spec without default copyright types keeps an empty configuration empty.
@@ -118,7 +119,7 @@ describe('EditRoute', () => {
 
     await waitFor(() => expect(fieldByName('bibliographicInfo.title')?.value).toBe('Original Title'));
     expect(fieldByName('identifiers.ISBN').value).toBe('9781234567890');
-    expect(fieldByName('systemInstanceIdentifier').value).toBe('sys-42');
+    expect(fieldByName('bibliographicInfo.supplierUniqueRecordId').value).toBe('sys-42');
     expect(fieldByName('requesterPickupLocationId').value).toBe('branch-e');
 
     setField('bibliographicInfo.title', 'Edited Title');
@@ -311,6 +312,52 @@ describe('EditRoute', () => {
         expect(mockOkapi.put.mock.calls[0][1].json.illRequest.serviceInfo.copyrightCompliance).toEqual({ '#text': 'US-CCG' });
       }
     });
+  });
+
+  it('saves catalog identifiers while preserving chapter and page details', async () => {
+    const original = editableRequest().illRequest.bibliographicInfo;
+    renderEdit({
+      request: editableRequest({ illRequest: {
+        ...editableRequest().illRequest,
+        bibliographicInfo: { ...original, titleOfComponent: 'Chapter 3', pagesRequested: '10-20' },
+      } }),
+      prefill: { bibliographicInfo: {
+        supplierUniqueRecordId: 'cat-7',
+        title: 'Catalog Title',
+        author: 'Catalog Author',
+        bibliographicItemId: [{ bibliographicItemIdentifier: '9780000000007', bibliographicItemIdentifierCode: { '#text': 'ISBN' } }],
+      } },
+    });
+    await waitFor(() => expect(fieldByName('bibliographicInfo.title')?.value).toBe('Original Title'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rs.requestform.populateById' }));
+    await waitFor(() => expect(fieldByName('bibliographicInfo.title').value).toBe('Catalog Title'));
+    expect(mockOkapi.calledUrls()).toContain('broker/patron_requests/prefill?identifier=sys-42');
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+
+    await waitFor(() => expect(mockOkapi.put).toHaveBeenCalledTimes(1));
+    const { json } = mockOkapi.put.mock.calls[0][1];
+    expect(json.illRequest.bibliographicInfo).toEqual({
+      supplierUniqueRecordId: 'cat-7',
+      title: 'Catalog Title',
+      author: 'Catalog Author',
+      bibliographicItemId: [{ bibliographicItemIdentifier: '9780000000007', bibliographicItemIdentifierCode: { '#text': 'ISBN' } }],
+      titleOfComponent: 'Chapter 3',
+      pagesRequested: '10-20',
+    });
+  });
+
+  it('normalizes lowercase publication types for display and saving', async () => {
+    renderEdit({ request: editableRequest({ illRequest: {
+      ...editableRequest().illRequest,
+      publicationInfo: { publicationType: { '#text': 'book' } },
+    } }) });
+    await waitFor(() => expect(fieldByName("publicationInfo.publicationType['#text']")?.value).toBe('Book'));
+
+    setField('bibliographicInfo.title', 'Edited Title');
+    fireEvent.click(document.querySelector('button[type="submit"]'));
+    await waitFor(() => expect(mockOkapi.put).toHaveBeenCalledTimes(1));
+    expect(mockOkapi.put.mock.calls[0][1].json.illRequest.publicationInfo).toEqual({ publicationType: { '#text': 'Book' } });
   });
 
   it('redirects away without a PUT when the request is not editable', async () => {

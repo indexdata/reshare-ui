@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useMemo } from 'react';
 import { Form } from 'react-final-form';
 import { useMutation, useQueryClient } from 'react-query';
 import { Redirect, useHistory, useLocation } from 'react-router-dom';
@@ -11,7 +11,6 @@ import useOptions from '#/components/PatronRequestForm/useOptions';
 import { brokerToForm, formToBroker } from '#/components/PatronRequestForm/formMapping';
 import { EDIT } from '#/components/PatronRequestForm/operations';
 import isRequestEditable from '#/util/isRequestEditable';
-import handleSISelect from '#/components/PatronRequestForm/handleSISelect';
 
 const EditRoute = ({ match }) => {
   const id = match.params?.id;
@@ -45,13 +44,18 @@ const EditRoute = ({ match }) => {
     },
   });
 
+  // Keep initialValues stable so rerenders don't reinitialize the form
+  // and undo catalog prefill.
+  const initialValues = useMemo(
+    () => request && brokerToForm(request, { tiers: options.tiers }),
+    [request, options.tiers]
+  );
+
   if (!hasRequestLoaded || !hasModelLoaded || !optionsLoaded) return null;
 
   if (!isRequestEditable(stateModel, request)) {
     return <Redirect to={requestView} />;
   }
-
-  const initialValues = brokerToForm(request, { tiers: options.tiers });
 
   const submit = async submittedRecord => {
     const updatedRecord = formToBroker(submittedRecord, { operation: EDIT, tiers: options.tiers });
@@ -64,15 +68,15 @@ const EditRoute = ({ match }) => {
   };
 
   return (
-    <Form onSubmit={submit} initialValues={initialValues} mutators={{ handleSISelect }} keepDirtyOnReinitialize>
-      {({ form, pristine }) => (
+    <Form onSubmit={submit} initialValues={initialValues} keepDirtyOnReinitialize>
+      {({ pristine }) => (
         <PatronRequestFormPane
           titleId="ui-rs.editPatronRequest"
           submitLabelId="ui-rs.save"
           submitDisabled={pristine}
           onClose={close}
         >
-          <PatronRequestForm selectOptions={options} onSISelect={form.mutators.handleSISelect} />
+          <PatronRequestForm selectOptions={options} />
         </PatronRequestFormPane>
       )}
     </Form>

@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useMemo } from 'react';
 import { Form } from 'react-final-form';
 import { useMutation, useQueryClient } from 'react-query';
 import { useHistory, useLocation } from 'react-router-dom';
@@ -9,9 +9,8 @@ import PatronRequestFormPane from '#/components/PatronRequestForm/PatronRequestF
 import submissionError from '#/components/PatronRequestForm/submissionError';
 import useOptions from '#/components/PatronRequestForm/useOptions';
 import { formToBroker } from '#/components/PatronRequestForm/formMapping';
-import handleSISelect from '#/components/PatronRequestForm/handleSISelect';
 
-const CreateRoute = () => {
+const CreateRoute = ({ match }) => {
   const history = useHistory();
   const routerLocation = useLocation();
   const callout = useContext(CalloutContext);
@@ -28,9 +27,8 @@ const CreateRoute = () => {
       await queryClient.invalidateQueries('broker/patron_requests');
 
       if (created?.id) {
-        // Creation may start at either requests/create or
-        // requests/create/:systemInstanceId. In both cases, replace it with
-        // the new request's route and retain any list/aside query parameters.
+        // Creation may start at requests/create or requests/create/:prefillId. Either way,
+        // replace it with the new request's route and keep any list/aside query parameters.
         const requestsPath = routerLocation.pathname.replace(/\/create(?:\/[^/]+)?$/, '');
         history.replace(`${requestsPath}/${created.id}${routerLocation.search}`);
       } else {
@@ -40,24 +38,17 @@ const CreateRoute = () => {
     },
   });
 
-  // Render nothing until the form's select data is loaded, so the whole form
-  // paints at once. Below every hook call, as it returns early.
-  if (!optionsLoaded) return null;
-
-  const initialValues = {
+  const prefillId = match.params?.prefillId;
+  const onlyLocation = options.locations?.length === 1 ? options.locations[0].value : undefined;
+  // Keep initialValues stable so rerenders don't reinitialize the form
+  // and undo catalog prefill.
+  const initialValues = useMemo(() => ({
     serviceInfo: { serviceType: 'Loan' },
-    ...(options.locations?.length === 1 && {
-      requesterPickupLocationId: options.locations[0].value,
-    }),
-  };
+    ...(prefillId && { bibliographicInfo: { supplierUniqueRecordId: prefillId } }),
+    ...(onlyLocation && { requesterPickupLocationId: onlyLocation }),
+  }), [prefillId, onlyLocation]);
 
-  const reg = /.+\/create\/(\d+)/;
-  const sysIdMatch = reg.exec(routerLocation?.pathname);
-  const autopopulate = !!sysIdMatch;
-
-  if (autopopulate) {
-    initialValues.systemInstanceIdentifier = sysIdMatch[1];
-  }
+  if (!optionsLoaded) return null;
 
   const submit = async submittedRecord => {
     const newRecord = formToBroker(submittedRecord, { tiers: options.tiers });
@@ -70,15 +61,10 @@ const CreateRoute = () => {
   };
 
   return (
-    <Form onSubmit={submit} initialValues={initialValues} mutators={{ handleSISelect }} keepDirtyOnReinitialize>
-      {({ form, pristine }) => (
+    <Form onSubmit={submit} initialValues={initialValues} keepDirtyOnReinitialize>
+      {({ pristine }) => (
         <PatronRequestFormPane titleId="ui-rs.createPatronRequest" submitDisabled={pristine} onClose={close}>
-          <PatronRequestForm
-            selectOptions={options}
-            onSISelect={form.mutators.handleSISelect}
-            autopopulate={autopopulate}
-            requireTier
-          />
+          <PatronRequestForm selectOptions={options} prefillId={prefillId} requireTier />
         </PatronRequestFormPane>
       )}
     </Form>

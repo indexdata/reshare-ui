@@ -79,7 +79,7 @@ async function submitCreate(page: Page): Promise<string> {
 export async function createLoanRequest(page: Page, title: string, identifier = holding(peer.symbol)): Promise<string> {
   await page.goto('/request/requests/create');
   await page.locator('[name="patronInfo.patronId"]').fill(patron.id);
-  await page.locator('[name="systemInstanceIdentifier"]').fill(identifier);
+  await page.locator('[name="bibliographicInfo.supplierUniqueRecordId"]').fill(identifier);
   await page.locator('[name="bibliographicInfo.title"]').fill(title);
   await page.locator('[name="bibliographicInfo.author"]').fill(item.author);
   await page.locator('[name="requesterPickupLocationId"]').selectOption({ label: pickupLocation.name });
@@ -98,7 +98,7 @@ export async function createCopyRequest(page: Page, title: string, chapter: stri
   // whichever the directory offers; index 0 is blank
   await page.locator('[name="serviceInfo.copyrightCompliance[\'#text\']"]').selectOption({ index: 1 });
   await chooseFirstTier(page);
-  await page.locator('[name="systemInstanceIdentifier"]').fill(identifier);
+  await page.locator('[name="bibliographicInfo.supplierUniqueRecordId"]').fill(identifier);
   await page.locator('[name="bibliographicInfo.title"]').fill(title);
   await page.locator('[name="bibliographicInfo.author"]').fill(item.author);
   await page.locator('[name="bibliographicInfo.titleOfComponent"]').fill(chapter);

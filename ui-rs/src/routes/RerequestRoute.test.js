@@ -187,7 +187,7 @@ describe('RerequestRoute', () => {
     expect(screen.getAllByText('ui-rs.rerequestPatronRequest').length).toBeGreaterThan(0);
     expect(fieldByName('patronInfo.patronId').value).toBe('p1');
     expect(fieldByName('identifiers.ISBN').value).toBe('9781234567890');
-    expect(fieldByName('systemInstanceIdentifier').value).toBe('sys-42');
+    expect(fieldByName('bibliographicInfo.supplierUniqueRecordId').value).toBe('sys-42');
     expect(fieldByName('requesterPickupLocationId').value).toBe('branch-e');
     expect(fieldByName('internalNote').value).toBe('Staff only note');
     expect(fieldByName('publicationInfo.publisher').value).toBe('Pub Co');
