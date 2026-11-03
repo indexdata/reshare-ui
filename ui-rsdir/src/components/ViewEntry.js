@@ -26,7 +26,7 @@ const ViewEntry = ({ entry }) => {
   const branchesQuery = useEntryChildren(entry, 'Branch');
   const membersQuery = useEntryChildren(entry, 'Institution');
   const parentValue = parentQuery.data?.name || parentQuery.data?.id || entry.parent;
-  const parentDisplay = ['Branch', 'Institution'].includes(entry.type)
+  const parentDisplay = entry.parent && ['Branch', 'Institution'].includes(entry.type)
     ? (
       <DirectLink
         to={`/directory/entries/${entry.parent}`}

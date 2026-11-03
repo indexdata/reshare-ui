@@ -203,7 +203,7 @@ const EditEntryRoute = () => {
             paneTitle={op === CREATE
               ? <FormattedMessage id="ui-rsdir.createEntry" />
               : entryQuery.data.name}
-            paneSub={op === EDIT && <FormattedMessage id="ui-rsdir.edit" />}
+            paneSub={op === EDIT ? <FormattedMessage id="ui-rsdir.edit" /> : undefined}
           >
             {body}
           </Pane>

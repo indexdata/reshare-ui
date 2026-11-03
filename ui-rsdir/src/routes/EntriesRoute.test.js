@@ -18,18 +18,15 @@ jest.mock('@projectreshare/stripes-reshare', () => ({
 // with a paging control so tests can drive Entries' offset without layout timing.
 jest.mock('@folio/stripes/components', () => ({
   ...jest.requireActual('@folio/stripes/components'),
-  MultiColumnList: ({ contentData, onNeedMoreData, pageAmount }) => {
-    const offset = Math.max(0, contentData.findIndex(Boolean));
-    return (
-      <div>
-        {contentData.map(entry => <div key={entry.id}>{entry.name}</div>)}
-        <button type="button" onClick={() => onNeedMoreData(pageAmount, offset + pageAmount)}>Next page</button>
-        <button disabled={offset === 0} type="button" onClick={() => onNeedMoreData(pageAmount, offset - pageAmount)}>
-          Previous page
-        </button>
-      </div>
-    );
-  },
+  MultiColumnList: ({ contentData, onNeedMoreData, pageAmount, pagingOffset: offset }) => (
+    <div>
+      {contentData.map(entry => <div key={entry.id}>{entry.name}</div>)}
+      <button type="button" onClick={() => onNeedMoreData(pageAmount, offset + pageAmount)}>Next page</button>
+      <button disabled={offset === 0} type="button" onClick={() => onNeedMoreData(pageAmount, offset - pageAmount)}>
+        Previous page
+      </button>
+    </div>
+  ),
 }));
 
 const queryInput = () => document.querySelector('input[name="query"]');

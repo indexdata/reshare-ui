@@ -7,6 +7,7 @@ import {
   MultiColumnList,
   MCLPagingTypes,
   Button,
+  LoadingPane,
   PaneMenu,
 } from '@folio/stripes/components';
 import { DirectLink } from '@projectreshare/stripes-reshare';
@@ -42,13 +43,16 @@ const Entries = ({
 
   const entries = cachedPageAtOffset(offset)?.items || [];
   const openEntry = matchPath(location.pathname, { path: `${match.path}/:id` })?.params;
-  const sparseEntries = (new Array(offset)).concat(entries);
   const totalCount = entriesQuery?.data?.pages?.[0]?.about?.count || 0;
 
-  const fetchMore = (_askAmount, index) => {
+  // Move to a page only once its data has loaded, so the list is never handed an empty
+  // page while it fetches; MultiColumnList shows NaN page indices for one. A fetch that
+  // resolves after the search has moved on is stamped with the old query and ignored.
+  const fetchMore = async (_askAmount, index) => {
     // fetchNextPage appends even if this offset already exists in the cache.
     if (!cachedPageAtOffset(index)) {
-      entriesQuery.fetchNextPage({ pageParam: index });
+      const { isError } = await entriesQuery.fetchNextPage({ pageParam: index });
+      if (isError) return;
     }
     setPagination({ query: searchQuery, offset: index });
   };
@@ -81,49 +85,53 @@ const Entries = ({
         </form>
       </Pane>
 
-      <Pane
-        defaultWidth="fill"
-        noOverflow
-        padContent={false}
-        paneTitle={intl.formatMessage({ id: 'ui-rsdir.entries.resultsCount' }, { count: totalCount })}
-        lastMenu={
-          <PaneMenu>
-            <DirectLink
-              component={Button}
-              id="clickable-new-entry"
-              to={`${match.url}/create`}
-              preserveSearch
-              buttonStyle="primary paneHeaderNewButton"
-              marginBottom0
-            >
-              <FormattedMessage id="ui-rsdir.new" />
-            </DirectLink>
-          </PaneMenu>
-        }
-      >
-        <MultiColumnList
-          key={searchQuery}
-          autosize
-          id="entries-list"
-          contentData={sparseEntries}
-          visibleColumns={['name', 'type', 'symbols']}
-          columnMapping={{
-            name: intl.formatMessage({ id: 'ui-rsdir.entry.name' }),
-            type: intl.formatMessage({ id: 'ui-rsdir.entry.type' }),
-            symbols: intl.formatMessage({ id: 'ui-rsdir.entry.symbols' }),
-          }}
-          formatter={resultsFormatter}
-          isEmptyMessage={intl.formatMessage({ id: 'stripes-smart-components.sas.noResults.noTerms' })}
-          isSelected={({ item, criteria }) => !!criteria && item?.id === criteria.id}
-          loading={entriesQuery.isFetching}
-          onNeedMoreData={fetchMore}
-          onRowClick={(_e, rowData) => history.push(`${match.url}/${rowData.id}${location.search}`)}
-          pageAmount={perPage}
-          pagingType={MCLPagingTypes.PREV_NEXT}
-          selectedRow={openEntry}
-          totalCount={totalCount}
-        />
-      </Pane>
+      {entriesQuery.isLoading && <LoadingPane />}
+      {!entriesQuery.isLoading &&
+        <Pane
+          defaultWidth="fill"
+          noOverflow
+          padContent={false}
+          paneTitle={intl.formatMessage({ id: 'ui-rsdir.entries.resultsCount' }, { count: totalCount })}
+          lastMenu={
+            <PaneMenu>
+              <DirectLink
+                component={Button}
+                id="clickable-new-entry"
+                to={`${match.url}/create`}
+                preserveSearch
+                buttonStyle="primary paneHeaderNewButton"
+                marginBottom0
+              >
+                <FormattedMessage id="ui-rsdir.new" />
+              </DirectLink>
+            </PaneMenu>
+          }
+        >
+          <MultiColumnList
+            key={searchQuery}
+            autosize
+            id="entries-list"
+            contentData={entries}
+            visibleColumns={['name', 'type', 'symbols']}
+            columnMapping={{
+              name: intl.formatMessage({ id: 'ui-rsdir.entry.name' }),
+              type: intl.formatMessage({ id: 'ui-rsdir.entry.type' }),
+              symbols: intl.formatMessage({ id: 'ui-rsdir.entry.symbols' }),
+            }}
+            formatter={resultsFormatter}
+            isEmptyMessage={intl.formatMessage({ id: 'stripes-smart-components.sas.noResults.noTerms' })}
+            isSelected={({ item, criteria }) => !!criteria && item?.id === criteria.id}
+            loading={entriesQuery.isFetching}
+            onNeedMoreData={fetchMore}
+            onRowClick={(_e, rowData) => history.push(`${match.url}/${rowData.id}${location.search}`)}
+            pageAmount={perPage}
+            pagingOffset={offset}
+            pagingType={MCLPagingTypes.PREV_NEXT}
+            selectedRow={openEntry}
+            totalCount={totalCount}
+          />
+        </Pane>
+      }
       {children}
     </Paneset>
   );
