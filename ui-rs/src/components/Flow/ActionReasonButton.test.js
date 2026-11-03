@@ -2,7 +2,7 @@ import React from 'react';
 import { act, fireEvent, screen, waitFor, within } from '@folio/jest-config-stripes/testing-library/react';
 import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
-import { quietQueryLog } from '#/test/quietQueryLog';
+import { quietQueryLog } from '@projectreshare/stripes-reshare/testing/quietQueryLog';
 import { CannotSupply } from './moreActions';
 import ActionAccordion from './FlowViewComponents/ActionAccordion';
 

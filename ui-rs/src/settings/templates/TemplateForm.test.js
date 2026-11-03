@@ -4,7 +4,7 @@ import { Paneset } from '@folio/stripes/components';
 
 import { renderWithRs, settleQueries } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
-import { quietQueryLog } from '#/test/quietQueryLog';
+import { quietQueryLog } from '@projectreshare/stripes-reshare/testing/quietQueryLog';
 import { lastEditor } from '#/test/editorMock';
 import TemplateForm from './TemplateForm';
 

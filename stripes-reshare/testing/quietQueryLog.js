@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { setLogger } from 'react-query';
 
 // react-query v3 logs every rejected query and mutation, handled or not, so a test that
@@ -7,9 +8,8 @@ import { setLogger } from 'react-query';
 // the console, so an unexpected query failure stays visible. Jest's per-file module
 // registry keeps the override out of other test files.
 //
-// TODO: fold into makeQueryClient on the v4 move — v4 keeps the logger but hangs it
-// off the client (`new QueryClient({ logger })`), retiring the global override and
-// this beforeAll/afterAll with it. v5 removes it outright.
+// TODO: delete on the move to TanStack Query v5, which reports a failure only through
+// the query's state and callbacks and never logs it, so there is nothing to quiet.
 const quietQueryLog = (expected) => {
   beforeAll(() => setLogger({
     log: console.log,
