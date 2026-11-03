@@ -9,6 +9,8 @@ import { SearchAndSortQuery, makeQueryFunction } from '@folio/stripes/smart-comp
 import Entries from '../components/Entries';
 
 const PER_PAGE = 100;
+// makeQueryFunction logs every query it builds to the logger it is given.
+const silentLogger = { log: () => {} };
 const FILTER_PARAMS_MAPPING = {
   filters: (value) => (value || '').split(',').filter(Boolean).reduce((filters, token) => {
     const [name, ...parts] = token.split('.');
@@ -94,7 +96,7 @@ const EntriesRoute = ({ children }) => {
     undefined,
     { rightTrunc: false, escape: true },
   );
-  const cql = getCQL(queryParams, {}, { query: queryParams }, console);
+  const cql = getCQL(queryParams, {}, { query: queryParams }, silentLogger);
 
   const entriesQuery = useInfiniteQuery(
     {

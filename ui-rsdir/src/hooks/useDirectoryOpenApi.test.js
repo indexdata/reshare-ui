@@ -2,7 +2,8 @@ import React from 'react';
 // Provided by the shared Stripes test environment.
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider, setLogger } from 'react-query';
+import { QueryClient, QueryClientProvider } from 'react-query';
+import { quietQueryLog } from '@projectreshare/stripes-reshare/testing/quietQueryLog';
 import useDirectoryOpenApi from './useDirectoryOpenApi';
 
 const mockKy = jest.fn();
@@ -16,15 +17,15 @@ const Consumer = ({ enabled = true }) => {
 let queryClient;
 const renderConsumers = children => render(<QueryClientProvider client={queryClient}>{children}</QueryClientProvider>);
 
+quietQueryLog(/^Unavailable$/); // failure tests reject the fetch on purpose
+
 beforeEach(() => {
   mockKy.mockReset();
-  setLogger({ log: console.log, warn: console.warn, error: jest.fn() });
   queryClient = new QueryClient();
 });
 
 afterEach(() => {
   queryClient.clear();
-  setLogger(console);
 });
 
 it('shares the authenticated fetch across consumers and navigation while fresh', async () => {

@@ -8,6 +8,7 @@ import { act, fireEvent, screen, waitFor, within } from '@folio/jest-config-stri
 
 import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
+import { quietQueryLog } from '@projectreshare/stripes-reshare/testing/quietQueryLog';
 import RSDir from './index';
 import directoryOpenApi from '../test/fixtures/directoryOpenApi';
 
@@ -20,6 +21,9 @@ jest.mock('@folio/stripes/core', () => require('@projectreshare/stripes-reshare/
 const { CalloutContext } = require('@folio/stripes/core');
 
 const sendCallout = jest.fn();
+
+// Failure tests reject these requests on purpose.
+quietQueryLog(/^(Entry not found|Save failed|Membership lookup failed)$/);
 
 const entry = {
   id: 'e1',
@@ -115,7 +119,7 @@ describe('directory entries', () => {
     expect(entryRow()).toHaveClass('mclSelected');
 
     fireEvent.click(screen.getByRole('button', { name: 'stripes-components.closeItem' }));
-    expect(at(history)).toBe('/directory/entries?filters=type.Institution&query=fix');
+    await waitFor(() => expect(at(history)).toBe('/directory/entries?filters=type.Institution&query=fix'));
     expect(screen.queryByText('fixture-lms-address')).not.toBeInTheDocument();
     expect(querySectionLink('entry')).not.toBeInTheDocument();
     expect(entryRow()).not.toHaveClass('mclSelected');
@@ -140,7 +144,7 @@ describe('directory entries', () => {
 
     expect(await screen.findByText('ui-rsdir.entry.symbolNotFound')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'stripes-components.closeItem' }));
-    expect(at(history)).toBe('/directory/entries?filters=type.Institution&query=fix');
+    await waitFor(() => expect(at(history)).toBe('/directory/entries?filters=type.Institution&query=fix'));
   });
 
   it('edits the entry in a pane of its own and cancels or closes back to the view', async () => {

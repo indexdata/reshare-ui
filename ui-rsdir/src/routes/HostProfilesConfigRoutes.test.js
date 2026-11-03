@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@folio/jest-config-stripes/testing-library/react';
-import { QueryClient, QueryClientProvider, setLogger } from 'react-query';
+import { QueryClient, QueryClientProvider } from 'react-query';
+import { quietQueryLog } from '@projectreshare/stripes-reshare/testing/quietQueryLog';
 import LMSConfigRoute from './LMSConfigRoute';
 import CatalogConfigRoute from './CatalogConfigRoute';
 import spec from '../../test/fixtures/directoryOpenApi';
@@ -43,18 +44,18 @@ const mount = Component => render(
 const editorProps = () => mockEditor.mock.calls.at(-1)[0];
 const field = name => editorProps().fieldMapping.find(candidate => candidate.fieldName === name);
 
+quietQueryLog(/^Offline$/); // failure tests reject the fetch on purpose
+
 beforeEach(() => {
   mockKy.mockReset();
   mockEditor.mockClear();
   mockEntry = { id: 'entry-id', lmsConfig: { vendor: 'Koha' }, catalogConfig: {} };
   queryClient = new QueryClient();
-  setLogger({ log: console.log, warn: console.warn, error: jest.fn() });
   mockKy.mockReturnValue({ json: () => Promise.resolve(spec) });
 });
 
 afterEach(() => {
   queryClient.clear();
-  setLogger(console);
 });
 
 it.each([LMSConfigRoute, CatalogConfigRoute])('waits for metadata before mounting %p', async Component => {
