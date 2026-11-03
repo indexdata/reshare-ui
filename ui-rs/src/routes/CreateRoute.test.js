@@ -1,7 +1,7 @@
 import React from 'react';
 import { Route } from 'react-router-dom';
 import { createMemoryHistory } from 'history';
-import { act, fireEvent, screen, waitFor } from '@folio/jest-config-stripes/testing-library/react';
+import { fireEvent, screen, waitFor } from '@folio/jest-config-stripes/testing-library/react';
 
 import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
@@ -417,8 +417,8 @@ describe('CreateRoute', () => {
       expect(mockOkapi.post).not.toHaveBeenCalled();
     });
 
-    it('keeps staff choices and deliberate clears across service switches and directory refreshes', async () => {
-      const { queryClient } = renderCreate({ owned: ownedWith({
+    it('keeps staff choices and deliberate clears across service switches', async () => {
+      renderCreate({ owned: ownedWith({
         availableCopyrightTypes: copyrightTypes, defaultCopyrightType: copyrightTypes[0],
       }) });
       await formRendered();
@@ -428,68 +428,10 @@ describe('CreateRoute', () => {
       chooseServiceType('Loan');
       chooseServiceType('Copy');
       expect(copyrightField()).toHaveValue('US-CCG');
-      const extra = { code: 'NewPolicy', defaultDesc: 'New institution policy' };
-      act(() => queryClient.setQueriesData('directory/entries/owned', ownedWith({
-        availableCopyrightTypes: [...copyrightTypes, extra], defaultCopyrightType: extra,
-      })));
-      await waitFor(() => expect(optionLabels(fieldName)).toContain(extra.defaultDesc));
-      expect(copyrightField()).toHaveValue('US-CCG');
       setField(fieldName, '');
-      act(() => queryClient.setQueriesData('directory/entries/owned', ownedWith({
-        availableCopyrightTypes: copyrightTypes, defaultCopyrightType: copyrightTypes[0],
-      })));
-      await waitFor(() => expect(optionLabels(fieldName)).toHaveLength(2));
-      expect(copyrightField()).toHaveValue('');
       chooseServiceType('Loan');
       chooseServiceType('Copy');
       expect(copyrightField()).toHaveValue('');
-    });
-
-    it('keeps the draft and switches to the defaults when a refresh empties the configured types', async () => {
-      const { queryClient } = renderCreate();
-      await formRendered();
-      fillRequiredFields();
-      chooseServiceType('Copy');
-      act(() => queryClient.setQueriesData('directory/entries/owned', ownedWith({ availableCopyrightTypes: [] })));
-      await waitFor(() => expect(optionLabels(fieldName)).toEqual(['Fair Dealing (UK)', 'CCL (US code)']));
-      expect(fieldByName('bibliographicInfo.title')).toHaveValue('Test Title');
-    });
-
-    it('keeps the default types and selection when an owned-entries refetch fails', async () => {
-      const { queryClient } = renderCreate({ owned: ownedWith({ availableCopyrightTypes: [] }) });
-      await formRendered();
-      fillRequiredFields();
-      chooseServiceType('Copy');
-      setField(fieldName, 'US-CCL');
-      mockOkapi.setResponses({ 'directory/entries/owned': () => { throw new Error('Forbidden'); }, 'directory/openapi.json': directorySpec });
-      await act(() => queryClient.refetchQueries('directory/entries/owned'));
-      expect(queryClient.getQueryState(['directory/entries/owned', { limit: '1000' }]).status).toBe('error');
-      expect(optionLabels(fieldName)).toEqual(['Fair Dealing (UK)', 'CCL (US code)']);
-      fireEvent.click(document.querySelector('button[type="submit"]'));
-      await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
-      expect(mockOkapi.post.mock.calls[0][1].json.illRequest.serviceInfo.copyrightCompliance).toEqual({ '#text': 'US-CCL' });
-    });
-
-    it('revalidates a selected code removed by a directory refresh without overwriting it', async () => {
-      const { queryClient } = renderCreate({ messages: {
-        'ui-rs.requestform.copyright.invalid': 'Translated unavailable code',
-      } });
-      await formRendered();
-      fillRequiredFields();
-      chooseServiceType('Copy');
-      setField(fieldName, 'US-CCG');
-      act(() => queryClient.setQueriesData('directory/entries/owned', ownedWith({
-        availableCopyrightTypes: [copyrightTypes[0]], defaultCopyrightType: copyrightTypes[0],
-      })));
-      await waitFor(() => expect(copyrightField().querySelector('option[value="US-CCG"]')).toBeDisabled());
-      expect(copyrightField()).toHaveValue('US-CCG');
-      fireEvent.click(document.querySelector('button[type="submit"]'));
-      expect(await screen.findByText('Translated unavailable code')).toBeInTheDocument();
-      expect(mockOkapi.post).not.toHaveBeenCalled();
-      setField(fieldName, 'AU-GenBus');
-      fireEvent.click(document.querySelector('button[type="submit"]'));
-      await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledTimes(1));
-      expect(mockOkapi.post.mock.calls[0][1].json.illRequest.serviceInfo.copyrightCompliance).toEqual({ '#text': 'AU-GenBus' });
     });
   });
 

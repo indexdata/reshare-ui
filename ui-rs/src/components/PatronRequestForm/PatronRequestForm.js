@@ -197,9 +197,7 @@ const PatronRequestForm = ({ prefillId, selectOptions, requireTier = false }) =>
         }
         {isCopyReq &&
         <Col xs={3}>
-          {/* Re-register validation when eligibility changes, retaining the field value. */}
           <Field
-            key={JSON.stringify(copyrightTypes.map(option => option.value))}
             name={COPYRIGHT_FIELD}
             label={<FormattedMessage id="ui-rs.information.copyrightType" />}
             placeholder=" "

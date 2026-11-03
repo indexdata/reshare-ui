@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import uniqBy from 'lodash/uniqBy';
+import { FORM_ERROR } from 'final-form';
 import { Form, Field } from 'react-final-form';
 import { FormattedMessage } from 'react-intl';
 import { useIsActionPending } from '@projectreshare/stripes-reshare';
@@ -70,12 +71,8 @@ const AddCondition = ({ request, performAction }) => {
     if (hasInvalidCost(values)) {
       return { cost: <FormattedMessage id="ui-rs.actions.add-condition.invalidCost" /> };
     }
-    if (canSubmit(values)) return {};
-
-    return {
-      loanCondition: true,
-      cost: true,
-    };
+    // A form-level error blocks submission without marking a field invalid.
+    return canSubmit(values) ? {} : { [FORM_ERROR]: true };
   };
 
   return (
