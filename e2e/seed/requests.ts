@@ -143,7 +143,7 @@ function record(r: SeedRequest) {
   const notifications = [
     ...(r.hasCost ? [{
       id: `${id}-cost`, fromSymbol: other, toSymbol: owner, direction: 'received', kind: 'condition',
-      note: 'Seeded condition', cost: 5, currency: 'USD', condition: 'LibraryUseOnly',
+      note: 'Seeded condition', cost: 5, currency: 'USD', code: 'LibraryUseOnly',
       createdAt: r.createdAt, acknowledgedAt: r.createdAt,
     }] : []),
     ...(r.unread ? [{

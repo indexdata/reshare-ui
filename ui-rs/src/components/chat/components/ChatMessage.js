@@ -4,9 +4,17 @@ import classNames from 'classnames';
 
 import { Layout, MessageBanner } from '@folio/stripes/components';
 
+import { formatConditionCost, formatNotificationCode } from '#/util/formatCondition';
+
 import ChatMessageHeader from './ChatMessageHeader';
 import css from './ChatMessage.css';
 import MessageDropdown from './MessageDropdown';
+
+const codeSummaryIds = {
+  condition: 'ui-rs.view.chatMessage.conditionSummary',
+  cancellation_reason: 'ui-rs.view.chatMessage.cancellationReasonSummary',
+  unfilled_reason: 'ui-rs.view.chatMessage.unfilledReasonSummary',
+};
 
 const ChatMessage = React.forwardRef((props, ref) => {
   const { notification } = props;
@@ -17,19 +25,16 @@ const ChatMessage = React.forwardRef((props, ref) => {
     ? null
     : (read ? css.read : css.unread);
 
-  const renderConditionSummary = () => {
-    if (notification?.kind !== 'condition') return null;
-    const conditionLabel = notification.condition && intl.formatMessage({
-      id: `ui-rs.settings.customiseListSelect.loanConditions.${notification.condition.toLowerCase()}`,
-      defaultMessage: notification.condition,
-    });
-    const hasCost = notification.cost != null;
-    if (!conditionLabel && !hasCost) return null;
-    const costStr = hasCost ? `${notification.cost}${notification.currency ? ` ${notification.currency}` : ''}` : null;
-    const label = conditionLabel || costStr;
+  const renderCodeSummary = () => {
+    const summaryId = codeSummaryIds[notification?.kind];
+    if (!summaryId) return null;
+    const codeLabel = formatNotificationCode(notification, intl.formatMessage);
+    // Only conditions carry a cost; a cost-only condition is summarised by its cost.
+    const costStr = notification.kind === 'condition' ? formatConditionCost(notification) : '';
+    if (!codeLabel && !costStr) return null;
     const parts = [
-      intl.formatMessage({ id: 'ui-rs.view.chatMessage.conditionSummary' }, { condition: label }),
-      conditionLabel && costStr,
+      intl.formatMessage({ id: summaryId }, { code: codeLabel || costStr }),
+      codeLabel && costStr,
     ].filter(Boolean);
     return <div className={css.actionText}>{parts.join(' · ')}</div>;
   };
@@ -48,7 +53,7 @@ const ChatMessage = React.forwardRef((props, ref) => {
           <div className={classNames(css.contents, css.displayFlex)}>
             {notification?.messageContent}
           </div>
-          {renderConditionSummary()}
+          {renderCodeSummary()}
           {notification?.sendFailed && (
             <Layout className="padding-all-gutter">
               <MessageBanner type="error">

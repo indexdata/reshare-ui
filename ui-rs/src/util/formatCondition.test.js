@@ -1,4 +1,4 @@
-import { findAgreedCost } from './formatCondition';
+import { findAgreedCost, formatNotificationCode } from './formatCondition';
 
 const cond = (props) => ({
   kind: 'condition',
@@ -34,5 +34,31 @@ describe('findAgreedCost', () => {
     expect(findAgreedCost([
       cond({ id: 'free', cost: 0, createdAt: '2026-01-01T00:00:00Z' }),
     ], 'ISIL:SUP').id).toBe('free');
+  });
+});
+
+describe('formatNotificationCode', () => {
+  const formatMessage = ({ id, defaultMessage }) => (
+    id === 'ui-rs.settings.customiseListSelect.loanConditions.libraryuseonly' ? 'Use in library only' : defaultMessage
+  );
+
+  it('prefers the description recorded from the sender', () => {
+    expect(formatNotificationCode({ kind: 'condition', code: 'LibraryUseOnly', codeDescription: 'Reading room only' }, formatMessage))
+      .toBe('Reading room only');
+    expect(formatNotificationCode({ kind: 'cancellation_reason', code: 'LocalCode', codeDescription: 'Library-defined reason' }, formatMessage))
+      .toBe('Library-defined reason');
+  });
+
+  it('translates default loan condition codes without a description', () => {
+    expect(formatNotificationCode({ kind: 'condition', code: 'LibraryUseOnly' }, formatMessage)).toBe('Use in library only');
+  });
+
+  it('shows other codes as sent', () => {
+    expect(formatNotificationCode({ kind: 'condition', code: 'RareBkRoom' }, formatMessage)).toBe('RareBkRoom');
+    expect(formatNotificationCode({ kind: 'unfilled_reason', code: 'libraryuseonly' }, formatMessage)).toBe('libraryuseonly');
+  });
+
+  it('is empty without a code', () => {
+    expect(formatNotificationCode({ kind: 'condition', cost: 5 }, formatMessage)).toBe('');
   });
 });
