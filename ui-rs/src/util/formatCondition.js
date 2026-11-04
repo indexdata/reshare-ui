@@ -8,9 +8,16 @@ export const formatConditionNote = (notification) => {
   }
 };
 
-export const formatConditionCode = (notification, formatMessage) => {
-  const code = notification.condition;
+// A notification's code is interpreted by its kind (loan condition, cancellation
+// reason or unfilled reason) and comes from the sending library's own
+// vocabulary. Prefer the description the broker recorded from that library's
+// Directory entry; without one, default loan condition codes still have UI
+// translations, and anything else is shown as sent.
+export const formatNotificationCode = (notification, formatMessage) => {
+  const { code, codeDescription, kind } = notification;
+  if (codeDescription) return codeDescription;
   if (!code) return '';
+  if (kind !== 'condition') return code;
   return formatMessage({
     id: `ui-rs.settings.customiseListSelect.loanConditions.${code.toLowerCase()}`,
     defaultMessage: code,

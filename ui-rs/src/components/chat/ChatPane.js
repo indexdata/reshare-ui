@@ -26,7 +26,8 @@ const normalise = (n) => ({
   senderSymbol: n.fromSymbol,
   receiverSymbol: n.toSymbol,
   kind: n.kind,
-  condition: n.condition,
+  code: n.code,
+  codeDescription: n.codeDescription,
   cost: n.cost,
   currency: n.currency,
 });

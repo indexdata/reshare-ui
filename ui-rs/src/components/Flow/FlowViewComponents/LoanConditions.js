@@ -1,7 +1,7 @@
 import React from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { Accordion, MultiColumnList } from '@folio/stripes/components';
-import { formatConditionCode, formatConditionCost, formatConditionNote } from '#/util/formatCondition';
+import { formatConditionCost, formatConditionNote, formatNotificationCode } from '#/util/formatCondition';
 import { useNotificationList } from '../../chat/useNotifications';
 
 const conditionStatusId = (receipt) => {
@@ -23,7 +23,7 @@ const LoanConditions = (props) => {
   if (conditions.length === 0) return null;
 
   const formatter = {
-    condition: n => formatConditionCode(n, formatMessage),
+    condition: n => formatNotificationCode(n, formatMessage),
     cost: n => formatConditionCost(n),
     note: n => formatConditionNote(n),
     createdAt: n => (n.createdAt ? formatDate(n.createdAt) : ''),
