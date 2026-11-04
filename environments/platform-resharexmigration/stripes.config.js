@@ -20,6 +20,7 @@ module.exports = {
   modules: {
     '@folio/users': {},
     '@folio/developer': {},
+    '@folio/ldp': {},
     '@folio/tenant-settings': {},
     '@projectreshare/request': {},
     '@projectreshare/rs': {},

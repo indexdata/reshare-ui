@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@folio/developer": "~10.0.2",
+    "@folio/ldp": "~3.3.0",
     "@folio/stripes": "~10.0.0",
     "@folio/tenant-settings": "10.0.0",
     "@folio/users": "12.1.16",
