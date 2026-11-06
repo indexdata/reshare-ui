@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { useInfiniteQuery } from 'react-query';
 import { useIntl } from 'react-intl';
 import { Redirect, useLocation } from 'react-router-dom';
 import queryString from 'query-string';
-import { ServiceLevel, ServiceType, useOkapiKy, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { ServiceLevel, ServiceType, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import PatronRequests from '#/components/PatronRequests';
 import { buildPatronRequestsCql, buildFacetOptionsCql, DEFAULT_SEARCH } from '#/util/buildPatronRequestsCql';
 
@@ -28,7 +27,6 @@ const selectedFilterValues = (location, filterName) => {
 
 const PatronRequestsQueries = ({ appName, children }) => {
   const intl = useIntl();
-  const ky = useOkapiKy();
   const location = useLocation();
   const side = appName === 'supply' ? 'lending' : 'borrowing';
   const stateSide = appName === 'supply' ? 'SUPPLIER' : 'REQUESTER';
@@ -57,17 +55,19 @@ const PatronRequestsQueries = ({ appName, children }) => {
     return { search: location.search, term };
   });
 
-  const prQuery = useInfiniteQuery(
+  // One query per page, keyed on its offset, so a revisited page comes from the cache and
+  // a refetch reloads only the page on screen. A search change resets the offset during
+  // render, like the peer term above, so no render pairs the new search with the old page.
+  const [paging, setPaging] = useState({ search: location.search, offset: 0 });
+  if (paging.search !== location.search) setPaging({ search: location.search, offset: 0 });
+  const offset = paging.search === location.search ? paging.offset : 0;
+  const setOffset = (next) => setPaging({ search: location.search, offset: next });
+
+  const prQuery = useOkapiQuery(
+    'broker/patron_requests',
     {
-      queryKey: ['broker/patron_requests', `@projectreshare/${appName}`, cql],
-      queryFn: ({ pageParam = 0 }) => {
-        const params = new URLSearchParams();
-        params.append('limit', PER_PAGE);
-        params.append('offset', pageParam);
-        params.append('side', side);
-        if (cql) params.append('cql', cql);
-        return ky(`broker/patron_requests?${params.toString()}`).json();
-      },
+      searchParams: { limit: PER_PAGE, offset, side, ...(cql ? { cql } : {}) },
+      keepPreviousData: true,
       // Surface query failures (e.g. malformed CQL) inline via MessageBanner rather
       // than crashing into the error boundary.
       useErrorBoundary: false,
@@ -75,6 +75,10 @@ const PatronRequestsQueries = ({ appName, children }) => {
       cacheTime: 10 * 60 * 1000,
     }
   );
+
+  // The pager moves to the new offset only once that page has loaded.
+  const [shownOffset, setShownOffset] = useState(offset);
+  if (prQuery.isSuccess && !prQuery.isPreviousData && shownOffset !== offset) setShownOffset(offset);
 
   // The peer option list, narrowed by the typeahead term when there is one. Keyed (via
   // useOkapiQuery's searchParams) on the CQL, so react-query's cache does the bookkeeping:
@@ -142,6 +146,8 @@ const PatronRequestsQueries = ({ appName, children }) => {
     <PatronRequests
       requestsQuery={prQuery}
       perPage={PER_PAGE}
+      offset={shownOffset}
+      onPageChange={setOffset}
       filterOptions={filterOptions}
       peerFacet={{
         name: peerFilterName,

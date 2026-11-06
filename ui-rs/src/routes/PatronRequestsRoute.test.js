@@ -183,6 +183,28 @@ describe('PatronRequestsRoute', () => {
       .toContain('created_at>="2025-02-01T05:00:00Z"+and+created_at<"2025-03-01T05:00:00Z"'));
   });
 
+  it('pages back and forth showing each page once fetched', async () => {
+    // One row per page, named by the offset it was fetched at.
+    mockOkapi.setResponses({
+      ...responses,
+      'broker/patron_requests': (url) => {
+        const offset = new URL(url, 'http://x').searchParams.get('offset') ?? '0';
+        return { items: [{ ...requestRow, id: `pr-${offset}`, requesterRequestId: `REQ-at-${offset}` }], about: { count: 300 } };
+      },
+    });
+    renderList(['/requests?sort=-dateCreated']);
+    await screen.findByText('REQ-at-0');
+    const page = async (label, expected) => {
+      fireEvent.click(screen.getByText(label).closest('button'));
+      expect(await screen.findByText(expected)).toBeInTheDocument();
+    };
+    await page('stripes-components.next', 'REQ-at-100');
+    await page('stripes-components.previous', 'REQ-at-0');
+    await page('stripes-components.next', 'REQ-at-100');
+    await page('stripes-components.next', 'REQ-at-200');
+    expect(listQueryUrls().map((u) => u.match(/offset=(\d+)/)[1])).toEqual(['0', '100', '200']);
+  });
+
   // No filter-interaction test here on purpose: behaviour #1 already proves a real
   // `filters=` param flows through buildPatronRequestsCql to the broker cql, and
   // the remaining half — a filter *control* writing the URL param — is Stripes'

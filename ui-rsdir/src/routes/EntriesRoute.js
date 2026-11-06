@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useInfiniteQuery } from 'react-query';
 import { useHistory, useLocation } from 'react-router-dom';
 import queryString from 'query-string';
 
-import { useOkapiKy } from '@folio/stripes/core';
 import { SearchAndSortQuery, makeQueryFunction } from '@folio/stripes/smart-components';
+import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 
 import Entries from '../components/Entries';
 
@@ -48,7 +47,6 @@ const FILTER_CONFIG = [{
 ];
 
 const EntriesRoute = ({ children }) => {
-  const ky = useOkapiKy();
   const history = useHistory();
   const location = useLocation();
   const urlParams = queryString.parse(location.search);
@@ -98,23 +96,25 @@ const EntriesRoute = ({ children }) => {
   );
   const cql = getCQL(queryParams, {}, { query: queryParams }, silentLogger);
 
-  const entriesQuery = useInfiniteQuery(
-    {
-      queryKey: ['directory/entries', cql, '@projectreshare/rsdir'],
-      enabled: !needsFilterNormalization,
-      queryFn: ({ pageParam = 0 }) => {
-        const params = new URLSearchParams();
-        if (cql) params.append('cql', cql);
-        params.append('limit', PER_PAGE);
-        params.append('offset', pageParam);
-        const url = `directory/entries?${params.toString()}`;
-        return ky(url).json();
-      },
-      useErrorBoundary: true,
-      staleTime: 2 * 60 * 1000,
-      cacheTime: 10 * 60 * 1000,
-    }
-  );
+  // One query per page, keyed on its offset, so a revisited page comes from the cache and
+  // a refetch reloads only the page on screen. A search change resets the offset during
+  // render so no render pairs the new search with the old page.
+  const [paging, setPaging] = useState({ cql, offset: 0 });
+  if (paging.cql !== cql) setPaging({ cql, offset: 0 });
+  const offset = paging.cql === cql ? paging.offset : 0;
+  const setOffset = (next) => setPaging({ cql, offset: next });
+
+  const entriesQuery = useOkapiQuery('directory/entries', {
+    searchParams: { ...(cql ? { cql } : {}), limit: PER_PAGE, offset },
+    enabled: !needsFilterNormalization,
+    keepPreviousData: true,
+    staleTime: 2 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
+  });
+
+  // The pager moves to the new offset only once that page has loaded.
+  const [shownOffset, setShownOffset] = useState(offset);
+  if (entriesQuery.isSuccess && !entriesQuery.isPreviousData && shownOffset !== offset) setShownOffset(offset);
 
   // Wait only on initial entry; later normalization must preserve nested drafts.
   if (initializingFilters) return null;
@@ -139,10 +139,9 @@ const EntriesRoute = ({ children }) => {
       }) => (
         <Entries
           searchQuery={cql || ''}
-          entriesQuery={{
-            ...entriesQuery,
-            fetchNextPage: (...args) => (needsFilterNormalization ? undefined : entriesQuery.fetchNextPage(...args)),
-          }}
+          entriesQuery={entriesQuery}
+          offset={shownOffset}
+          onPageChange={setOffset}
           searchValue={searchValue}
           getSearchHandlers={getSearchHandlers}
           onSubmitSearch={onSubmitSearch}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { matchPath, useHistory, useRouteMatch, useLocation } from 'react-router-dom';
 import {
@@ -23,39 +23,17 @@ const Entries = ({
   getFilterHandlers,
   resetAll,
   perPage,
+  offset,
+  onPageChange,
   children,
 }) => {
   const history = useHistory();
   const match = useRouteMatch();
   const location = useLocation();
   const intl = useIntl();
-  const [pagination, setPagination] = useState({ query: searchQuery, offset: 0 });
-  const offset = pagination.query === searchQuery ? pagination.offset : 0;
-
-  useEffect(() => {
-    setPagination({ query: searchQuery, offset: 0 });
-  }, [searchQuery]);
-
-  const cachedPageAtOffset = pageOffset => {
-    const pageIndex = entriesQuery?.data?.pageParams?.findIndex(pageParam => (pageParam ?? 0) === pageOffset);
-    return entriesQuery?.data?.pages?.[pageIndex];
-  };
-
-  const entries = cachedPageAtOffset(offset)?.items || [];
+  const entries = entriesQuery?.data?.items || [];
   const openEntry = matchPath(location.pathname, { path: `${match.path}/:id` })?.params;
-  const totalCount = entriesQuery?.data?.pages?.[0]?.about?.count || 0;
-
-  // Move to a page only once its data has loaded, so the list is never handed an empty
-  // page while it fetches; MultiColumnList shows NaN page indices for one. A fetch that
-  // resolves after the search has moved on is stamped with the old query and ignored.
-  const fetchMore = async (_askAmount, index) => {
-    // fetchNextPage appends even if this offset already exists in the cache.
-    if (!cachedPageAtOffset(index)) {
-      const { isError } = await entriesQuery.fetchNextPage({ pageParam: index });
-      if (isError) return;
-    }
-    setPagination({ query: searchQuery, offset: index });
-  };
+  const totalCount = entriesQuery?.data?.about?.count || 0;
 
   const resultsFormatter = {
     name: (entry) => entry.name,
@@ -122,8 +100,10 @@ const Entries = ({
             isEmptyMessage={intl.formatMessage({ id: 'stripes-smart-components.sas.noResults.noTerms' })}
             isSelected={({ item, criteria }) => !!criteria && item?.id === criteria.id}
             loading={entriesQuery.isFetching}
-            onNeedMoreData={fetchMore}
+            onNeedMoreData={(_askAmount, index) => onPageChange(index)}
             onRowClick={(_e, rowData) => history.push(`${match.url}/${rowData.id}${location.search}`)}
+            // MultiColumnList renders NaN page numbers for an empty list that is loading.
+            hidePageIndices={entries.length === 0}
             pageAmount={perPage}
             pagingOffset={offset}
             pagingType={MCLPagingTypes.PREV_NEXT}

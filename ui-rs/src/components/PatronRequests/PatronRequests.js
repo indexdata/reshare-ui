@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect } from 'react';
 import {
   FormattedDate,
   FormattedMessage,
@@ -68,6 +68,8 @@ const appDetails = {
 const PatronRequests = ({
   requestsQuery,
   perPage,
+  offset,
+  onPageChange,
   filterOptions,
   peerFacet,
   children,
@@ -79,32 +81,14 @@ const PatronRequests = ({
   const match = useRouteMatch();
   const stripes = useStripes();
   const sendCallout = useIntlCallout();
-  // Reset to the first page when location.search changes. Done during render, not in an
-  // effect, so no frame shows the new result at the old offset.
-  const [paging, setPaging] = useState({ search: location.search, offset: 0 });
-  if (paging.search !== location.search) setPaging({ search: location.search, offset: 0 });
-  const { offset } = paging;
-
-  const pageData = requestsQuery?.data?.pages?.[offset / perPage];
-  const requests = Array.isArray(pageData)
-    ? pageData
-    : pageData?.items || [];
-  const totalCount = requestsQuery?.data?.pages?.[0]?.about?.count || 0;
+  const requests = requestsQuery?.data?.items || [];
+  const totalCount = requestsQuery?.data?.about?.count || 0;
   const parsedParams = queryString.parse(location.search);
   const sortOrder = parsedParams.sort || '';
-  const fetchMore = async (_askAmount, index) => {
-    // Advance the visible page only once its data has loaded; on a failed page
-    // fetch, keep the current page's results on screen (the error surfaces via
-    // the isRefetchError callout) instead of flipping to an empty page. A fetch that
-    // resolves after the search has moved on stamps the old location and is discarded.
-    const { isError } = await requestsQuery.fetchNextPage({ pageParam: index });
-    if (!isError) setPaging({ search: location.search, offset: index });
-  };
 
-  // A refetch or pagination failure (as opposed to a cold-load failure) keeps the
-  // existing results on screen, so surface it as a transient callout rather than
-  // replacing the table. Keyed on errorUpdatedAt so a repeat error refires but
-  // ordinary re-renders don't.
+  // A failed refetch keeps its results on screen, so it gets a callout; a page that fails
+  // to load gets the error pane instead. Keyed on errorUpdatedAt so a repeat error refires
+  // but ordinary re-renders don't.
   useEffect(() => {
     if (requestsQuery.isRefetchError) {
       sendCallout('ui-rs.search.refreshError', 'error', { errMsg: requestsQuery.error?.message });
@@ -341,8 +325,10 @@ const PatronRequests = ({
                     key={requestsQuery?.dataUpdatedAt}
                     loading={requestsQuery?.isFetching}
                     onHeaderClick={onSort}
-                    onNeedMoreData={fetchMore}
+                    onNeedMoreData={(_askAmount, index) => onPageChange(index)}
                     onRowClick={(_e, rowData) => history.push(`${match.url}/${rowData.id}${location.search}`)}
+                    // MultiColumnList renders NaN page numbers for an empty list that is loading.
+                    hidePageIndices={requests.length === 0}
                     pageAmount={perPage}
                     pagingType={MCLPagingTypes.PREV_NEXT}
                     showSortIndicator
