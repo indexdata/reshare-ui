@@ -52,6 +52,13 @@ jobs:
       - name: Test ui-rsdir
         run: yarn workspace @projectreshare/rsdir test --ci
 
+      - name: Test ui-plugin-rs-siquery-vufind
+        shell: bash
+        run: |
+          yarn workspace @projectreshare/plugin-rs-siquery-vufind test --ci 2>&1 | tee jest.log
+          n=$(grep -c '● Console' jest.log || true)
+          [ "$n" -gt 0 ] && echo "::warning::ui-plugin-rs-siquery-vufind: console output in $n test file(s)" || true
+
       # PR-only: pushes to main already build the full deploy
       # platform in deploy-resharex.yaml, this lets PRs verify
       # at least the leaner dev platform builds

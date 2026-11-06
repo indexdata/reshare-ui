@@ -8,6 +8,11 @@ const SearchAndFilter = ({ setSearchParams }) => {
   const [searchIndex, setSearchIndex] = useState('AllFields');
   const indices = ['AllFields', 'Title', 'Author', 'Subject', 'CallNumber', 'ISN', 'tag'];
   const handleQuery = q => setQuery(q?.target?.value);
+  const handleReset = () => {
+    setQuery('');
+    setSearchIndex('AllFields');
+    setSearchParams(null);
+  };
   const handleSubmit = e => {
     e.preventDefault();
     e.stopPropagation();
@@ -40,7 +45,7 @@ const SearchAndFilter = ({ setSearchParams }) => {
         buttonStyle="none"
         id="clickable-reset-all"
         fullWidth
-        onClick={() => setQuery('')}
+        onClick={handleReset}
       >
         <Icon icon="times-circle-solid">
           <FormattedMessage id="stripes-smart-components.resetAll" />
