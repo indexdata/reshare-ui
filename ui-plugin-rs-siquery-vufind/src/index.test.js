@@ -65,6 +65,32 @@ describe('PluginRsSIQueryVufind', () => {
     ]).toString());
   });
 
+  it('pages through results by VuFind page number, reusing pages already seen', async () => {
+    // One record per page, titled by the page it was fetched as.
+    ky.mockImplementation((_url, { searchParams }) => {
+      const page = searchParams.get('page');
+      return { json: () => Promise.resolve({ resultCount: 120, records: [{ ...record, id: `rec-${page}`, title: `Page ${page}` }] }) };
+    });
+    renderWithRs(
+      <PluginRsSIQueryVufind
+        endpoint="https://vufind.example"
+        searchLabel="Search shared catalog"
+        selectInstance={jest.fn()}
+      />
+    );
+
+    const dialog = openAndSearch();
+    await within(dialog).findByText('Page 1');
+    const page = async (label, expected) => {
+      fireEvent.click(within(dialog).getByText(label).closest('button'));
+      expect(await within(dialog).findByText(expected)).toBeInTheDocument();
+    };
+    await page('stripes-components.next', 'Page 2');
+    await page('stripes-components.previous', 'Page 1');
+    await page('stripes-components.next', 'Page 2');
+    expect(ky.mock.calls.map(([, { searchParams }]) => searchParams.get('page'))).toEqual(['1', '2']);
+  });
+
   it('shows a failed search in the modal and retries it from there', async () => {
     ky.mockReturnValueOnce({ json: () => Promise.reject(new Error('Request failed with status code 502')) });
     renderWithRs(
