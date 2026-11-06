@@ -1,9 +1,9 @@
 import { FormattedMessage } from 'react-intl';
 import ky from 'ky';
-import { useInfiniteQuery } from 'react-query';
+import { useQuery } from 'react-query';
 import { useEffect, useState } from 'react';
 
-import { Button, IconButton, Layout, LoadingPane, MessageBanner, Modal, MultiColumnList, Pane, PaneMenu, Paneset } from '@folio/stripes/components';
+import { Button, IconButton, Layout, LoadingPane, MCLPagingTypes, MessageBanner, Modal, MultiColumnList, Pane, PaneMenu, Paneset } from '@folio/stripes/components';
 import { useIntlCallout } from '@projectreshare/stripes-reshare';
 
 import SearchAndFilter from './components/SearchAndFilter';
@@ -24,21 +24,33 @@ const PluginRsSIQueryVufind = ({ disabled, endpoint, selectInstance, searchButto
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState(null);
 
-  const query = useInfiniteQuery({
-    queryKey: ['vufindLookup', endpoint, search],
-    // VuFind pages are 1-based and treat page 0 as page 1.
-    queryFn: ({ pageParam = 1 }) => ky(`${endpoint}/api/v1/search`, { searchParams: searchParams(search, pageParam) }).json(),
-    getNextPageParam: (_lastPage, pages) => pages.length + 1,
+  // One query per page, keyed on its offset, so a revisited page comes from the cache. A
+  // new search resets the offset during render so no render pairs it with the old page.
+  const [paging, setPaging] = useState({ search, offset: 0 });
+  if (paging.search !== search) setPaging({ search, offset: 0 });
+  const offset = paging.search === search ? paging.offset : 0;
+
+  const query = useQuery({
+    queryKey: ['vufindLookup', endpoint, search, offset],
+    // VuFind pages are 1-based.
+    queryFn: () => ky(`${endpoint}/api/v1/search`, { searchParams: searchParams(search, offset / PER_PAGE + 1) }).json(),
+    keepPreviousData: true,
     staleTime: 2 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
     enabled: !!search,
   });
-  const results = query.data?.pages?.flatMap(x => x?.records ?? []);
-  const totalCount = query.data?.pages?.[0]?.resultCount;
+
+  // The pager moves to the new offset only once that page has loaded.
+  const [shownOffset, setShownOffset] = useState(offset);
+  if (query.isSuccess && !query.isPreviousData && shownOffset !== offset) setShownOffset(offset);
+
+  const results = query.data?.records ?? [];
+  const totalCount = query.data?.resultCount ?? 0;
   const sendCallout = useIntlCallout();
 
-  // A failed later page keeps the loaded results on screen, so it is reported as a
-  // callout. Keyed on errorUpdatedAt so a repeat failure reports again.
+  // A failed refetch keeps its results on screen, so it gets a callout; a page that fails
+  // to load gets the error pane instead. Keyed on errorUpdatedAt so a repeat failure
+  // reports again.
   useEffect(() => {
     if (query.isRefetchError) {
       sendCallout('ui-plugin-rs-siquery-vufind.refreshError', 'error', { errMsg: query.error?.message });
@@ -94,7 +106,8 @@ const PluginRsSIQueryVufind = ({ disabled, endpoint, selectInstance, searchButto
               </Layout>
             </Pane>
           }
-          {query.data &&
+          {/* A reset search shows no results, though keepPreviousData still holds the last ones. */}
+          {search && query.data &&
             <Pane
               defaultWidth="fill"
               noOverflow
@@ -118,14 +131,15 @@ const PluginRsSIQueryVufind = ({ disabled, endpoint, selectInstance, searchButto
                   physicalDescriptions: rec => rec.physicalDescriptions?.join(', '),
                 }}
                 hasMargin
+                // MultiColumnList renders NaN page numbers for an empty list that is loading.
+                hidePageIndices={results.length === 0}
                 loading={query.isFetching}
-                // MCL asks again while a page is loading; by default that cancels the
-                // fetch and requests the same page again.
-                onNeedMoreData={() => query.fetchNextPage({ cancelRefetch: false })}
+                onNeedMoreData={(_askAmount, index) => setPaging({ search, offset: index })}
                 onRowClick={(_e, row) => onSelect(row)}
                 pageAmount={PER_PAGE}
+                pagingOffset={shownOffset}
+                pagingType={MCLPagingTypes.PREV_NEXT}
                 totalCount={totalCount}
-                virtualize
                 visibleColumns={['title', 'authors', 'edition', 'formats', 'physicalDescriptions']}
               />
             </Pane>

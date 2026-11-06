@@ -1,5 +1,9 @@
 
 .pluginModalContent {
-  min-height: 500px;
   padding: 0;
+  /* Fill the modal below its header. The stock cap leaves a gap under the pager. */
+  max-height: none;
+  /* Keeps the pager inside the modal. The root Paneset is absolutely positioned and
+     would otherwise be as tall as the whole modal, header included. */
+  position: relative;
 }
