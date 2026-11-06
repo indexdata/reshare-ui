@@ -1,10 +1,11 @@
 {
   "name": "@projectreshare/plugin-rs-siquery-vufind",
-  "version": "2.0.0",
-  "description": "Plugin to find an instance from an SI via the Vufind API",
+  "version": "3.0.0",
+  "description": "Plugin to find an instance from an SI via the VuFind API",
   "repository": {
     "type": "git",
-    "url": "https://github.com/openlibraryenvironment/ui-plugin-rs-siquery-vufind"
+    "url": "https://github.com/indexdata/reshare-ui",
+    "directory": "ui-plugin-rs-siquery-vufind"
   },
   "main": "src/index.js",
   "license": "Apache-2.0",
@@ -16,21 +17,17 @@
     "displayName": "ui-plugin-rs-siquery-vufind.meta.title"
   },
   "scripts": {
-    "lint": "eslint ."
-  },
-  "devDependencies": {
-    "@folio/eslint-config-stripes": "~7.0.0",
-    "eslint": "^7.32.0"
+    "lint": "eslint .",
+    "test": "jest"
   },
   "dependencies": {
-    "@projectreshare/stripes-reshare": "^2.0.0",
-    "ky": "^0.23.0",
-    "query-string": "^8.1.0"
+    "@projectreshare/stripes-reshare": "~3.0.0",
+    "ky": "^0.23.0"
   },
   "peerDependencies": {
-    "@folio/stripes": "^7.1.0 || ^8.0.0 || ^9.0.0 || ^10.0.0",
+    "@folio/stripes": "^10.0.0",
     "react": "*",
-    "react-intl": "^6.0.0 || ^7.0.0",
+    "react-intl": "^6.4.7 || ^7.0.0",
     "react-query": "^3.9.0"
   }
 }

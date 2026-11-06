@@ -1,73 +1,53 @@
 import { FormattedMessage } from 'react-intl';
 import ky from 'ky';
-import queryString from 'query-string';
 import { useInfiniteQuery } from 'react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { Button, LoadingPane, Modal, MultiColumnList, Pane, Paneset } from '@folio/stripes/components';
+import { Button, IconButton, Layout, LoadingPane, MessageBanner, Modal, MultiColumnList, Pane, PaneMenu, Paneset } from '@folio/stripes/components';
 import { useIntlCallout } from '@projectreshare/stripes-reshare';
 
 import SearchAndFilter from './components/SearchAndFilter';
 import css from './index.css';
 
 const PER_PAGE = 60;
-const field = ['id', 'authors', 'title', 'cleanIsbn', 'cleanIssn', 'cleanOclcNumber', 'edition', 'formats', 'physicalDescriptions', 'placesOfPublication', 'publicationDates', 'publishers'];
+const FIELDS = ['id', 'title', 'authors', 'edition', 'formats', 'physicalDescriptions'];
 
-const recordToReshareForm = rec => {
-  if (typeof rec !== 'object') return null;
-  const res = {
-    systemInstanceIdentifier: rec.id,
-    title: rec.title,
-    subtitle: rec.subTitle,
-    author: ((typeof rec?.authors?.primary === 'object' ? Object.keys(rec.authors.primary).join('; ') : '')
-              ?? (typeof rec?.authors?.corporate === 'object' ? Object.keys(rec.authors.corporate).join('; ') : '')),
-    edition: rec?.edition,
-    isbn: rec?.cleanIsbn,
-    issn: rec?.cleanIssn,
-    oclcNumber: rec?.cleanOclcNumber,
-    publisher: rec?.publishers?.join('; '),
-    publicationDate: rec?.publicationDates?.join('; '),
-    placeOfPublication: rec?.placesOfPublication?.join('; '),
-  };
-  // exclude fields without truthy value such as those containing an empty string
-  return Object.fromEntries(Object.entries(res).filter(([_key, value]) => value));
-};
+const searchParams = (search, page) => new URLSearchParams([
+  ...Object.entries(search),
+  ...FIELDS.map(f => ['field[]', f]),
+  ['page', page],
+  ['limit', PER_PAGE],
+]);
 
-const PluginRsSIQueryVufind = ({ disabled, endpoint, selectInstance, searchButtonStyle, searchLabel, specifiedId }) => {
+// Picks a record from a VuFind index and hands its id to selectInstance
+const PluginRsSIQueryVufind = ({ disabled, endpoint, selectInstance, searchButtonStyle, searchLabel }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchParams, setSearchParams] = useState('');
-  const sendCallout = useIntlCallout();
+  const [search, setSearch] = useState(null);
 
   const query = useInfiniteQuery({
-    queryKey: ['vufindLookup', searchParams],
-    queryFn: ({ pageParam = 0 }) => ky(`${endpoint}/api/v1/search?${queryString.stringify({ ...searchParams, field, page: pageParam, limit: PER_PAGE }, { arrayFormat: 'bracket' })}`).json(),
-    useErrorBoundary: true,
+    queryKey: ['vufindLookup', endpoint, search],
+    // VuFind pages are 1-based and treat page 0 as page 1.
+    queryFn: ({ pageParam = 1 }) => ky(`${endpoint}/api/v1/search`, { searchParams: searchParams(search, pageParam) }).json(),
+    getNextPageParam: (_lastPage, pages) => pages.length + 1,
     staleTime: 2 * 60 * 1000,
     cacheTime: 10 * 60 * 1000,
-    enabled: !!searchParams,
+    enabled: !!search,
   });
-  const results = query?.data?.pages?.flatMap(x => x?.records ?? []);
-  const totalCount = query?.data?.pages?.[0]?.resultCount;
+  const results = query.data?.pages?.flatMap(x => x?.records ?? []);
+  const totalCount = query.data?.pages?.[0]?.resultCount;
+  const sendCallout = useIntlCallout();
 
-  const onButton = async () => {
-    if (!specifiedId) {
-      setIsOpen(true);
-      return;
+  // A failed later page keeps the loaded results on screen, so it is reported as a
+  // callout. Keyed on errorUpdatedAt so a repeat failure reports again.
+  useEffect(() => {
+    if (query.isRefetchError) {
+      sendCallout('ui-plugin-rs-siquery-vufind.refreshError', 'error', { errMsg: query.error?.message });
     }
-    const res = await ky(`${endpoint}/api/v1/record?${queryString.stringify({ id: specifiedId, field }, { arrayFormat: 'bracket' })}`)
-      .json()
-      .catch(async e => {
-        const errBody = await e.response?.text();
-        const errMsg = (typeof errBody === 'string' && errBody.startsWith('{')) ? JSON.parse(errBody)?.statusMessage : '';
-        sendCallout('ui-plugin-rs-siquery-vufind.byIdError', 'error', { errMsg });
-      });
-    if (res?.status === 'OK' && res?.resultCount === 1) {
-      selectInstance(recordToReshareForm(res.records?.[0]));
-    }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query.isRefetchError, query.errorUpdatedAt]);
 
   const onSelect = record => {
-    selectInstance(recordToReshareForm(record));
+    selectInstance(record.id);
     setIsOpen(false);
   };
 
@@ -76,7 +56,7 @@ const PluginRsSIQueryVufind = ({ disabled, endpoint, selectInstance, searchButto
       <Button
         buttonStyle={searchButtonStyle}
         disabled={disabled}
-        onClick={onButton}
+        onClick={() => setIsOpen(true)}
       >
         {searchLabel}
       </Button>
@@ -87,16 +67,34 @@ const PluginRsSIQueryVufind = ({ disabled, endpoint, selectInstance, searchButto
         closeOnBackgroundClick
         dismissible
         contentClass={css.pluginModalContent}
-        style={{ width: '80vw', 'max-width': '80vw', height: '80vw' }}
+        style={{ width: '80vw', maxWidth: '80vw', height: '80vh' }}
       >
         <Paneset isRoot>
           <Pane
             defaultWidth="20%"
             paneTitle={<FormattedMessage id="stripes-smart-components.searchAndFilter" />}
           >
-            <SearchAndFilter setSearchParams={setSearchParams} />
+            <SearchAndFilter setSearchParams={setSearch} />
           </Pane>
-          {query.isSuccess &&
+          {query.isLoadingError &&
+            <Pane
+              defaultWidth="fill"
+              firstMenu={(
+                // A retry with no data loaded counts as a fresh load, so LoadingPane takes over.
+                <PaneMenu>
+                  <IconButton icon="refresh" onClick={() => query.refetch()} />
+                </PaneMenu>
+              )}
+              paneTitle={<FormattedMessage id="ui-plugin-rs-siquery-vufind.resultsHeader" />}
+            >
+              <Layout className="padding-all-gutter">
+                <MessageBanner type="error">
+                  <FormattedMessage id="ui-plugin-rs-siquery-vufind.queryError" values={{ errMsg: query.error?.message }} />
+                </MessageBanner>
+              </Layout>
+            </Pane>
+          }
+          {query.data &&
             <Pane
               defaultWidth="fill"
               noOverflow
@@ -116,12 +114,14 @@ const PluginRsSIQueryVufind = ({ disabled, endpoint, selectInstance, searchButto
                 contentData={results}
                 formatter={{
                   authors: v => (typeof v?.authors?.primary === 'object' ? Object.keys(v.authors.primary).join('; ') : ''),
-                  formats: rec => rec.formats.join(', '),
-                  physicalDescriptions: rec => rec.physicalDescriptions.join(', '),
+                  formats: rec => rec.formats?.join(', '),
+                  physicalDescriptions: rec => rec.physicalDescriptions?.join(', '),
                 }}
                 hasMargin
-                loading={query?.isFetching}
-                onNeedMoreData={(_ask, index) => query.fetchNextPage({ pageParam: Math.ceil(index / PER_PAGE) })}
+                loading={query.isFetching}
+                // MCL asks again while a page is loading; by default that cancels the
+                // fetch and requests the same page again.
+                onNeedMoreData={() => query.fetchNextPage({ cancelRefetch: false })}
                 onRowClick={(_e, row) => onSelect(row)}
                 pageAmount={PER_PAGE}
                 totalCount={totalCount}

@@ -3,6 +3,7 @@
   "workspaces": [
     "platform-rs-dev",
     "stripes-reshare",
+    "ui-plugin-rs-siquery-vufind",
     "ui-request",
     "ui-rs",
     "ui-rsdir",

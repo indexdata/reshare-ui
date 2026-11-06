@@ -2,24 +2,18 @@
   "modal.title": "Select instance",
   "meta.title": "SI instance finder for VuFind (plugin)",
   "resultsHeader": "Search results",
-  "filters.language": "Language",
-
-  "byIdError": "Error looking up id from VuFind: {errMsg}",
-
+  "queryError": "Your search could not be run: {errMsg}",
+  "refreshError": "Could not load more results: {errMsg}",
   "columns.title": "Title",
   "columns.contributors": "Contributors",
-  "columns.publishers": "Publishers",
   "columns.edition": "Edition",
   "columns.formats": "Format",
   "columns.description": "Description",
-
   "index.AllFields": "All fields",
   "index.Title": "Title",
   "index.Author": "Author",
   "index.Subject": "Subject",
   "index.CallNumber": "Call number",
   "index.ISN": "ISN",
-  "index.tag": "Tag",
-
-  "JSON": "is unhappy with trailing commas"
+  "index.tag": "Tag"
 }
