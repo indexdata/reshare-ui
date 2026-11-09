@@ -1,7 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useLocation } from 'react-router-dom';
-import { NavList, NavListItem, NavListSection } from '@folio/stripes/components';
+import { Badge, NavList, NavListItem, NavListSection } from '@folio/stripes/components';
+import { sectionAppliesTo } from '../config/configSections';
+import css from './EntryPane.css';
 
 export const SECTIONS = [
   { key: 'entry', segment: '', labelId: 'ui-rsdir.entry.section.entry' },
@@ -19,14 +21,12 @@ export const sectionAt = (pathname, entryUrl) => {
   return SECTIONS.find(section => section.segment === segment) || SECTIONS[0];
 };
 
-const EntrySections = ({ className, entryUrl, entryType, active }) => {
+// Missing counts mean not searched; zero means searched with no matches.
+const EntrySections = ({ entryUrl, entryType, active, counts = {} }) => {
   const intl = useIntl();
   const location = useLocation();
   const activeRef = useRef();
-  const sections = SECTIONS.filter(section => (
-    (entryType !== 'Branch' || section.key !== 'catalogconfig')
-    && (entryType === 'Institution' || entryType === 'Branch' || section.key !== 'lmsconfig')
-  ));
+  const sections = SECTIONS.filter(section => sectionAppliesTo(section.segment, entryType));
 
   // Section navigation unmounts the focused link. Focus the active section
   // if nothing else has focus; leave focus on a results row or other control.
@@ -36,7 +36,7 @@ const EntrySections = ({ className, entryUrl, entryType, active }) => {
   const linkTo = ({ segment }) => `${entryUrl}${segment && `/${segment}`}${location.search}`;
 
   return (
-    <NavList className={className} aria-label={intl.formatMessage({ id: 'ui-rsdir.entry.sections' })}>
+    <NavList aria-label={intl.formatMessage({ id: 'ui-rsdir.entry.sections' })}>
       <NavListSection>
         {sections.map(section => (
           <NavListItem
@@ -48,6 +48,15 @@ const EntrySections = ({ className, entryUrl, entryType, active }) => {
             to={linkTo(section)}
           >
             <FormattedMessage id={section.labelId} />
+            {counts[section.segment] !== undefined &&
+              <>
+                {' '}
+                <span aria-hidden="true" className={css.sectionCount}><Badge color={counts[section.segment] > 0 ? 'primary' : 'default'} size="small">{counts[section.segment]}</Badge></span>
+                <span className="sr-only">
+                  <FormattedMessage id="ui-rsdir.entry.settingsSearch.summary" values={{ count: counts[section.segment] }} />
+                </span>
+              </>
+            }
           </NavListItem>
         ))}
       </NavListSection>

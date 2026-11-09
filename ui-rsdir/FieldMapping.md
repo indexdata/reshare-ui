@@ -1,11 +1,14 @@
 # Settings configuration field mappings
 
-Entry configuration routes use `SettingsConfigEditor` to edit an object stored on an Entry, such as `lmsConfig`, `catalogConfig`, or `holdingsPolicy`. Each route defines a local `fieldMap` array and passes it to the editor as `fieldMapping`:
+Entry configuration routes use `SettingsConfigEditor` to edit an object stored on an Entry, such as `lmsConfig`, `catalogConfig`, or `holdingsPolicy`. The field maps live in `src/config/configSections.js`, one row per section giving its `configKey`, URL `segment`, `controlIdPrefix`, `labelPrefix`, the `fieldLabelId` derived from that prefix, and its `fieldMap`. Each route reads its row through `configSection(configKey)` and passes the map to the editor as `fieldMapping`. The LMS and catalog routes instead pass the map with the entry's host-profile overrides applied, which `useEffectiveSections(entry)` yields for every section; the settings search indexes the same maps:
 
 ```jsx
+const { controlIdPrefix, fieldLabelId, fieldMap } = configSection('catalogConfig');
+
 <SettingsConfigEditor
   configKey="catalogConfig"
-  fieldLabelId={fieldName => `ui-rsdir.catalogConfig.${fieldName}`}
+  controlIdPrefix={controlIdPrefix}
+  fieldLabelId={fieldLabelId}
   fieldMapping={fieldMap}
   // Other route properties...
 />
@@ -14,6 +17,8 @@ Entry configuration routes use `SettingsConfigEditor` to edit an object stored o
 Each top-level mapping is displayed in its own card and saved independently. Saving a card patches the corresponding property beneath `configKey`.
 
 The optional editor callback `getSelectionChangeImpact({ fieldName, nextValue, resource })` can return `{ source: { setting, name }, groups: [{ configKey, paths }], catalogProfile? }` to require confirmation before a top-level dropdown draft changes. The optional `catalogProfile` names the explicit profile that prevents a proposed LMS vendor's catalog overrides from applying; it triggers confirmation even with no affected groups. Empty groups without `catalogProfile`, or an undefined result, apply the change immediately. Confirming updates the draft only; Save persists it. LMS vendor and catalog profile routes use `selectionChangeImpact` to list new override paths derived from OpenAPI `x-host-profiles`, respecting an independent catalog profile. Clearing either selection bypasses confirmation and updates the draft immediately; Save persists `null`, and a cleared catalog profile falls back to the LMS vendor. Removed overrides are not listed.
+
+The settings search in the entry pane drives two optional editor props. `shownFields` lists the top-level field names whose cards are shown; the other cards are hidden rather than unmounted unless open for editing, and when it is undefined every card shows. The empty-configuration message shows only while some card does. `searchWords` are highlighted in every field label, ignoring case and accents.
 
 ## Common field properties
 

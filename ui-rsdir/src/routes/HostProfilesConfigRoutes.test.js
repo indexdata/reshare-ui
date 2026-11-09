@@ -23,7 +23,7 @@ jest.mock('@folio/stripes/components', () => ({
 }));
 jest.mock('../components/EntryPane', () => ({
   __esModule: true,
-  default: ({ children }) => <div>{children}</div>,
+  default: ({ children }) => <div>{typeof children === 'function' ? children({ searchWords: [] }) : children}</div>,
   EntryLoadingPane: () => <div>Loading settings</div>,
 }));
 jest.mock('../components/SettingsConfigEditor', () => ({

@@ -43,6 +43,17 @@ test('our own entry loads section by section and in the edit form', async ({ pag
     await expect(entry.locator(loaded).first()).toBeVisible();
     await checkA11y(page, `entry section ${key}`);
   }
+  // Verify search against live host profiles; cancel edits to preserve the configuration.
+  await page.locator('#clickable-entry-section-lmsconfig').click();
+  const search = page.locator('#entry-settings-search');
+  await search.fill('agency');
+  await expect(entry.getByRole('status')).toHaveText(/^\d+ matching settings?$/);
+  const edit = entry.locator('[id^="edit-lms-config-"]:visible:not([disabled])').first();
+  const field = (await edit.getAttribute('id'))!.replace(/^edit-/, '');
+  await edit.click();
+  await checkA11y(page, 'settings card in edit mode');
+  await page.locator(`#cancel-${field}`).click();
+  await expect(page.locator(`#edit-${field}`)).toBeVisible();
   await page.locator('#clickable-entry-section-entry').click();
   await page.locator('#clickable-edit-entry').click();
   // the edit form renders only once the entry has loaded, and the directory

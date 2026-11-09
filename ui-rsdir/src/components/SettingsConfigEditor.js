@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   ConfirmationModal,
+  Highlighter,
   Icon,
   IconButton,
   MultiSelection,
@@ -19,6 +20,9 @@ import {
 import css from './SettingsConfigEditor.css';
 import useDirectoryOpenApi from '../hooks/useDirectoryOpenApi';
 import { configFieldDefaultData, configFieldDescription, supportsConfigDescriptions } from '../util/configFieldDescription';
+import fieldLabel from '../util/fieldLabel';
+import { foldForHighlight } from '../util/settingsIndex';
+import { hasOwnValue, selectedBranches } from '../util/onlyOneSelection';
 
 const STRING_ARRAY = 'stringarray';
 const STRING_MAP = 'stringmap';
@@ -35,11 +39,6 @@ const isObject = value => value && typeof value === 'object' && !Array.isArray(v
 const sameCodeDescription = (left, right) => isObject(left) && isObject(right) &&
   left.code === right.code && left.defaultDesc === right.defaultDesc;
 
-const hasOwnValue = (source, fieldName) => isObject(source) &&
-  Object.prototype.hasOwnProperty.call(source, fieldName) &&
-  source[fieldName] !== null && source[fieldName] !== undefined;
-
-const selectedSubFields = (value, field) => field.subMap.filter(child => hasOwnValue(value, child.fieldName));
 
 const isValidSymbol = value => isObject(value) &&
   typeof value.authority === 'string' && !!value.authority &&
@@ -325,7 +324,7 @@ const isEmptyFieldValue = (value, field) => {
     const source = isObject(value) ? value : {};
 
     if (field.onlyOne) {
-      return selectedSubFields(source, field).length === 0;
+      return selectedBranches(field, source).length === 0;
     }
 
     return field.subMap.every(child => isEmptyFieldValue(source[child.fieldName], child));
@@ -373,6 +372,8 @@ const SettingsConfigEditor = ({
   initialResource,
   onSave,
   resourcePath,
+  searchWords = [],
+  shownFields,
   successMessage,
 }) => {
   useMemo(() => {
@@ -487,10 +488,7 @@ const SettingsConfigEditor = ({
     };
   };
 
-  const labelForPath = path => intl.formatMessage({
-    id: fieldLabelId(path),
-    defaultMessage: path.split('.').pop(),
-  });
+  const labelForPath = path => fieldLabel(intl, fieldLabelId, path);
 
   const objectDescription = (path, item) => {
     const id = `${fieldLabelId(path)}.values.${item.code}`;
@@ -539,7 +537,16 @@ const SettingsConfigEditor = ({
             )}
           </Tooltip>
         }
-        <span className={css.fieldLabelText}>{label}</span>
+        <span className={css.fieldLabelText}>
+          {searchWords.length > 0 ?
+            <Highlighter
+              searchWords={searchWords}
+              sanitize={text => foldForHighlight(text, intl.locale)}
+              text={label}
+            /> :
+            label
+          }
+        </span>
         {field.overrideSource &&
           <Popover
             renderTrigger={({ ref, toggle, open }) => (
@@ -1121,7 +1128,7 @@ const SettingsConfigEditor = ({
 
     if (type === SUB_FIELD) {
       const source = isObject(value) ? value : {};
-      const selectedFields = field.onlyOne ? selectedSubFields(source, field) : field.subMap;
+      const selectedFields = field.onlyOne ? selectedBranches(field, source) : field.subMap;
 
       if (field.onlyOne && selectedFields.length > 1) {
         errors[path] = onlyOneMessage();
@@ -2396,7 +2403,7 @@ const SettingsConfigEditor = ({
     const context = contextForField(field, parentContext);
     const path = context.path.join('.');
     const value = isEditing ? draftFieldValue(field, parentContext) : committedFieldValue(field, parentContext);
-    const selectedFields = field.onlyOne ? selectedSubFields(value, field) : field.subMap;
+    const selectedFields = field.onlyOne ? selectedBranches(field, value) : field.subMap;
     const selectedFieldName = selectedFields.length === 1 ? selectedFields[0].fieldName : '';
     const fieldsToRender = field.onlyOne ? selectedFields : field.subMap;
 
@@ -2546,6 +2553,9 @@ const SettingsConfigEditor = ({
             cardClass={field.disabled ? css.disabledField : undefined}
             roundedBorder
             key={fieldName}
+            // Keep hidden cards mounted to preserve their local state. A card open
+            // for editing always shows, so a refetch or URL change cannot hide its draft.
+            hidden={shownFields && !isEditing ? !shownFields.includes(fieldName) : undefined}
             headerStart={renderFieldLabel(field, fieldName)}
             headerEnd={!field.disabled &&
               <Button
@@ -2583,7 +2593,7 @@ const SettingsConfigEditor = ({
           </Card>
         );
       })}
-      {!resource?.[configKey] &&
+      {!resource?.[configKey] && (!shownFields || shownFields.length > 0) &&
         <div>
           {emptyMessage}
         </div>
