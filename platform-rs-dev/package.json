@@ -4,7 +4,7 @@
   "description": "Top-level platform for ReShare UI",
   "license": "Apache-2.0",
   "scripts": {
-    "build": "export STRIPES_TRANSPILE_TOKENS=\"@projectreshare\"; export NODE_OPTIONS=\"--max-old-space-size=4096 $NODE_OPTIONS\"; stripes build stripes.config.js",
+    "build": "export STRIPES_TRANSPILE_TOKENS=\"@k-int @projectreshare\"; export NODE_OPTIONS=\"--max-old-space-size=4096 $NODE_OPTIONS\"; stripes build stripes.config.js",
     "stripes": "stripes",
     "start": "stripes serve stripes.config.js",
     "build-module-descriptors": "stripes mod descriptor stripes.config.js --full --strict  --output ./ModuleDescriptors"
@@ -15,8 +15,10 @@
     "@folio/tenant-settings": "10.0.0",
     "@folio/users": "12.1.16",
     "@projectreshare/supply": "~2.0.0",
+    "@projectreshare/plugin-rs-siquery-vufind": "~3.0.0",
     "@projectreshare/request": "~2.0.0",
     "@projectreshare/rs": "~2.0.0",
+    "@projectreshare/rsdir": "~0.0.0",
     "@projectreshare/update": "~2.0.0",
     "moment": "~2.29.0",
     "react": "~18.2.0",
