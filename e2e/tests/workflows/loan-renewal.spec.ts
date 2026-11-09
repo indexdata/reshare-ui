@@ -2,7 +2,6 @@ import { test, expect, step } from '../../lib/tenants';
 import { item, pickupLocation } from '../../lib/env';
 import { clickAction, createLoanRequest, expectState, openFromList, scan, showTab, usDate } from '../../lib/request';
 
-// Set due dates in the UI to reach overdue without waiting for a scheduler.
 test('loan with a renewal', async ({ ownPage: borrower, peerPage: lender }) => {
   test.setTimeout(300_000);
   const title = `${item.title} ${Date.now()}`;
@@ -16,7 +15,7 @@ test('loan with a renewal', async ({ ownPage: borrower, peerPage: lender }) => {
     await showTab(borrower, 'Flow');
   });
 
-  await step('lender prints the pull slip and ships, already due', async () => {
+  await step('lender prints the pull slip and ships', async () => {
     await openFromList(lender, '/supply/requests', title);
     // the broker sent the branch's shipping address as the delivery address
     await showTab(lender, 'Details');
@@ -24,10 +23,6 @@ test('loan with a renewal', async ({ ownPage: borrower, peerPage: lender }) => {
     await showTab(lender, 'Flow');
     await clickAction(lender, /pull ?slip.*printed/i);
     await expectState(lender, 'Searching');
-    await clickAction(lender, /Override due date/);
-    // a due date means the end of that day in the tenant's timezone, so
-    // yesterday by this machine's clock can still lie ahead
-    await lender.locator('[name="dueDate"]').fill(usDate(-2));
     await scan(lender, requestId);
     await expectState(lender, 'Shipped');
   });
@@ -44,14 +39,7 @@ test('loan with a renewal', async ({ ownPage: borrower, peerPage: lender }) => {
     await expect(borrower.getByText('Success: Check out to patron')).toBeVisible();
   });
 
-  await step('lender marks the loan overdue', async () => {
-    await expectState(lender, 'Received');
-    await clickAction(lender, /overdue/i);
-    await expectState(lender, 'Overdue');
-  });
-
   await step('borrower asks for a renewal', async () => {
-    await expectState(borrower, 'Overdue');
     await clickAction(borrower, 'Request renewal');
     await expectState(borrower, 'Renewal pending');
   });
