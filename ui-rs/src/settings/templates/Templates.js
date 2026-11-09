@@ -11,7 +11,7 @@ import EditTemplate from './EditTemplate';
 const TemplatesList = ({ match, history }) => {
   const intl = useIntl();
   const { data, isSuccess } = useOkapiQuery('broker/templates', {
-    searchParams: { limit: 100 },
+    searchParams: { limit: 1000 },
   });
   const items = data?.items ?? [];
 

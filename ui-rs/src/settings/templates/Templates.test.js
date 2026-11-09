@@ -52,7 +52,7 @@ describe('Templates', () => {
     renderList();
 
     await waitFor(() => expect(screen.getByText('Received item notification')).toBeInTheDocument());
-    expect(mockOkapi.calledUrls()).toContain('broker/templates?limit=100');
+    expect(mockOkapi.calledUrls()).toContain('broker/templates?limit=1000');
     expect(screen.getByText('received-notification')).toBeInTheDocument();
     expect(screen.getByText('ui-rs.settings.templates.audience.patron')).toBeInTheDocument();
   });

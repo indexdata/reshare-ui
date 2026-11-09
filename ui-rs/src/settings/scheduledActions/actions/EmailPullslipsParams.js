@@ -26,7 +26,7 @@ const TEMPLATE_SCOPE = { purpose: 'email', audience: 'staff' };
 const TemplateLabelField = ({ invalidMessage }) => {
   const intl = useIntl();
   const { data, isLoading } = useOkapiQuery('broker/templates', {
-    searchParams: { limit: 100 },
+    searchParams: { limit: 1000 },
   });
   const options = useMemo(
     () => templateLabelOptions(data?.items, TEMPLATE_SCOPE),

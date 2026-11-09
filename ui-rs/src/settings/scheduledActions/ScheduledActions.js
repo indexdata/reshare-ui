@@ -11,7 +11,9 @@ import EditScheduledAction from './EditScheduledAction';
 
 const ScheduledActionsList = ({ match, history }) => {
   const intl = useIntl();
-  const { data, isSuccess } = useOkapiQuery('broker/batch_actions');
+  const { data, isSuccess } = useOkapiQuery('broker/batch_actions', {
+    searchParams: { limit: 1000 },
+  });
   const items = data?.items ?? [];
 
   const formatter = {

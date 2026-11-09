@@ -365,7 +365,7 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
   // Both are optional, so either request can fail without disabling free-text labels.
   const { data: presets } = useOkapiQuery('broker/state_model/templates', { useErrorBoundary: false });
   const { data: templates } = useOkapiQuery('broker/templates', {
-    searchParams: { limit: 100 },
+    searchParams: { limit: 1000 },
     useErrorBoundary: false,
   });
   const {
