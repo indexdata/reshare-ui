@@ -65,16 +65,16 @@ describe('visible settings', () => {
     expect(paths(search('agency auth'))).toEqual(['lmsConfig.fromAgencyAuthentication']);
   });
 
-  it('matches only the parent label when no branch is selected', () => {
+  it('matches only the parent label when no subMap child is selected', () => {
     expect(paths(search('holdings format'))).toEqual(['catalogConfig.holdingsFormat']);
   });
 
-  it('skips unselected branches', () => {
+  it('skips unselected subMap children', () => {
     expect(paths(search('availability rule', { entry: marcSaved }))).toEqual([]);
     expect(paths(search('main field', { entry: marcSaved }))).toEqual(['catalogConfig.holdingsFormat.marc.mainField']);
   });
 
-  it('uses profile locks over saved branch selections', () => {
+  it('uses profile locks over saved subMap selections', () => {
     const sections = CONFIG_SECTIONS.map(row => (row.configKey === 'catalogConfig' ? {
       ...row,
       fieldMap: applyDisabledPaths(row.fieldMap, ['holdingsFormat.opac.includeItemId'], { setting: 'lmsConfig.vendor', name: 'Locked' }),

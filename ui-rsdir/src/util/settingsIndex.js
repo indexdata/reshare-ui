@@ -1,8 +1,15 @@
 import { sectionAppliesTo } from '../config/configSections';
 import fieldLabel from './fieldLabel';
-import { selectedBranches } from './onlyOneSelection';
 
 const isSubField = field => (field.valueType || 'string').toLowerCase() === 'subfield' && Array.isArray(field.subMap);
+
+// The children renderSubField shows: all of them, or for onlyOne the locked or saved subMap child.
+// The editor drops unlocked subMap children before rendering; saved config still holds them.
+const renderedChildren = (field, value) => field.subMap.filter(child => !field.onlyOne || (
+  field.lockedSelection !== undefined ?
+    child.fieldName === field.lockedSelection :
+    value?.[child.fieldName] != null
+));
 
 // Ignore case and accents in both queries and labels.
 export const normalizeText = (text, locale) => (
@@ -19,7 +26,7 @@ export const queryWords = (query, locale) => normalizeText(query, locale).split(
 
 // Keep this traversal in sync with renderSubField:
 // - Include visible settings even when they have no value.
-// - Follow only saved or profile-locked branches of onlyOne fields.
+// - Follow only the saved or profile-locked subMap child of onlyOne fields.
 // - Include disabled fields' labels, but skip their descendants.
 // Exclude objectMap children: they are table columns, not separate settings.
 export const flattenSection = ({ configKey, fieldLabelId, fieldMap }, config, intl) => {
@@ -33,14 +40,13 @@ export const flattenSection = ({ configKey, fieldLabelId, fieldMap }, config, in
     };
     if (field.disabled || !isSubField(field)) return [entry];
 
-    const children = field.onlyOne ? selectedBranches(field, value) : field.subMap;
-    return [entry, ...children.flatMap(child => visit(child, value?.[child.fieldName], entry))];
+    return [entry, ...renderedChildren(field, value).flatMap(child => visit(child, value?.[child.fieldName], entry))];
   };
 
   return fieldMap.flatMap(field => visit(field, config?.[field.fieldName]));
 };
 
-// Index labels using saved branch selections and profile overrides.
+// Index labels using saved subMap selections and profile overrides.
 export const settingsIndex = (sections, entry, intl) => sections
   .filter(section => section.fieldMap && sectionAppliesTo(section.segment, entry.type))
   .flatMap(section => flattenSection(section, entry[section.configKey], intl))

@@ -22,7 +22,6 @@ import useDirectoryOpenApi from '../hooks/useDirectoryOpenApi';
 import { configFieldDefaultData, configFieldDescription, supportsConfigDescriptions } from '../util/configFieldDescription';
 import fieldLabel from '../util/fieldLabel';
 import { foldForHighlight } from '../util/settingsIndex';
-import { hasOwnValue, selectedBranches } from '../util/onlyOneSelection';
 
 const STRING_ARRAY = 'stringarray';
 const STRING_MAP = 'stringmap';
@@ -39,6 +38,11 @@ const isObject = value => value && typeof value === 'object' && !Array.isArray(v
 const sameCodeDescription = (left, right) => isObject(left) && isObject(right) &&
   left.code === right.code && left.defaultDesc === right.defaultDesc;
 
+const hasOwnValue = (source, fieldName) => isObject(source) &&
+  Object.prototype.hasOwnProperty.call(source, fieldName) &&
+  source[fieldName] !== null && source[fieldName] !== undefined;
+
+const selectedSubFields = (value, field) => field.subMap.filter(child => hasOwnValue(value, child.fieldName));
 
 const isValidSymbol = value => isObject(value) &&
   typeof value.authority === 'string' && !!value.authority &&
@@ -324,7 +328,7 @@ const isEmptyFieldValue = (value, field) => {
     const source = isObject(value) ? value : {};
 
     if (field.onlyOne) {
-      return selectedBranches(field, source).length === 0;
+      return selectedSubFields(source, field).length === 0;
     }
 
     return field.subMap.every(child => isEmptyFieldValue(source[child.fieldName], child));
@@ -1128,7 +1132,7 @@ const SettingsConfigEditor = ({
 
     if (type === SUB_FIELD) {
       const source = isObject(value) ? value : {};
-      const selectedFields = field.onlyOne ? selectedBranches(field, source) : field.subMap;
+      const selectedFields = field.onlyOne ? selectedSubFields(source, field) : field.subMap;
 
       if (field.onlyOne && selectedFields.length > 1) {
         errors[path] = onlyOneMessage();
@@ -2403,7 +2407,7 @@ const SettingsConfigEditor = ({
     const context = contextForField(field, parentContext);
     const path = context.path.join('.');
     const value = isEditing ? draftFieldValue(field, parentContext) : committedFieldValue(field, parentContext);
-    const selectedFields = field.onlyOne ? selectedBranches(field, value) : field.subMap;
+    const selectedFields = field.onlyOne ? selectedSubFields(value, field) : field.subMap;
     const selectedFieldName = selectedFields.length === 1 ? selectedFields[0].fieldName : '';
     const fieldsToRender = field.onlyOne ? selectedFields : field.subMap;
 
