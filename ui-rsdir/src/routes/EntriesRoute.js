@@ -50,7 +50,7 @@ const EntriesRoute = ({ children }) => {
   const history = useHistory();
   const location = useLocation();
   const urlParams = queryString.parse(location.search);
-  const needsFilterNormalization = !Object.prototype.hasOwnProperty.call(urlParams, 'filters');
+  const needsFilterNormalization = urlParams.filters === undefined;
   const [initializingFilters, setInitializingFilters] = useState(needsFilterNormalization);
 
   useEffect(() => {

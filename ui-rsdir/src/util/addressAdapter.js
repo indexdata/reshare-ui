@@ -31,8 +31,6 @@ const mappingForComponent = component => {
   return ADDRESS_FIELD_MAPPINGS.find(mapping => mapping.componentType === component.type);
 };
 
-const hasValue = value => value !== undefined && value !== null && value !== '';
-
 const apiCountryCode = address => (
   (address.addressComponents || []).find(component => component.type === 'CountryCode')?.value
 );
@@ -102,7 +100,7 @@ export const pluginAddressToApiAddress = (address = {}, addressPlugin) => {
   });
 
   const pluginComponents = (pluginAddress.lines || [])
-    .filter(line => hasValue(line?.value))
+    .filter(line => line?.value)
     .map(line => {
       const mapping = ADDRESS_FIELD_MAPPINGS.find(candidate => (
         candidate.lineType === line.type?.value?.toLowerCase()
@@ -141,7 +139,7 @@ export const apiAddressToDisplayComponents = (address = {}, fieldOrder = {}) => 
         pluginOrder: Number.isFinite(pluginOrder) ? pluginOrder : undefined,
       };
     })
-    .filter(({ component }) => hasValue(component.value))
+    .filter(({ component }) => component.value)
     .sort((left, right) => {
       const leftIsRecognized = left.pluginOrder !== undefined;
       const rightIsRecognized = right.pluginOrder !== undefined;

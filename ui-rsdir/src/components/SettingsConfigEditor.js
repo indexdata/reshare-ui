@@ -33,20 +33,12 @@ const INTEGER_PATTERN = /^-?\d+$/;
 
 const normalizedValueType = valueType => valueType?.toLowerCase?.() || 'string';
 
-const isObject = value => value && typeof value === 'object' && !Array.isArray(value);
-
-const sameCodeDescription = (left, right) => isObject(left) && isObject(right) &&
+const sameCodeDescription = (left, right) => !!left && !!right &&
   left.code === right.code && left.defaultDesc === right.defaultDesc;
 
-const hasOwnValue = (source, fieldName) => isObject(source) &&
-  Object.prototype.hasOwnProperty.call(source, fieldName) &&
-  source[fieldName] !== null && source[fieldName] !== undefined;
+const selectedSubFields = (value, field) => field.subMap.filter(child => value?.[child.fieldName] != null);
 
-const selectedSubFields = (value, field) => field.subMap.filter(child => hasOwnValue(value, child.fieldName));
-
-const isValidSymbol = value => isObject(value) &&
-  typeof value.authority === 'string' && !!value.authority &&
-  typeof value.symbol === 'string' && !!value.symbol;
+const isValidSymbol = value => !!value?.authority && !!value?.symbol;
 
 const symbolKey = value => JSON.stringify([value.authority, value.symbol]);
 
@@ -157,13 +149,13 @@ const validateFieldDefinition = (field, path = field.fieldName) => {
 };
 
 const sourceWithLockedSelection = (value, field, initializeChild) => {
-  const source = isObject(value) ? { ...value } : {};
+  const source = { ...value };
 
   if (field.lockedSelection !== undefined) {
     field.subMap.forEach(child => {
       if (child.fieldName !== field.lockedSelection) {
         delete source[child.fieldName];
-      } else if (!hasOwnValue(source, child.fieldName)) {
+      } else if (source[child.fieldName] == null) {
         source[child.fieldName] = initializeChild(child);
       }
     });
@@ -176,7 +168,7 @@ const toEditorValue = (value, field, onlyPresent = false) => {
   const type = normalizedValueType(field.valueType);
 
   if (type === CODE_DESCRIPTION) {
-    return isObject(value) ? { ...value } : null;
+    return value ? { ...value } : null;
   }
 
   if (type === STRING_ARRAY) {
@@ -188,14 +180,14 @@ const toEditorValue = (value, field, onlyPresent = false) => {
   }
 
   if (type === STRING_MAP) {
-    return isObject(value) ? { ...value } : {};
+    return { ...value };
   }
 
   if (type === OBJECT_ARRAY) {
     const source = Array.isArray(value) ? value : [];
 
     return source.map(item => field.objectMap.reduce((acc, child) => {
-      if (onlyPresent && !hasOwnValue(item, child.fieldName)) {
+      if (onlyPresent && item?.[child.fieldName] == null) {
         delete acc[child.fieldName];
         return acc;
       }
@@ -203,12 +195,12 @@ const toEditorValue = (value, field, onlyPresent = false) => {
       return {
         ...acc,
         [child.fieldName]: toEditorValue(
-          isObject(item) ? item[child.fieldName] : undefined,
+          item?.[child.fieldName],
           child,
           onlyPresent,
         ),
       };
-    }, isObject(item) ? { ...item } : {}));
+    }, { ...item }));
   }
 
   if (type === SUB_FIELD) {
@@ -216,7 +208,7 @@ const toEditorValue = (value, field, onlyPresent = false) => {
     const preserveAbsence = onlyPresent || field.onlyOne;
 
     return field.subMap.reduce((acc, child) => {
-      if (preserveAbsence && !hasOwnValue(source, child.fieldName)) {
+      if (preserveAbsence && source[child.fieldName] == null) {
         delete acc[child.fieldName];
         return acc;
       }
@@ -239,7 +231,7 @@ const valueForPatch = (value, field, onlyPresent = false) => {
   const type = normalizedValueType(field.valueType);
 
   if (type === CODE_DESCRIPTION) {
-    return isObject(value) ? { ...value } : null;
+    return value ? { ...value } : null;
   }
 
   if (type === STRING_ARRAY) {
@@ -251,14 +243,14 @@ const valueForPatch = (value, field, onlyPresent = false) => {
   }
 
   if (type === STRING_MAP) {
-    return isObject(value) ? { ...value } : {};
+    return { ...value };
   }
 
   if (type === OBJECT_ARRAY) {
     const source = Array.isArray(value) ? value : [];
 
     return source.map(item => field.objectMap.reduce((acc, child) => {
-      if (onlyPresent && !hasOwnValue(item, child.fieldName)) {
+      if (onlyPresent && item?.[child.fieldName] == null) {
         delete acc[child.fieldName];
         return acc;
       }
@@ -266,12 +258,12 @@ const valueForPatch = (value, field, onlyPresent = false) => {
       return {
         ...acc,
         [child.fieldName]: valueForPatch(
-          isObject(item) ? item[child.fieldName] : undefined,
+          item?.[child.fieldName],
           child,
           onlyPresent,
         ),
       };
-    }, isObject(item) ? { ...item } : {}));
+    }, { ...item }));
   }
 
   if (type === SUB_FIELD) {
@@ -279,7 +271,7 @@ const valueForPatch = (value, field, onlyPresent = false) => {
     const preserveAbsence = onlyPresent || field.onlyOne;
 
     return field.subMap.reduce((acc, child) => {
-      if (preserveAbsence && !hasOwnValue(source, child.fieldName)) {
+      if (preserveAbsence && source[child.fieldName] == null) {
         delete acc[child.fieldName];
         return acc;
       }
@@ -321,30 +313,23 @@ const isEmptyFieldValue = (value, field) => {
   }
 
   if (type === STRING_MAP) {
-    return !isObject(value) || Object.keys(value).length === 0;
+    return Object.keys(value ?? {}).length === 0;
   }
 
   if (type === SUB_FIELD) {
-    const source = isObject(value) ? value : {};
-
     if (field.onlyOne) {
-      return selectedSubFields(source, field).length === 0;
+      return selectedSubFields(value, field).length === 0;
     }
 
-    return field.subMap.every(child => isEmptyFieldValue(source[child.fieldName], child));
+    return field.subMap.every(child => isEmptyFieldValue(value?.[child.fieldName], child));
   }
 
   return value === '' || value === null || value === undefined;
 };
 
-const missingRequiredStringMapKeys = (value, requiredKeys = []) => {
-  const mapValue = isObject(value) ? value : {};
-
-  return requiredKeys.filter((key, index) => (
-    requiredKeys.indexOf(key) === index &&
-    !Object.prototype.hasOwnProperty.call(mapValue, key)
-  ));
-};
+const missingRequiredStringMapKeys = (value, requiredKeys = []) => requiredKeys.filter((key, index) => (
+  requiredKeys.indexOf(key) === index && value?.[key] === undefined
+));
 
 const buildChoiceOptions = validChoices => [
   { label: '', value: '' },
@@ -476,7 +461,7 @@ const SettingsConfigEditor = ({
 
   const valueWithPathUpdated = (source, path, nextValue) => {
     const [key, ...remainingPath] = path;
-    const currentValue = isObject(source) ? source : {};
+    const currentValue = source ?? {};
 
     if (remainingPath.length === 0) {
       const previousValue = currentValue[key];
@@ -639,7 +624,7 @@ const SettingsConfigEditor = ({
     }
 
     setDraftFieldValue(field, parentContext, current => {
-      const source = isObject(current) ? current : {};
+      const source = current ?? {};
       const unrelatedValues = Object.keys(source).reduce((acc, key) => (
         mappedFieldNames.has(key) ? acc : { ...acc, [key]: source[key] }
       ), {});
@@ -648,8 +633,7 @@ const SettingsConfigEditor = ({
         return unrelatedValues;
       }
 
-      const selectedValue = hasOwnValue(source, selectedFieldName) ?
-        source[selectedFieldName] : toEditorValue(undefined, selectedField, true);
+      const selectedValue = source[selectedFieldName] ?? toEditorValue(undefined, selectedField, true);
 
       return {
         ...unrelatedValues,
@@ -843,7 +827,7 @@ const SettingsConfigEditor = ({
       return;
     }
 
-    if (Object.prototype.hasOwnProperty.call(currentMap, key)) {
+    if (Object.hasOwn(currentMap, key)) {
       setStringMapEntryErrors(current => ({
         ...current,
         [path]: intl.formatMessage({
@@ -1006,7 +990,7 @@ const SettingsConfigEditor = ({
       return;
     }
 
-    if (Object.prototype.hasOwnProperty.call(currentMap, key)) {
+    if (Object.hasOwn(currentMap, key)) {
       setStringMapEntryErrors(current => ({
         ...current,
         [childPath]: intl.formatMessage({
@@ -1131,8 +1115,7 @@ const SettingsConfigEditor = ({
     }
 
     if (type === SUB_FIELD) {
-      const source = isObject(value) ? value : {};
-      const selectedFields = field.onlyOne ? selectedSubFields(source, field) : field.subMap;
+      const selectedFields = field.onlyOne ? selectedSubFields(value, field) : field.subMap;
 
       if (field.onlyOne && selectedFields.length > 1) {
         errors[path] = onlyOneMessage();
@@ -1141,7 +1124,7 @@ const SettingsConfigEditor = ({
       selectedFields.forEach(child => {
         Object.assign(errors, validationErrorsForValue(
           child,
-          source[child.fieldName],
+          value?.[child.fieldName],
           `${path}.${child.fieldName}`,
           originalValue?.[child.fieldName],
         ));
@@ -1469,7 +1452,7 @@ const SettingsConfigEditor = ({
     const path = pathForField(field, parentField);
     const controlPath = controlPathForField(field, parentField);
     const value = isEditing ? draftFieldValue(field, parentField) : committedFieldValue(field, parentField);
-    const mapValue = isObject(value) ? value : {};
+    const mapValue = value ?? {};
 
     return (
       <div className={css.structuredValues}>
@@ -1593,7 +1576,7 @@ const SettingsConfigEditor = ({
     if (type === STRING_MAP) {
       return (
         <div className={css.structuredValues}>
-          {Object.entries(isObject(value) ? value : {}).map(([key, entryValue]) => (
+          {Object.entries(value ?? {}).map(([key, entryValue]) => (
             <span className={css.structuredValue} key={key}>
               <span className={css.stringMapKey}>{key}</span>
               <span className={css.stringMapSeparator}>:</span>
@@ -1622,7 +1605,7 @@ const SettingsConfigEditor = ({
             {value.map((item, index) => (
               <div className={css.objectArrayValue} key={`${path}-${index}`}>
                 <div className={css.objectArrayComponents}>
-                  {field.objectMap.filter(child => Object.prototype.hasOwnProperty.call(item, child.fieldName)).map(child => (
+                  {field.objectMap.filter(child => item[child.fieldName] !== undefined).map(child => (
                     <div className={css.objectArrayComponent} key={child.fieldName}>
                       <span className={css.objectArrayComponentLabel}>
                         {renderFieldLabel(child, `${path}.${child.fieldName}`, `override-${index}`)}:
@@ -1649,7 +1632,7 @@ const SettingsConfigEditor = ({
         </div>
       );
     }
-    if (isObject(value)) {
+    if (value && typeof value === 'object') {
       return (
         <div className={css.structuredValues}>
           {Object.entries(value).map(([key, item]) => (
@@ -1895,7 +1878,7 @@ const SettingsConfigEditor = ({
     const childPath = newObjectChildPath(field, parentField, child);
     const controlPath = childPath.split('.').join('-');
     const objectValue = newObjectValue(field, parentField);
-    const mapValue = isObject(objectValue[child.fieldName]) ? objectValue[child.fieldName] : {};
+    const mapValue = objectValue[child.fieldName] ?? {};
     const newEntry = newStringMapEntries[childPath] || { key: '', value: '' };
     const isSaving = savingFields[topFieldName(field, parentField)];
     const canAdd = !!newEntry.key.trim() && !!newEntry.value.trim();
@@ -2054,7 +2037,7 @@ const SettingsConfigEditor = ({
                     <span className={css.objectArrayComponentLabel}>
                       {renderFieldLabel(child, `${path}.${child.fieldName}`, `value-${index}`)}:
                     </span>
-                    {child.disabled && Object.prototype.hasOwnProperty.call(child, 'overrideValue') &&
+                    {child.disabled && child.overrideValue !== undefined &&
                       <div className={css.objectArrayComponentValue}>
                         {renderOverrideValue(child, child.overrideValue, `${path}.${child.fieldName}`)}
                       </div>
@@ -2196,7 +2179,7 @@ const SettingsConfigEditor = ({
                 <div className={css.subFieldLabel}>
                   {renderFieldLabel(child, `${path}.${child.fieldName}`, 'new')}
                 </div>
-                {child.disabled && Object.prototype.hasOwnProperty.call(child, 'overrideValue') &&
+                {child.disabled && child.overrideValue !== undefined &&
                   renderOverrideValue(child, child.overrideValue, `${path}.${child.fieldName}`)
                 }
                 {!child.disabled && renderNewObjectChildInput(field, parentField, child)}
@@ -2374,7 +2357,7 @@ const SettingsConfigEditor = ({
   };
 
   const renderFieldDisplay = (field, parentField) => {
-    if (field.disabled && Object.prototype.hasOwnProperty.call(field, 'overrideValue')) {
+    if (field.disabled && field.overrideValue !== undefined) {
       return renderOverrideValue(field, field.overrideValue, pathForField(field, parentField));
     }
     const type = normalizedValueType(field.valueType);
@@ -2448,7 +2431,7 @@ const SettingsConfigEditor = ({
               key={child.fieldName}
             >
               <div className={css.subFieldLabel}>{renderFieldLabel(child, childPath)}</div>
-              {child.disabled && Object.prototype.hasOwnProperty.call(child, 'overrideValue') &&
+              {child.disabled && child.overrideValue !== undefined &&
                 renderFieldDisplay(child, context)
               }
               {!child.disabled && (isChildSubField ?
@@ -2575,7 +2558,7 @@ const SettingsConfigEditor = ({
               </Button>
             }
           >
-            {field.disabled && Object.prototype.hasOwnProperty.call(field, 'overrideValue') && renderFieldDisplay(field)}
+            {field.disabled && field.overrideValue !== undefined && renderFieldDisplay(field)}
             {!field.disabled && (isEditing ?
               <div className={css.fieldEditor}>
                 <div className={css.fieldInput}>

@@ -19,13 +19,13 @@ export const hostProfilesFromOpenApi = spec => {
 
     const values = {};
     const mapping = Object.fromEntries(['lmsConfig', 'catalogConfig'].map(configKey => {
-      const config = Object.prototype.hasOwnProperty.call(profile, configKey) ? profile[configKey] : {};
+      const { [configKey]: config = {} } = profile;
       if (!isObject(config)) throw new Error(`Invalid ${configKey} for host profile "${name}".`);
       const entries = overrideEntries(config);
       values[configKey] = Object.fromEntries(entries);
       return [configKey, entries.map(([path]) => path)];
     }));
-    Object.defineProperty(vendorFieldValues, name, { value: values, enumerable: true });
+    vendorFieldValues[name] = values;
     return [name, mapping];
   }));
 
@@ -48,8 +48,8 @@ export const applyDisabledPaths = (fieldMapping, disabledPaths, overrideSource, 
 
     if (disabledPathSet.has(path)) {
       if (overrideSource) nextField.overrideSource = overrideSource;
-      if (Object.prototype.hasOwnProperty.call(overrideValues, path)) {
-        const value = overrideValues[path];
+      const value = overrideValues[path];
+      if (value !== undefined) {
         if (field.valueType?.toLowerCase() === 'objectarray' && value !== null && (
           !Array.isArray(value) || value.some(item => !isObject(item))
         )) {
@@ -94,7 +94,7 @@ export const applyDisabledPaths = (fieldMapping, disabledPaths, overrideSource, 
 };
 
 const mappingForProfile = (vendorFieldMapping, name) => (
-  Object.prototype.hasOwnProperty.call(vendorFieldMapping, name) ? vendorFieldMapping[name] : undefined
+  Object.hasOwn(vendorFieldMapping, name) ? vendorFieldMapping[name] : undefined
 );
 
 export const vendorFieldMappingForVendor = (fieldMapping, vendor, configKey, vendorFieldMapping, setting = 'lmsConfig.vendor', overrideValues = {}) => (

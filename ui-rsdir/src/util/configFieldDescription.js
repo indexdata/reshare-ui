@@ -5,7 +5,7 @@ const CONFIG_SCHEMAS = {
   illConfig: 'IllConfig',
 };
 
-export const supportsConfigDescriptions = configKey => Object.prototype.hasOwnProperty.call(CONFIG_SCHEMAS, configKey);
+export const supportsConfigDescriptions = configKey => configKey in CONFIG_SCHEMAS;
 
 const nonEmptyDescription = description => (
   typeof description === 'string' && description.trim() ? description : undefined
@@ -14,10 +14,9 @@ const nonEmptyDescription = description => (
 const localReference = (spec, reference) => {
   if (typeof reference !== 'string' || !reference.startsWith('#/')) return undefined;
 
-  return reference.slice(2).split('/').reduce((value, part) => {
-    const key = part.replace(/~1/g, '/').replace(/~0/g, '~');
-    return value && Object.prototype.hasOwnProperty.call(value, key) ? value[key] : undefined;
-  }, spec);
+  return reference.slice(2).split('/').reduce((value, part) => (
+    value?.[part.replace(/~1/g, '/').replace(/~0/g, '~')]
+  ), spec);
 };
 
 // Traverse references at the current path before consuming the next property.
