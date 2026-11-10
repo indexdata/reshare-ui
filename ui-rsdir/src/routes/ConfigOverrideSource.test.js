@@ -20,7 +20,7 @@ jest.mock('@projectreshare/stripes-reshare', () => ({
 }));
 jest.mock('../components/EntryPane', () => ({
   __esModule: true,
-  default: ({ children }) => children,
+  default: ({ children }) => (typeof children === 'function' ? children({ searchWords: [] }) : children),
   EntryLoadingPane: () => null,
 }));
 jest.mock('../components/SettingsConfigEditor', () => ({

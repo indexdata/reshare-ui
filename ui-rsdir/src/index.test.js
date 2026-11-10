@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { createMemoryHistory } from 'history';
 import { act, fireEvent, screen, waitFor, within } from '@folio/jest-config-stripes/testing-library/react';
 
-import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
+import { renderWithRs, settleQueries } from '@projectreshare/stripes-reshare/testing/renderWithRs';
 import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
 import { quietQueryLog } from '@projectreshare/stripes-reshare/testing/quietQueryLog';
 import RSDir from './index';
@@ -818,6 +818,87 @@ describe('directory entries', () => {
     ));
     await waitFor(() => expect(at(history)).toBe('/directory/entries/new-1?filters=type.Institution&query=fix'));
     expect(await findSectionLink('entry')).toHaveAttribute('href', '/directory/entries/new-1?filters=type.Institution&query=fix');
+  });
+
+  it('filters settings cards across sections', async () => {
+    const { history } = renderDirectory(['/directory/entries/e1/lmsconfig?query=fix'], {
+      messages: { 'ui-rsdir.entry.settingsSearch.summary': '{count} matching' },
+    });
+    await screen.findByText('fixture-lms-address');
+    const box = screen.getByRole('searchbox', { name: 'ui-rsdir.entry.settingsSearch.label' });
+    const card = (prefix, field) => document.getElementById(`edit-${prefix}-${field}`);
+
+    fireEvent.change(box, { target: { value: 'agency' } });
+    expect(at(history)).toBe('/directory/entries/e1/lmsconfig?filters=type.Institution&query=fix&settingsQuery=agency');
+    ['fromAgency', 'fromAgencyAuthentication', 'toAgency'].forEach(field => expect(card('lms-config', field)).toBeVisible());
+    ['vendor', 'address'].forEach(field => expect(card('lms-config', field)).not.toBeVisible());
+    expect(screen.getAllByText('Agency', { selector: 'mark' })).toHaveLength(3);
+    expect(screen.getByRole('status')).toHaveTextContent('3 matching');
+
+    fireEvent.click(screen.getByRole('link', { name: 'ui-rsdir.entry.section.illConfig 1 matching' }));
+    await screen.findByText('1.5');
+    expect(screen.getByRole('searchbox', { name: 'ui-rsdir.entry.settingsSearch.label' })).toHaveValue('agency');
+    expect(card('ill-config', 'includeRequestingAgencyInfo')).toBeVisible();
+    expect(card('ill-config', 'minimumCost')).not.toBeVisible();
+    expect(screen.getByRole('status')).toHaveTextContent('1 matching');
+
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.entry.settingsSearch.clear' }));
+    expect(screen.getByRole('searchbox', { name: 'ui-rsdir.entry.settingsSearch.label' })).toHaveFocus();
+    expect(at(history)).toBe('/directory/entries/e1/illconfig?filters=type.Institution&query=fix');
+    expect(card('ill-config', 'minimumCost')).toBeVisible();
+    expect(screen.queryAllByText('Agency', { selector: 'mark' })).toHaveLength(0);
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'ui-rsdir.entry.settingsSearch.label' }), { target: { value: 'agency' } });
+    fireEvent.click(document.getElementById('clickable-reset-all'));
+    await waitFor(() => expect(history.location.search).not.toContain('query=fix'));
+    expect(history.location.search).toContain('settingsQuery=agency');
+  });
+
+  it('shows section match counts and a message for empty results', async () => {
+    renderDirectory(['/directory/entries/e1/catalogconfig?settingsQuery=agency'], {
+      messages: {
+        'ui-rsdir.entry.settingsSearch.summary': '{count} matching',
+        'ui-rsdir.entry.settingsSearch.noMatchHere': 'Nothing here matches {query}',
+      },
+    });
+
+    await screen.findByText('Nothing here matches agency');
+    expect(screen.getByRole('link', { name: 'ui-rsdir.entry.section.lmsConfig 3 matching' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'ui-rsdir.entry.section.catalogConfig 0 matching' })).toBeInTheDocument();
+    expect(sectionLink('networks')).toBeInTheDocument();
+  });
+
+  it('keeps an open card visible after a refetch stops it matching', async () => {
+    const marcEntry = { ...entry, catalogConfig: { holdingsFormat: { marc: { mainField: '852' } } } };
+    mockOkapi.setResponses(responses({ 'directory/entries/by-id/e1': marcEntry }));
+    const { queryClient } = renderDirectory(['/directory/entries/e1/catalogconfig?settingsQuery=mainField']);
+    const card = () => document.getElementById('edit-catalog-config-holdingsFormat') ||
+      document.getElementById('save-catalog-config-holdingsFormat');
+
+    await waitFor(() => expect(card()).toBeVisible());
+    fireEvent.click(card());
+    mockOkapi.setResponses(responses({
+      'directory/entries/by-id/e1': { ...entry, catalogConfig: { holdingsFormat: { opac: {} } } },
+    }));
+    await act(() => queryClient.invalidateQueries());
+    await settleQueries(queryClient);
+    expect(card()).toBeVisible();
+
+    fireEvent.click(document.getElementById('cancel-catalog-config-holdingsFormat'));
+    expect(card()).not.toBeVisible();
+    expect(screen.getByText('ui-rsdir.entry.settingsSearch.noMatchHere')).toBeInTheDocument();
+  });
+
+  it('keeps an open card visible when the URL search changes', async () => {
+    const { history } = renderDirectory(['/directory/entries/e1/illconfig']);
+    await screen.findByText('1.5');
+    fireEvent.click(document.getElementById('edit-ill-config-minimumCost'));
+
+    act(() => history.push('/directory/entries/e1/illconfig?filters=type.Institution&settingsQuery=agency'));
+    expect(document.getElementById('save-ill-config-minimumCost')).toBeVisible();
+
+    fireEvent.click(document.getElementById('cancel-ill-config-minimumCost'));
+    expect(document.getElementById('edit-ill-config-minimumCost')).not.toBeVisible();
   });
 });
 

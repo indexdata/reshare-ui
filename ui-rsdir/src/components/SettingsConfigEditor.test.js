@@ -6,13 +6,14 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 // eslint-disable-next-line import/no-extraneous-dependencies
 import userEvent from '@testing-library/user-event';
 import SettingsConfigEditor from './SettingsConfigEditor';
-import { fieldMap as baseCatalogFieldMapping } from '../routes/CatalogConfigRoute';
-import { fieldMap as illFieldMapping } from '../routes/ILLConfigRoute';
+import { configSection } from '../config/configSections';
 import { applyDisabledPaths, hostProfilesFromOpenApi, selectionChangeImpact as changeImpact, vendorFieldMappingForVendor as mapVendorFields } from '../config/vendorFieldMapping';
 
 import specWithProfiles from '../../test/fixtures/directoryOpenApi';
 
 const { names, vendorFieldMapping, vendorFieldValues } = hostProfilesFromOpenApi(specWithProfiles);
+const baseCatalogFieldMapping = configSection('catalogConfig').fieldMap;
+const illFieldMapping = configSection('illConfig').fieldMap;
 const catalogFieldMapping = baseCatalogFieldMapping.map(field => (
   field.fieldName === 'profile' ? { ...field, validChoices: names } : field
 ));

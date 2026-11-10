@@ -17,3 +17,25 @@
   overflow: auto;
   border-left: 1px solid var(--color-border);
 }
+
+.search {
+  padding: var(--gutter-static-one-third);
+}
+
+.searchSummary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--gutter-static-one-third);
+  font-size: var(--font-size-small);
+  color: var(--color-text-p2);
+}
+
+.noMatch {
+  margin-bottom: var(--gutter-static);
+}
+
+/* The link is a flex row, which drops the space before the count. */
+.sectionCount {
+  margin-inline-start: var(--gutter-static-one-third);
+}

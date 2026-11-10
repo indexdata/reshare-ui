@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   ConfirmationModal,
+  Highlighter,
   Icon,
   IconButton,
   MultiSelection,
@@ -19,6 +20,8 @@ import {
 import css from './SettingsConfigEditor.css';
 import useDirectoryOpenApi from '../hooks/useDirectoryOpenApi';
 import { configFieldDefaultData, configFieldDescription, supportsConfigDescriptions } from '../util/configFieldDescription';
+import fieldLabel from '../util/fieldLabel';
+import { foldForHighlight } from '../util/settingsIndex';
 
 const STRING_ARRAY = 'stringarray';
 const STRING_MAP = 'stringmap';
@@ -373,6 +376,8 @@ const SettingsConfigEditor = ({
   initialResource,
   onSave,
   resourcePath,
+  searchWords = [],
+  shownFields,
   successMessage,
 }) => {
   useMemo(() => {
@@ -487,10 +492,7 @@ const SettingsConfigEditor = ({
     };
   };
 
-  const labelForPath = path => intl.formatMessage({
-    id: fieldLabelId(path),
-    defaultMessage: path.split('.').pop(),
-  });
+  const labelForPath = path => fieldLabel(intl, fieldLabelId, path);
 
   const objectDescription = (path, item) => {
     const id = `${fieldLabelId(path)}.values.${item.code}`;
@@ -539,7 +541,16 @@ const SettingsConfigEditor = ({
             )}
           </Tooltip>
         }
-        <span className={css.fieldLabelText}>{label}</span>
+        <span className={css.fieldLabelText}>
+          {searchWords.length > 0 ?
+            <Highlighter
+              searchWords={searchWords}
+              sanitize={text => foldForHighlight(text, intl.locale)}
+              text={label}
+            /> :
+            label
+          }
+        </span>
         {field.overrideSource &&
           <Popover
             renderTrigger={({ ref, toggle, open }) => (
@@ -2546,6 +2557,9 @@ const SettingsConfigEditor = ({
             cardClass={field.disabled ? css.disabledField : undefined}
             roundedBorder
             key={fieldName}
+            // Keep hidden cards mounted to preserve their local state. A card open
+            // for editing always shows, so a refetch or URL change cannot hide its draft.
+            hidden={shownFields && !isEditing ? !shownFields.includes(fieldName) : undefined}
             headerStart={renderFieldLabel(field, fieldName)}
             headerEnd={!field.disabled &&
               <Button
@@ -2583,7 +2597,7 @@ const SettingsConfigEditor = ({
           </Card>
         );
       })}
-      {!resource?.[configKey] &&
+      {!resource?.[configKey] && (!shownFields || shownFields.length > 0) &&
         <div>
           {emptyMessage}
         </div>
