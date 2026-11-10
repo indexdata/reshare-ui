@@ -115,7 +115,7 @@ it.each([
   });
   if (!profile) {
     const marc = field('holdingsFormat').subMap.find(child => child.fieldName === 'marc');
-    expect(marc.subMap.find(child => child.fieldName === 'shelvingLocationSubField').disabled).toBe(true);
+    expect(marc.subMap.find(child => child.fieldName === 'shelvingLocationSubfield').disabled).toBe(true);
   }
   const impact = editorProps().getSelectionChangeImpact({ fieldName: 'profile', nextValue: 'Sierra', resource: mockEntry });
   expect(impact.source).toEqual({ setting: 'catalogConfig.profile', name: 'Sierra' });
