@@ -547,6 +547,17 @@ const illConfigFields = [
     valueType: 'string',
   },
   {
+    fieldName: 'requestIdPrefix',
+    valueType: 'string',
+    nullOnEmpty: true,
+    getSaveErrorMessage: error => (error.response?.status === 400 ? (
+      <FormattedMessage
+        id="ui-rsdir.illConfig.requestIdPrefix.invalid"
+        defaultMessage="Request ID prefix must be at most 32 letters and digits."
+      />
+    ) : undefined),
+  },
+  {
     fieldName: 'duplicateCheckWindowHours',
     valueType: 'integer',
     minValue: 0,

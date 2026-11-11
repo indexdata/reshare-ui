@@ -162,6 +162,8 @@
   "illConfig.minimumCost" : "Minimum cost",
   "illConfig.noteFieldSeparator" : "Note field separator",
   "illConfig.supplierPatronPattern" : "Supplier patron pattern",
+  "illConfig.requestIdPrefix" : "Request ID prefix",
+  "illConfig.requestIdPrefix.invalid" : "Request ID prefix must be at most 32 letters and digits.",
   "illConfig.duplicateCheckWindowHours" : "Duplicate check window (hours)",
   "illConfig.maxRequestsPerPatron" : "Maximum active requests per patron",
   "illConfig.defaultLoanPeriod" : "Default loan period (days)",
