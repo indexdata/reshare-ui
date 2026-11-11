@@ -647,12 +647,15 @@ describe('directory entries', () => {
     fireEvent.click(document.getElementById('save-ill-config-requestIdPrefix'));
     expect(await screen.findByText('Request ID prefix must be at most 32 letters and digits.')).toBeInTheDocument();
 
+    mockOkapi.patch.mockResolvedValueOnce({ text: async () => '' });
     fireEvent.change(input, { target: { value: 'ABC123' } });
     fireEvent.click(document.getElementById('save-ill-config-requestIdPrefix'));
     await waitFor(() => expect(mockOkapi.patch).toHaveBeenLastCalledWith(
       'directory/entries/by-id/e1',
       { json: { illConfig: { requestIdPrefix: 'ABC123' } } }
     ));
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: 'requestIdPrefix' })).not.toBeInTheDocument());
+    expect(sendCallout).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
   });
 
   it('lists reciprocal status instead of network priority for a consortium', async () => {
