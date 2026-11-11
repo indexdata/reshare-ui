@@ -635,6 +635,26 @@ describe('directory entries', () => {
     ));
   });
 
+  it('shows a request ID prefix error on a rejected save and saves a corrected value', async () => {
+    renderDirectory(['/directory/entries/e1/illconfig']);
+
+    await screen.findByText('37');
+    fireEvent.click(document.getElementById('edit-ill-config-requestIdPrefix'));
+    const input = screen.getByRole('textbox', { name: 'requestIdPrefix' });
+
+    mockOkapi.patch.mockRejectedValueOnce(Object.assign(new Error('Bad request'), { response: { status: 400 } }));
+    fireEvent.change(input, { target: { value: 'abc-def' } });
+    fireEvent.click(document.getElementById('save-ill-config-requestIdPrefix'));
+    expect(await screen.findByText('Request ID prefix must be at most 32 letters and digits.')).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: 'ABC123' } });
+    fireEvent.click(document.getElementById('save-ill-config-requestIdPrefix'));
+    await waitFor(() => expect(mockOkapi.patch).toHaveBeenLastCalledWith(
+      'directory/entries/by-id/e1',
+      { json: { illConfig: { requestIdPrefix: 'ABC123' } } }
+    ));
+  });
+
   it('lists reciprocal status instead of network priority for a consortium', async () => {
     mockOkapi.setResponses(responses({
       'directory/entries/by-id/e1': { ...entry, type: 'Consortium' },
