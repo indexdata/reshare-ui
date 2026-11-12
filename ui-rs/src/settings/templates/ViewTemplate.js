@@ -114,10 +114,12 @@ const ViewTemplate = ({ match }) => {
               value={data.subject}
             />
           )}
-          <KeyValue
-            label={<FormattedMessage id="ui-rs.settings.templates.field.contentType" />}
-            value={intl.formatMessage({ id: `ui-rs.settings.templates.contentType.${data.contentType}`, defaultMessage: data.contentType })}
-          />
+          {data.purpose !== 'pullslip' && (
+            <KeyValue
+              label={<FormattedMessage id="ui-rs.settings.templates.field.contentType" />}
+              value={intl.formatMessage({ id: `ui-rs.settings.templates.contentType.${data.contentType}`, defaultMessage: data.contentType })}
+            />
+          )}
         </Col>
       </Row>
       <Row>

@@ -435,7 +435,6 @@
   "settings.templates.field.contentType": "Content type",
   "settings.templates.field.contentTypeHelp": "Switching to HTML escapes existing text so it is not read as markup. To see the markup of an HTML template without changing its content type, use \"Edit HTML source\".",
   "settings.templates.field.subject": "Subject",
-  "settings.templates.field.subjectHelp": "Not used for pull slip templates",
   "settings.templates.field.body": "Body",
   "settings.templates.field.editSource": "Edit HTML source",
   "settings.templates.field.bodyRewritten": "This template uses markup the editor cannot represent, and will simplify it if you edit the body here. It is saved unchanged until you do.",

@@ -588,67 +588,56 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
                 </Col>
               </Row>
 
-              <Row>
-                <Col xs={12} md={6}>
-                  <Field
-                    id="template-subject"
-                    name="subject"
-                    required={!isPullslip}
-                    // Disabled rather than hidden: a subject typed before the purpose
-                    // changed shouldn't vanish from view.
-                    disabled={isPullslip}
-                    marginBottom0={isPullslip}
-                    aria-describedby={isPullslip ? 'template-subject-help' : undefined}
-                    component={TextField}
-                    label={<FormattedMessage id="ui-rs.settings.templates.field.subject" />}
-                  />
-                  {/* An HTML pull slip has its own in the body's toolbar. */}
-                  {!canPreview && (
+              {!isPullslip && (
+                <Row>
+                  <Col xs={12} md={6}>
+                    <Field
+                      id="template-subject"
+                      name="subject"
+                      required
+                      component={TextField}
+                      label={<FormattedMessage id="ui-rs.settings.templates.field.subject" />}
+                    />
                     <PlaceholderButton
                       id="template-placeholder"
-                      onClick={() => openPlaceholderPicker(isPullslip ? 'body' : placeholderFieldRef.current)}
+                      onClick={() => openPlaceholderPicker(placeholderFieldRef.current)}
                     />
-                  )}
-                  {isPullslip && (
-                    <div id="template-subject-help" className={css.help}>
-                      <FormattedMessage id="ui-rs.settings.templates.field.subjectHelp" />
-                    </div>
-                  )}
-                </Col>
-                <Col xs={12} md={6}>
-                  <Field name="contentType">
-                    {({ input }) => (
-                      <>
-                        <Select
-                          id="template-contentType"
-                          dataOptions={opts('contentType', CONTENT_TYPES)}
-                          marginBottom0
-                          aria-describedby="template-contentType-help"
-                          label={<FormattedMessage id="ui-rs.settings.templates.field.contentType" />}
-                          value={input.value}
-                          onBlur={input.onBlur}
-                          onFocus={input.onFocus}
-                          onChange={(e) => {
-                            input.onChange(e);
-                            // Escape only text. The reverse leg leaves markup alone, so a
-                            // body that has been through HTML stays markup and escaping it
-                            // again would show the user their own tags.
-                            const toHtml = e.target.value === 'html';
-                            if (toHtml && !bodyIsMarkup.current) {
-                              const body = form.getState().values.body ?? '';
-                              if (body) form.change('body', escapeHtml(body));
-                            }
-                            bodyIsMarkup.current = bodyIsMarkup.current || toHtml;
-                          }}
-                        />
-                        <div id="template-contentType-help" className={css.help}>
-                          <FormattedMessage id="ui-rs.settings.templates.field.contentTypeHelp" />
-                        </div>
-                      </>
-                    )}
-                  </Field>
-                </Col>
-              </Row>
+                  </Col>
+                  <Col xs={12} md={6}>
+                    <Field name="contentType">
+                      {({ input }) => (
+                        <>
+                          <Select
+                            id="template-contentType"
+                            dataOptions={opts('contentType', CONTENT_TYPES)}
+                            marginBottom0
+                            aria-describedby="template-contentType-help"
+                            label={<FormattedMessage id="ui-rs.settings.templates.field.contentType" />}
+                            value={input.value}
+                            onBlur={input.onBlur}
+                            onFocus={input.onFocus}
+                            onChange={(e) => {
+                              input.onChange(e);
+                              // Escape only text. The reverse leg leaves markup alone, so a
+                              // body that has been through HTML stays markup and escaping it
+                              // again would show the user their own tags.
+                              const toHtml = e.target.value === 'html';
+                              if (toHtml && !bodyIsMarkup.current) {
+                                const body = form.getState().values.body ?? '';
+                                if (body) form.change('body', escapeHtml(body));
+                              }
+                              bodyIsMarkup.current = bodyIsMarkup.current || toHtml;
+                            }}
+                          />
+                          <div id="template-contentType-help" className={css.help}>
+                            <FormattedMessage id="ui-rs.settings.templates.field.contentTypeHelp" />
+                          </div>
+                        </>
+                      )}
+                    </Field>
+                  </Col>
+                </Row>
+              )}
 
               <Row>
                 <Col xs={12}>

@@ -149,7 +149,7 @@ describe('TemplateForm', () => {
     });
   });
 
-  it('requires no subject for a pull slip template, which never uses one', async () => {
+  it('offers neither subject nor content type for a pull slip template', async () => {
     await renderForm(jest.fn());
 
     fireEvent.change(byId('template-title'), { target: { value: 'Slip' } });
@@ -158,17 +158,8 @@ describe('TemplateForm', () => {
     fireEvent.change(byId('template-purpose'), { target: { value: 'pullslip' } });
 
     await waitFor(() => expect(save()).not.toBeDisabled());
-    expect(byId('template-subject')).toBeDisabled();
-    expect(byId('template-placeholder')).toBeInTheDocument();
-
-    fireEvent.focus(byId('template-subject'));
-    byId('template-body').setSelectionRange(4, 4);
-    fireEvent.click(byId('template-placeholder'));
-    fireEvent.click(await screen.findByRole('checkbox', { name: /\{\{\.ReqId\}\}/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'ui-rs.settings.templates.placeholders.insert' }));
-
-    expect(byId('template-subject')).toHaveValue('');
-    expect(byId('template-body')).toHaveValue('Body{{.ReqId}}');
+    expect(byId('template-subject')).toBeNull();
+    expect(byId('template-contentType')).toBeNull();
   });
 
   // Only that the HTML branch mounts: with the editor stubbed, nothing here can say
