@@ -156,10 +156,10 @@ describe('vendorFieldMapping', () => {
         lmsConfig: ['ncipNamespaceEnabled'],
         catalogConfig: [
           'holdingsFormat.marc.mainField',
-          'holdingsFormat.marc.locationSubField',
-          'holdingsFormat.marc.callNumberSubField',
+          'holdingsFormat.marc.locationSubfield',
+          'holdingsFormat.marc.callNumberSubfield',
           'holdingsFormat.marc.availability',
-          'holdingsFormat.marc.shelvingLocationSubField',
+          'holdingsFormat.marc.shelvingLocationSubfield',
         ],
       },
       Sierra: {

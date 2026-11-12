@@ -199,7 +199,7 @@ const catalogConfigFields = [
             valueType: 'objectArray',
             objectMap: [
               {
-                fieldName: 'subField',
+                fieldName: 'subfield',
                 valueType: 'string',
                 required: true
               },
@@ -220,23 +220,23 @@ const catalogConfigFields = [
             valueType: 'string',
           },
           {
-            fieldName: 'locationSubField',
+            fieldName: 'locationSubfield',
             valueType: 'string',
           },
           {
-            fieldName: 'shelvingLocationSubField',
+            fieldName: 'shelvingLocationSubfield',
             valueType: 'string',
           },
           {
-            fieldName: 'itemIdSubField',
+            fieldName: 'itemIdSubfield',
             valueType: 'string',
           },
           {
-            fieldName: 'restrictedSubField',
+            fieldName: 'restrictedSubfield',
             valueType: 'string',
           },
           {
-            fieldName: 'callNumberSubField',
+            fieldName: 'callNumberSubfield',
             valueType: 'string',
           },
         ],

@@ -51,20 +51,20 @@
         "holdingsFormat": {
           "marc": {
             "mainField": "952",
-            "locationSubField": "b",
-            "callNumberSubField": "o",
+            "locationSubfield": "b",
+            "callNumberSubfield": "o",
             "availability": [
               {
                 "operator": "equals",
-                "subField": "7",
+                "subfield": "7",
                 "value": "0"
               },
               {
                 "operator": "absent",
-                "subField": "q"
+                "subfield": "q"
               }
             ],
-            "shelvingLocationSubField": "c"
+            "shelvingLocationSubfield": "c"
           }
         }
       },

@@ -1304,7 +1304,7 @@ describe('SettingsConfigEditor onlyOne subFields', () => {
   ])('locks %s to %s while retaining editable branch values', async (vendor, branch) => {
     const branchValues = branch === 'opac' ?
       { availabilityRule: 'availableNow', shelvingLocationSource: 'shelvingLocation' } :
-      { mainField: '852', itemIdSubField: 'editable' };
+      { mainField: '852', itemIdSubfield: 'editable' };
     renderEditor({
       configKey: 'catalogConfig',
       fieldMapping: vendorFieldMappingForVendor(catalogFieldMapping, vendor, 'catalogConfig'),
@@ -1318,7 +1318,7 @@ describe('SettingsConfigEditor onlyOne subFields', () => {
     fireEvent.change(selector, { target: { value: 'reservoir' } });
     expect(selector).toHaveValue(branch);
     const input = screen.getByRole(branch === 'opac' ? 'combobox' : 'textbox', {
-      name: branch === 'opac' ? 'shelvingLocationSource' : 'itemIdSubField',
+      name: branch === 'opac' ? 'shelvingLocationSource' : 'itemIdSubfield',
     });
     const changedValue = branch === 'opac' ? 'localLocation' : 'changed';
     expect(input).toBeEnabled();
@@ -1329,7 +1329,7 @@ describe('SettingsConfigEditor onlyOne subFields', () => {
     expect(Object.keys(saved)).toEqual([branch]);
     expect(saved[branch]).toMatchObject({
       ...branchValues,
-      [branch === 'opac' ? 'shelvingLocationSource' : 'itemIdSubField']: changedValue,
+      [branch === 'opac' ? 'shelvingLocationSource' : 'itemIdSubfield']: changedValue,
     });
   });
 
