@@ -22,11 +22,11 @@ export const sectionAt = (pathname, entryUrl) => {
 };
 
 // Missing counts mean not searched; zero means searched with no matches.
-const EntrySections = ({ entryUrl, entryType, active, counts = {} }) => {
+const EntrySections = ({ entryUrl, effectiveSections, active, counts = {} }) => {
   const intl = useIntl();
   const location = useLocation();
   const activeRef = useRef();
-  const sections = SECTIONS.filter(section => sectionAppliesTo(section.segment, entryType));
+  const sections = SECTIONS.filter(section => sectionAppliesTo(section.segment, effectiveSections));
 
   // Section navigation unmounts the focused link. Focus the active section
   // if nothing else has focus; leave focus on a results row or other control.

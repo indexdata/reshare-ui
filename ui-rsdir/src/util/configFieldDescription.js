@@ -21,7 +21,7 @@ const localReference = (spec, reference) => {
 
 // Traverse references at the current path before consuming the next property.
 // Each branch has its own visited set so shared definitions remain reusable.
-const metadataAtPath = (spec, schema, path, read, visited = new Set()) => {
+export const metadataAtPath = (spec, schema, path, read, visited = new Set()) => {
   if (!schema || typeof schema !== 'object' || visited.has(schema)) return undefined;
 
   const nextVisited = new Set(visited).add(schema);

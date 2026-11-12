@@ -1,9 +1,11 @@
 # Settings configuration field mappings
 
-Entry configuration routes use `SettingsConfigEditor` to edit an object stored on an Entry, such as `lmsConfig`, `catalogConfig`, or `holdingsPolicy`. The field maps live in `src/config/configSections.js`, one row per section giving its `configKey`, URL `segment`, `controlIdPrefix`, `labelPrefix`, the `fieldLabelId` derived from that prefix, and its `fieldMap`. Each route reads its row through `configSection(configKey)` and passes the map to the editor as `fieldMapping`. The LMS and catalog routes instead pass the map with the entry's host-profile overrides applied, which `useEffectiveSections(entry)` yields for every section; the settings search indexes the same maps:
+Entry configuration routes use `SettingsConfigEditor` to edit an object stored on an Entry, such as `lmsConfig`, `catalogConfig`, or `holdingsPolicy`. The field maps live in `src/config/configSections.js`, one row per section giving its `configKey`, URL `segment`, `controlIdPrefix`, `labelPrefix`, the `fieldLabelId` derived from that prefix, and its `fieldMap`. Each route passes the editor the map that `useEffectiveSections(entry)` yields for its section, as `fieldMapping`: the base map with the entry's inheritance policy applied and, for LMS and catalog, its host-profile overrides. The settings search and section navigation use the same maps:
 
 ```jsx
-const { controlIdPrefix, fieldLabelId, fieldMap } = configSection('catalogConfig');
+const { controlIdPrefix, fieldLabelId } = configSection('catalogConfig');
+const { sections } = useEffectiveSections(entry);
+const { fieldMap } = sections.find(row => row.configKey === 'catalogConfig');
 
 <SettingsConfigEditor
   configKey="catalogConfig"
@@ -15,6 +17,12 @@ const { controlIdPrefix, fieldLabelId, fieldMap } = configSection('catalogConfig
 ```
 
 Each top-level mapping is displayed in its own card and saved independently. Saving a card patches the corresponding property beneath `configKey`.
+
+Cards display `initialResource`, which routes load as the entry's merged view, so they include inherited values. Edits instead start from the entry's own stored values, which the editor fetches itself as `resourcePath?resolve-inherit=false`. A field the entry does not store opens empty with the note "The local value of this field is unset." Saving an empty value that would be stored as `""` or `[]` asks first whenever the policy (`fieldCanInherit`) says the entry's type can inherit the field, because those values block inheritance:
+- If the field is stored locally, the choices are "Inherit from parent" (PATCH `null`, skipping field validation) or "Keep empty". This includes re-saving a stored empty value.
+- If the field is unset locally, the choices are "Keep inheriting" (no request) or "Store empty value".
+
+When a field cannot inherit, saving it while unset and empty sends nothing. Inheriting a field that has a save-impact check (for example `availableCopyrightTypes`) first reads the parent's merged entry and checks against the value that will be inherited. A missing parent counts as empty. If the read fails, the dialog stays open with an error, nothing is saved, and choosing Inherit again retries. Any resulting confirmation, such as clearing the default copyright type, still follows. Edit buttons stay disabled until the stored copy loads, and an alert replaces editing if it fails. A successful save updates the cached stored copy and refetches it together with the merged entry.
 
 The optional editor callback `getSelectionChangeImpact({ fieldName, nextValue, resource })` can return `{ source: { setting, name }, groups: [{ configKey, paths }], catalogProfile? }` to require confirmation before a top-level dropdown draft changes. The optional `catalogProfile` names the explicit profile that prevents a proposed LMS vendor's catalog overrides from applying; it triggers confirmation even with no affected groups. Empty groups without `catalogProfile`, or an undefined result, apply the change immediately. Confirming updates the draft only; Save persists it. LMS vendor and catalog profile routes use `selectionChangeImpact` to list new override paths derived from OpenAPI `x-host-profiles`, respecting an independent catalog profile. Clearing either selection bypasses confirmation and updates the draft immediately; Save persists `null`, and a cleared catalog profile falls back to the LMS vendor. Removed overrides are not listed.
 
@@ -28,6 +36,7 @@ The settings search in the entry pane drives two optional editor props. `shownFi
 | `valueType` | string | No | Controls the editor and JSON conversion. It defaults to `string` and is case-insensitive. Use the documented spelling for consistency. |
 | `required` | boolean | No | Prevents saving when the value is empty. For an `objectArray` child, it also prevents adding an object without that value. |
 | `disabled` | boolean | No | Renders a greyed-out field label with no editing controls. Supported on top-level mappings, `subMap` children, and `objectMap` children. Fields with `overrideValue` display that value read-only. Other disabled fields keep their content hidden. Disabled fields skip their own validation but retain their normal serialized value and still count when an enabled parent checks whether it is empty. |
+| `readOnly` | boolean | No | Top-level mappings only. Renders a greyed-out card that displays the committed value with no editing controls. Set by the inheritance policy (see below); `disabled` takes precedence. |
 | `defaultOnly` | boolean | No | For a code/description `objectArray`, restricts new additions to exact pairs published in OpenAPI `x-default-data`. Defaults to `false`. Saved entries remain visible and removable even if absent from current defaults. |
 | `onlyOne` | boolean | No | For a `subField`, allows at most one direct `subMap` child to be selected. The editor renders a child selector and omits unselected children from the saved value. Disabled children remain visible but unavailable in the selector. Combine with `required` to require exactly one selection. |
 | `lockedSelection` | string | No | Names the required direct child of an `onlyOne` field and disables its selector. Vendor/profile mappings derive this from overridden child or descendant paths. The editor displays that branch and retains its values, initializing it if absent; competing mapped branches are omitted on the next explicit save. Other fields within the branch remain editable unless disabled separately. |
@@ -65,6 +74,16 @@ closed on success; other drafts are retained and checked against the updated
 configuration on their next save. Failed saves release both locks.
 
 For `lmsConfig`, `catalogConfig`, `holdingsPolicy`, and `illConfig`, the editor also fetches `directory/openapi.json` and resolves descriptions from the corresponding resource schemas (`LmsConfig`, `CatalogConfig`, `HoldingsPolicy`, and `IllConfig`). Nested properties, array items, local references, and `allOf` are supported. Descriptions on a property take precedence over referenced descriptions. API descriptions are displayed as plain text, including any literal placeholders. Fields without a manual or schema description have no help icon. The shared specification cache stays fresh for 30 minutes. Description loading or failure alone does not block editing; the LMS and catalog routes additionally require the host-profile metadata described below.
+
+## Inheritance policy
+
+`useEffectiveSections` applies the Directory inheritance policy published in `directory/openapi.json` (`applyInheritancePolicy` in `src/util/inheritancePolicy.js`). It reads `x-editable-on` and `x-inheritance-root` from the `EntryProperties` configuration containers and their direct children. A child without its own annotation uses its container's. For each top-level mapping and the entry's type:
+
+- If `x-editable-on` is absent or includes the type, the field is editable.
+- If the type cannot store the field but has an ancestor within `x-inheritance-root`, the field gets `readOnly` and shows its inherited value. Branches inherit up to `Institution` or `Consortium` roots; institutions only up to `Consortium`.
+- Otherwise the field is removed. A section left with no fields is removed from navigation and search.
+
+Missing or failed metadata leaves every field editable; the Directory still rejects writes the policy forbids. Routes wait for the specification to settle (`policyReady`) before mounting the editor.
 
 ## Vendor and catalog profiles
 

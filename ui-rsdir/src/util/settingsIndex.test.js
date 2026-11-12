@@ -49,9 +49,9 @@ describe('matchSettings', () => {
     expect(paths(search('catálogo address', { searchIntl }))).toEqual(['catalogConfig.sru.address']);
   });
 
-  it('skips sections unavailable for the entry type', () => {
-    expect(paths(search('address', { entry: { type: 'Consortium' } }))).toEqual(['catalogConfig.sru.address', 'catalogConfig.zoom.address']);
-    expect(paths(search('address', { entry: { type: 'Branch' } }))).toEqual(['lmsConfig.address']);
+  it('skips sections the inheritance policy hides', () => {
+    const sections = CONFIG_SECTIONS.map(row => (row.configKey === 'lmsConfig' ? { ...row, applies: false } : row));
+    expect(paths(search('address', { sections }))).toEqual(['catalogConfig.sru.address', 'catalogConfig.zoom.address']);
   });
 
   it('skips sections without field maps', () => {

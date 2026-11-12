@@ -69,7 +69,7 @@ const EntryPane = ({ entry, actions, children, ...paneProps }) => {
         </div>
         <div className={css.sections}>
           <SettingsSearch count={sectionCards?.length} onChange={setQuery} query={query} />
-          <EntrySections entryUrl={entryUrl} entryType={entry.type} active={section} counts={searchWords.length > 0 ? counts : undefined} />
+          <EntrySections entryUrl={entryUrl} effectiveSections={sections} active={section} counts={searchWords.length > 0 ? counts : undefined} />
         </div>
       </div>
     </Pane>

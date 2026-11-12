@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useQueryClient } from 'react-query';
 import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
+import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 import {
   Badge,
   Button,
@@ -10,6 +11,8 @@ import {
   Highlighter,
   Icon,
   IconButton,
+  Modal,
+  ModalFooter,
   MultiSelection,
   Popover,
   Select,
@@ -21,7 +24,11 @@ import css from './SettingsConfigEditor.css';
 import useDirectoryOpenApi from '../hooks/useDirectoryOpenApi';
 import { configFieldDefaultData, configFieldDescription, supportsConfigDescriptions } from '../util/configFieldDescription';
 import fieldLabel from '../util/fieldLabel';
+import { fieldCanInherit } from '../util/inheritancePolicy';
 import { foldForHighlight } from '../util/settingsIndex';
+
+const LOCAL_ONLY = { 'resolve-inherit': 'false' };
+const LOCAL_STALE_TIME = 2 * 60 * 1000;
 
 const STRING_ARRAY = 'stringarray';
 const STRING_MAP = 'stringmap';
@@ -371,6 +378,13 @@ const SettingsConfigEditor = ({
   }, [fieldMapping]);
   const ky = useOkapiKy();
   const openApiQuery = useDirectoryOpenApi(supportsConfigDescriptions(configKey));
+  // Display shows the merged (inherited) view; edits start from the entry's own stored values.
+  const localQuery = useOkapiQuery(resourcePath, {
+    searchParams: LOCAL_ONLY,
+    staleTime: LOCAL_STALE_TIME,
+    // Show the inline alert below instead of replacing the page.
+    useErrorBoundary: false,
+  });
   const intl = useIntl();
   const callout = useContext(CalloutContext);
   const queryClient = useQueryClient();
@@ -389,6 +403,7 @@ const SettingsConfigEditor = ({
   const [customObjectForms, setCustomObjectForms] = useState({});
   const [pendingSelection, setPendingSelection] = useState(null);
   const [pendingSave, setPendingSave] = useState(null);
+  const [pendingInherit, setPendingInherit] = useState(null);
   const editingFieldsRef = useRef({});
   const savingFieldsRef = useRef({});
   const activeResourcePathRef = useRef(resourcePath);
@@ -401,6 +416,7 @@ const SettingsConfigEditor = ({
 
   useEffect(() => {
     setPendingSave(null);
+    setPendingInherit(null);
   }, [configKey, resourcePath]);
 
   const booleanOptions = useMemo(() => [
@@ -582,6 +598,19 @@ const SettingsConfigEditor = ({
     field,
   );
 
+  const isLocallyUnset = field => localQuery.data?.[configKey]?.[field.fieldName] == null;
+
+  const editBaseValue = field => toEditorValue(localQuery.data?.[configKey]?.[field.fieldName], field);
+
+  // An empty list or string saves as [] or "", which blocks inheritance. When the
+  // entry type could inherit the field, ask whether to inherit or store the empty value.
+  const offersInheritance = field => {
+    const draft = values[field.fieldName];
+
+    return isEmptyFieldValue(draft, field) && valueForPatch(draft, field) !== null &&
+      fieldCanInherit(openApiQuery.data, configKey, field.fieldName, resource?.type);
+  };
+
   const committedFieldValue = (field, parentContext) => {
     const context = contextForField(field, parentContext);
     const topLevelValue = committedTopLevelValue(context.topField);
@@ -668,7 +697,7 @@ const SettingsConfigEditor = ({
   const editField = field => {
     setValues(current => ({
       ...current,
-      [field.fieldName]: committedTopLevelValue(field),
+      [field.fieldName]: editBaseValue(field),
     }));
     clearTransientState(field.fieldName);
     setFieldEditing(field.fieldName, true);
@@ -679,7 +708,7 @@ const SettingsConfigEditor = ({
     setPendingSave(null);
     setValues(current => ({
       ...current,
-      [field.fieldName]: committedTopLevelValue(field),
+      [field.fieldName]: editBaseValue(field),
     }));
     clearTransientState(field.fieldName);
     setFieldEditing(field.fieldName, false);
@@ -1187,10 +1216,25 @@ const SettingsConfigEditor = ({
     setSavingFields(savingFieldsRef.current);
   };
 
+  // confirmedSave.choice records the inheritance answer: 'inherit' saves null, 'keep'
+  // saves the empty value. confirmedSave.inheritedValue is the parent's value for 'inherit'.
   const saveField = (field, confirmedSave) => {
     const { fieldName } = field;
     const savedResourcePath = resourcePath;
-    const validationErrors = validationErrorsForField(field);
+    const choice = confirmedSave?.choice;
+
+    if (!choice && offersInheritance(field)) {
+      setPendingInherit({ field });
+      return;
+    }
+
+    // An empty unset field already inherits (or has nothing to inherit); there is nothing to save.
+    if (choice !== 'keep' && isLocallyUnset(field) && isEmptyFieldValue(values[fieldName], field)) {
+      cancelEditingField(field);
+      return;
+    }
+
+    const validationErrors = choice === 'inherit' ? {} : validationErrorsForField(field);
 
     if (Object.keys(validationErrors).length > 0) {
       setFieldErrors(current => ({
@@ -1200,8 +1244,11 @@ const SettingsConfigEditor = ({
       return;
     }
 
-    const patchValue = valueForPatch(values[fieldName], field);
-    const impact = field.getSaveImpact?.({ nextValue: patchValue, resource });
+    const patchValue = choice === 'inherit' ? null : valueForPatch(values[fieldName], field);
+    const impact = field.getSaveImpact?.({
+      nextValue: choice === 'inherit' ? (confirmedSave.inheritedValue ?? []) : patchValue,
+      resource,
+    });
     const configPatch = { ...impact?.additionalValues, [fieldName]: patchValue };
     const affectedFieldNames = Object.keys(configPatch);
     const affectedFields = fieldMapping.filter(item => affectedFieldNames.includes(item.fieldName));
@@ -1211,7 +1258,7 @@ const SettingsConfigEditor = ({
     const discardedDrafts = affectedFields.filter(item => (
       item.fieldName !== fieldName && editingFields[item.fieldName] &&
       JSON.stringify(valueForPatch(values[item.fieldName], item)) !==
-      JSON.stringify(valueForPatch(committedTopLevelValue(item), item))
+      JSON.stringify(valueForPatch(editBaseValue(item), item))
     )).map(item => item.fieldName);
     // Refresh confirmation if the draft or committed values change while the modal is open.
     const confirmationKey = JSON.stringify({
@@ -1220,7 +1267,7 @@ const SettingsConfigEditor = ({
       discardedDrafts,
     });
     if (impact && confirmedSave?.confirmationKey !== confirmationKey) {
-      setPendingSave({ field, impact, confirmationKey, lockedFieldNames, hasUnsavedChanges: discardedDrafts.length > 0 });
+      setPendingSave({ field, impact, confirmationKey, lockedFieldNames, hasUnsavedChanges: discardedDrafts.length > 0, choice, inheritedValue: confirmedSave?.inheritedValue });
       return;
     }
 
@@ -1246,6 +1293,12 @@ const SettingsConfigEditor = ({
         };
 
         queryClient.setQueryData(savedResourcePath, nextResource);
+        // Keep the local copy current until the refetch below lands.
+        queryClient.setQueryData([savedResourcePath, LOCAL_ONLY], local => local && ({
+          ...local,
+          [configKey]: { ...local[configKey], ...configPatch },
+        }));
+        // Prefix match also refetches the local-only copy.
         queryClient.invalidateQueries(savedResourcePath);
         onSave?.();
 
@@ -1284,6 +1337,103 @@ const SettingsConfigEditor = ({
           setFieldsSaving(lockedFieldNames, false);
         }
       });
+  };
+
+  // Save-impact checks compare against the value the entry will inherit, read from
+  // the parent's merged view. A missing parent counts as empty. A failed read keeps
+  // the dialog open with an error, so the user can retry instead of acting on a guess.
+  const chooseInherit = async () => {
+    const { field } = pendingInherit;
+    const savedResourcePath = resourcePath;
+    let inheritedValue;
+
+    if (field.getSaveImpact && !isLocallyUnset(field) && resource?.parent) {
+      setPendingInherit({ field, loading: true });
+      try {
+        const parent = await ky(`directory/entries/by-id/${resource.parent}`).json();
+        inheritedValue = parent?.[configKey]?.[field.fieldName];
+      } catch (error) {
+        if (activeResourcePathRef.current === savedResourcePath) {
+          setPendingInherit({ field, loading: false, error: true });
+        }
+        return;
+      }
+      if (activeResourcePathRef.current !== savedResourcePath) return;
+    }
+
+    setPendingInherit(null);
+    saveField(field, { choice: 'inherit', inheritedValue });
+  };
+
+  const renderInheritModal = () => {
+    const { field, loading, error } = pendingInherit;
+    // An unset field already inherits; a stored one would stop overriding the parent.
+    const inherited = isLocallyUnset(field);
+    const fieldLabelText = labelForPath(field.fieldName);
+
+    return (
+      <Modal
+        dismissible={!loading}
+        id={`${controlIdPrefix}-inherit-modal`}
+        label={<FormattedMessage id="ui-rsdir.settingsConfig.inherit.heading" defaultMessage="Inherit from parent entry?" />}
+        onClose={loading ? undefined : () => setPendingInherit(null)}
+        open
+        footer={
+          <ModalFooter>
+            <Button
+              buttonStyle="primary"
+              disabled={loading}
+              id={`${controlIdPrefix}-inherit-confirm`}
+              onClick={chooseInherit}
+            >
+              {inherited ?
+                <FormattedMessage id="ui-rsdir.settingsConfig.inherit.stay" defaultMessage="Keep inheriting" /> :
+                <FormattedMessage id="ui-rsdir.settingsConfig.inherit.confirm" defaultMessage="Inherit from parent" />
+              }
+            </Button>
+            <Button
+              disabled={loading}
+              id={`${controlIdPrefix}-inherit-keep`}
+              onClick={() => {
+                setPendingInherit(null);
+                saveField(field, { choice: 'keep' });
+              }}
+            >
+              {inherited ?
+                <FormattedMessage id="ui-rsdir.settingsConfig.inherit.storeEmpty" defaultMessage="Store empty value" /> :
+                <FormattedMessage id="ui-rsdir.settingsConfig.inherit.keep" defaultMessage="Keep empty" />
+              }
+            </Button>
+            <Button disabled={loading} id={`${controlIdPrefix}-inherit-cancel`} onClick={() => setPendingInherit(null)}>
+              <FormattedMessage id="stripes-components.cancel" defaultMessage="Cancel" />
+            </Button>
+          </ModalFooter>
+        }
+      >
+        <p>
+          {inherited ?
+            <FormattedMessage
+              id="ui-rsdir.settingsConfig.inherit.unsetMessage"
+              defaultMessage="{field} is currently inherited from the parent entry. Keep inheriting it, or store an empty value that blocks inheritance?"
+              values={{ field: fieldLabelText }}
+            /> :
+            <FormattedMessage
+              id="ui-rsdir.settingsConfig.inherit.message"
+              defaultMessage="Remove this entry's value for {field} so that it inherits the value from its parent entry? Keeping it empty stores an empty value, which blocks inheritance."
+              values={{ field: fieldLabelText }}
+            />
+          }
+        </p>
+        {error && (
+          <p className={css.inheritError} role="alert">
+            <FormattedMessage
+              id="ui-rsdir.settingsConfig.inherit.parentError"
+              defaultMessage="The parent entry's value could not be loaded, so its effect on related fields can't be checked. Try again."
+            />
+          </p>
+        )}
+      </Modal>
+    );
   };
 
   const renderSymbolListValues = (field, isEditing, parentField) => {
@@ -2447,6 +2597,15 @@ const SettingsConfigEditor = ({
 
   return (
     <div>
+      {localQuery.isError &&
+        <div className={css.subFieldError} role="alert">
+          <FormattedMessage
+            id="ui-rsdir.settingsConfig.localError"
+            defaultMessage="This entry's local values could not be loaded, so its settings cannot be edited."
+          />
+        </div>
+      }
+      {pendingInherit && renderInheritModal()}
       {pendingSave &&
         <ConfirmationModal
           bodyTag="div"
@@ -2535,6 +2694,21 @@ const SettingsConfigEditor = ({
         const cannotEdit = isCodeDescription && !committedTopLevelValue(field) &&
           codeDescriptionChoices(field, fieldName).length === 0;
 
+        if (field.readOnly && !field.disabled) {
+          // Inherited-only setting: show the resolved value without editing controls.
+          return (
+            <Card
+              cardClass={`${css.disabledField} ${css.readOnlyField}`}
+              roundedBorder
+              key={fieldName}
+              hidden={shownFields ? !shownFields.includes(fieldName) : undefined}
+              headerStart={renderFieldLabel(field, fieldName)}
+            >
+              {isSubField ? renderSubField(field, false) : renderFieldDisplay(field)}
+            </Card>
+          );
+        }
+
         return (
           <Card
             cardClass={field.disabled ? css.disabledField : undefined}
@@ -2547,7 +2721,7 @@ const SettingsConfigEditor = ({
             headerEnd={!field.disabled &&
               <Button
                 buttonStyle={isEditing ? 'primary' : undefined}
-                disabled={isSaving || (!isEditing && cannotEdit)}
+                disabled={isSaving || (!isEditing && (cannotEdit || !localQuery.isSuccess))}
                 id={`${isEditing ? 'save' : 'edit'}-${controlIdPrefix}-${fieldName}`}
                 onClick={() => (isEditing ? saveField(field) : editField(field))}
               >
@@ -2576,6 +2750,14 @@ const SettingsConfigEditor = ({
               </div> :
               isSubField ? renderSubField(field, false) : renderFieldDisplay(field)
             )}
+            {isEditing && isLocallyUnset(field) &&
+              <p className={css.localUnset}>
+                <FormattedMessage
+                  id="ui-rsdir.settingsConfig.localUnset"
+                  defaultMessage="The local value of this field is unset."
+                />
+              </p>
+            }
             {!field.disabled && isCodeDescription && renderCodeDescriptionStatus(field, fieldName)}
           </Card>
         );

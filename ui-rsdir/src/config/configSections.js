@@ -441,7 +441,8 @@ const copyrightSaveImpact = ({ nextValue, resource }) => {
   const code = config?.defaultCopyrightType?.code;
   if (typeof code !== 'string' ||
     !config.availableCopyrightTypes?.some(item => item.code === code) ||
-    nextValue.some(item => item.code === code)) return undefined;
+    // null (inherit from the parent) keeps no local types, like an empty list.
+    (nextValue || []).some(item => item.code === code)) return undefined;
 
   return {
     heading: <FormattedMessage id="ui-rsdir.illConfig.clearDefault.heading" defaultMessage="Clear default copyright type?" />,
@@ -606,8 +607,8 @@ export const CONFIG_SECTIONS = [
 
 export const configSection = configKey => CONFIG_SECTIONS.find(section => section.configKey === configKey);
 
-export const sectionAppliesTo = (segment, entryType) => {
-  if (segment === 'catalogconfig') return entryType !== 'Branch';
-  if (segment === 'lmsconfig') return entryType === 'Institution' || entryType === 'Branch';
-  return true;
-};
+// Config sections apply per the effective sections from useEffectiveSections;
+// other sections always apply.
+export const sectionAppliesTo = (segment, effectiveSections) => (
+  effectiveSections.find(row => row.segment === segment)?.applies ?? true
+);
