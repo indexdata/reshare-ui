@@ -2,6 +2,22 @@
   opacity: 0.5;
 }
 
+/* Shown while editing a field the entry does not store itself. */
+.inheritError {
+  color: var(--error);
+}
+
+.localUnset {
+  margin: var(--gutter-static-one-third) 0 0;
+  font-size: var(--font-size-small);
+  color: var(--color-text-p2);
+}
+
+/* Inherited settings the entry type cannot store. */
+.readOnlyField {
+  color: var(--color-text-p2);
+}
+
 .fieldEditor {
   display: flex;
   align-items: flex-start;

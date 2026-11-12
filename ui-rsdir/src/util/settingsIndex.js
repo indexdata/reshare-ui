@@ -1,4 +1,3 @@
-import { sectionAppliesTo } from '../config/configSections';
 import fieldLabel from './fieldLabel';
 
 const isSubField = field => (field.valueType || 'string').toLowerCase() === 'subfield' && Array.isArray(field.subMap);
@@ -47,8 +46,9 @@ export const flattenSection = ({ configKey, fieldLabelId, fieldMap }, config, in
 };
 
 // Index labels using saved subMap selections and profile overrides.
+// Sections come from useEffectiveSections, which applies the inheritance policy.
 export const settingsIndex = (sections, entry, intl) => sections
-  .filter(section => section.fieldMap && sectionAppliesTo(section.segment, entry.type))
+  .filter(section => section.fieldMap && section.applies !== false)
   .flatMap(section => flattenSection(section, entry[section.configKey], intl))
   .map(field => ({ ...field, text: normalizeText(field.labels.join(' '), intl.locale) }));
 

@@ -5,7 +5,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 // Provided by the shared Stripes test environment.
 // eslint-disable-next-line import/no-extraneous-dependencies
 import userEvent from '@testing-library/user-event';
-import SettingsConfigEditor from './SettingsConfigEditor';
+import RealSettingsConfigEditor from './SettingsConfigEditor';
 import { configSection } from '../config/configSections';
 import { applyDisabledPaths, hostProfilesFromOpenApi, selectionChangeImpact as changeImpact, vendorFieldMappingForVendor as mapVendorFields } from '../config/vendorFieldMapping';
 
@@ -23,6 +23,21 @@ const vendorFieldMappingForVendor = (fields, vendor, configKey, setting) => (
 const selectionChangeImpact = options => changeImpact({ ...options, vendorFieldMapping });
 
 jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
+
+// The editor fetches the entry's local-only copy. Unless a test sets
+// mockLocalResource, that copy mirrors the rendered initialResource.
+let mockLocalResource;
+let mockRenderedResource;
+jest.mock('@projectreshare/stripes-reshare', () => ({
+  useOkapiQuery: () => ({
+    isSuccess: true,
+    data: mockLocalResource === undefined ? mockRenderedResource : mockLocalResource,
+  }),
+}));
+const SettingsConfigEditor = props => {
+  mockRenderedResource = props.initialResource;
+  return <RealSettingsConfigEditor {...props} />;
+};
 
 const mockPatch = jest.fn();
 const mockKy = jest.fn();
@@ -60,7 +75,12 @@ jest.mock('react-query', () => ({
   useQueryClient: () => ({
     getQueryData: jest.fn(),
     invalidateQueries: jest.fn(),
-    setQueryData: jest.fn(),
+    // Array keys address the local-only copy; apply updates to it as the cache would.
+    setQueryData: (key, update) => {
+      if (!Array.isArray(key)) return;
+      const current = mockLocalResource === undefined ? mockRenderedResource : mockLocalResource;
+      mockLocalResource = typeof update === 'function' ? update(current) : update;
+    },
   }),
 }));
 
@@ -68,6 +88,10 @@ jest.mock('@folio/stripes/components', () => ({
   MultiSelection: jest.requireActual('@folio/stripes-components/lib/MultiSelection').default,
   Badge: jest.requireActual('@folio/stripes-components/lib/Badge').default,
   ConfirmationModal: jest.requireActual('@folio/stripes-components/lib/ConfirmationModal').default,
+  Modal: ({ children, footer, label, open }) => open && (
+    <div role="dialog">{label}{children}{footer}</div>
+  ),
+  ModalFooter: ({ children }) => <div>{children}</div>,
   Icon: ({ icon, 'aria-hidden': ariaHidden }) => <svg aria-hidden={ariaHidden} data-icon={icon} />,
   Popover: jest.requireActual('@folio/stripes-components/lib/Popover').default,
   Button: ({ children, disabled, id, onClick }) => (
@@ -128,6 +152,7 @@ const renderEditor = ({
 );
 
 beforeEach(() => {
+  mockLocalResource = undefined;
   mockOpenApiData = undefined;
   mockOpenApiState = {};
   mockMessages = {};
@@ -557,7 +582,9 @@ describe('SettingsConfigEditor default copyright type', () => {
     expect(mockPatch).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
     save();
-    await expectSaved(null);
+    // The default was never stored locally, so clearing it saves nothing.
+    expect(mockPatch).not.toHaveBeenCalled();
+    expect(document.getElementById('edit-settings-config-defaultCopyrightType')).toBeInTheDocument();
   });
 
   it('retains the draft after a failed save and allows retry', async () => {
@@ -1162,7 +1189,156 @@ describe('SettingsConfigEditor nullOnEmpty strings', () => {
   });
 });
 
+describe('SettingsConfigEditor local values', () => {
+  const fields = [{ fieldName: 'inherited' }, { fieldName: 'local' }];
+  const merged = { config: { inherited: 'Parent value', local: 'Merged value' } };
+  const note = 'The local value of this field is unset.';
+
+  beforeEach(() => {
+    mockLocalResource = { config: { local: 'Local value' } };
+    renderEditor({ fieldMapping: fields, initialResource: merged });
+  });
+
+  it('displays merged values but edits from local values', () => {
+    expect(screen.getByText('Parent value')).toBeInTheDocument();
+    fireEvent.click(document.getElementById('edit-settings-config-local'));
+    expect(document.getElementById('settings-config-local')).toHaveValue('Local value');
+    expect(screen.queryByText(note)).not.toBeInTheDocument();
+  });
+
+  it('starts an unset field empty with a note, and saving it untouched sends nothing', () => {
+    fireEvent.click(document.getElementById('edit-settings-config-inherited'));
+    expect(document.getElementById('settings-config-inherited')).toHaveValue('');
+    expect(screen.getByText(note)).toBeInTheDocument();
+    fireEvent.click(document.getElementById('save-settings-config-inherited'));
+    expect(mockPatch).not.toHaveBeenCalled();
+    expect(screen.queryByText(note)).not.toBeInTheDocument();
+  });
+});
+
+describe('SettingsConfigEditor inheritance prompt', () => {
+  const inheritSpec = { components: { schemas: { EntryProperties: { properties: {
+    illConfig: { 'x-inheritance-root': 'Consortium', 'x-editable-on': ['Consortium', 'Institution'] },
+  } } } } };
+  const clearAndSave = type => {
+    renderEditor({
+      configKey: 'illConfig',
+      fieldMapping: [{ fieldName: 'items', valueType: 'stringArray' }],
+      initialResource: { type, illConfig: { items: ['Local'] } },
+    });
+    fireEvent.click(document.getElementById('edit-settings-config-items'));
+    fireEvent.click(document.getElementById('remove-settings-config-items-0'));
+    fireEvent.click(document.getElementById('save-settings-config-items'));
+  };
+  const expectPatched = value => waitFor(() => expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+    json: { illConfig: { items: value } },
+  }));
+
+  beforeEach(() => { mockOpenApiData = inheritSpec; });
+
+  it('saves null when an emptied field should inherit from the parent', async () => {
+    clearAndSave('Institution');
+    expect(mockPatch).not.toHaveBeenCalled();
+    fireEvent.click(document.getElementById('settings-config-inherit-confirm'));
+    await expectPatched(null);
+  });
+
+  it('saves the empty value when keeping it', async () => {
+    clearAndSave('Institution');
+    fireEvent.click(document.getElementById('settings-config-inherit-keep'));
+    await expectPatched([]);
+  });
+
+  it('does not ask when the entry type cannot inherit the field', async () => {
+    clearAndSave('Consortium');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await expectPatched([]);
+  });
+
+  describe('for an inherited field', () => {
+    const saveEmpty = () => {
+      mockLocalResource = { illConfig: {} };
+      renderEditor({
+        configKey: 'illConfig',
+        fieldMapping: [{ fieldName: 'items', valueType: 'stringArray' }],
+        initialResource: { type: 'Institution', illConfig: { items: ['Parent'] } },
+      });
+      fireEvent.click(document.getElementById('edit-settings-config-items'));
+      fireEvent.click(document.getElementById('save-settings-config-items'));
+      expect(screen.getByRole('dialog')).toHaveTextContent('is currently inherited');
+    };
+
+    it('stores an empty value to block inheritance', async () => {
+      saveEmpty();
+      fireEvent.click(screen.getByRole('button', { name: 'Store empty value' }));
+      await expectPatched([]);
+    });
+
+    it('sends nothing when it keeps inheriting', () => {
+      saveEmpty();
+      fireEvent.click(screen.getByRole('button', { name: 'Keep inheriting' }));
+      expect(mockPatch).not.toHaveBeenCalled();
+      expect(document.getElementById('edit-settings-config-items')).toBeInTheDocument();
+    });
+  });
+
+  it('offers inheritance again when re-saving a stored empty value', async () => {
+    renderEditor({
+      configKey: 'illConfig',
+      fieldMapping: [{ fieldName: 'items', valueType: 'stringArray' }],
+      initialResource: { type: 'Institution', illConfig: { items: [] } },
+    });
+    fireEvent.click(document.getElementById('edit-settings-config-items'));
+    fireEvent.click(document.getElementById('save-settings-config-items'));
+    fireEvent.click(document.getElementById('settings-config-inherit-confirm'));
+    await expectPatched(null);
+  });
+
+  it('retries a failed parent read, then keeps the default copyright type the inherited list contains', async () => {
+    const pair = { code: 'US-CCG', defaultDesc: 'CCG (US)' };
+    mockOpenApiData = { ...specWithProfiles,
+      components: { schemas: { ...specWithProfiles.components.schemas, ...inheritSpec.components.schemas } } };
+    mockKy
+      .mockReturnValueOnce({ json: () => Promise.reject(new Error('offline')) })
+      .mockReturnValue({ json: () => Promise.resolve({ illConfig: { availableCopyrightTypes: [pair] } }) });
+    renderEditor({
+      configKey: 'illConfig',
+      fieldMapping: illFieldMapping.filter(field => ['availableCopyrightTypes', 'defaultCopyrightType'].includes(field.fieldName)),
+      initialResource: {
+        type: 'Institution',
+        parent: 'parent-id',
+        illConfig: { availableCopyrightTypes: [pair], defaultCopyrightType: pair },
+      },
+    });
+    fireEvent.click(document.getElementById('edit-settings-config-availableCopyrightTypes'));
+    fireEvent.click(document.getElementById('remove-settings-config-availableCopyrightTypes-0'));
+    fireEvent.click(document.getElementById('save-settings-config-availableCopyrightTypes'));
+    fireEvent.click(document.getElementById('settings-config-inherit-confirm'));
+    expect(await screen.findByText(/parent entry's value could not be loaded/)).toBeInTheDocument();
+    expect(mockPatch).not.toHaveBeenCalled();
+    expect(screen.queryByText('Save and clear default')).not.toBeInTheDocument();
+
+    fireEvent.click(document.getElementById('settings-config-inherit-confirm'));
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+      json: { illConfig: { availableCopyrightTypes: null } },
+    }));
+    expect(mockKy).toHaveBeenCalledWith('directory/entries/by-id/parent-id');
+    expect(screen.queryByText('Save and clear default')).not.toBeInTheDocument();
+  });
+});
+
 describe('SettingsConfigEditor disabled fields', () => {
+  it('greys out a read-only card and shows its value without an edit control', () => {
+    renderEditor({
+      fieldMapping: [{ fieldName: 'inheritedField', readOnly: true }],
+      initialResource: { config: { inheritedField: 'Inherited value' } },
+    });
+
+    expect(screen.getByText('inheritedField').closest('section')).toHaveClass('disabledField');
+    expect(screen.getByText('Inherited value')).toBeInTheDocument();
+    expect(document.getElementById('edit-settings-config-inheritedField')).not.toBeInTheDocument();
+  });
+
   it('greys out a disabled card without rendering its content or edit control', () => {
     renderEditor({
       fieldMapping: [
@@ -1994,9 +2170,8 @@ describe('SettingsConfigEditor predefined code/description arrays', () => {
     fireEvent.click(document.getElementById('add-settings-config-loanConditions'));
     expect(code).toHaveAttribute('aria-invalid', 'true');
     save();
-    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
-      json: { illConfig: { loanConditions: [] } },
-    }));
+    // Neither entry was added, so the unset list stays unset.
+    expect(mockPatch).not.toHaveBeenCalled();
   });
 
   it('continues validating other children of saved code/description pairs', () => {
