@@ -9,9 +9,8 @@ import css from './Flow.css';
 
 const TitleAndSILink = ({ request }) => {
   const location = useLocation();
-  const supplierUniqueRecordId = request?.illRequest?.bibliographicInfo?.supplierUniqueRecordId;
   const getSIURL = useGetSIURL();
-  const siURL = supplierUniqueRecordId ? getSIURL(supplierUniqueRecordId) : null;
+  const siURL = getSIURL(request?.bibRecordId);
   const inventoryLink = siURL ? (
     <a
       target="_blank"

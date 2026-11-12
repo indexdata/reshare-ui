@@ -6,7 +6,7 @@ import { useGetSIURL } from '@projectreshare/stripes-reshare';
 const ItemCard = ({ request }) => {
   const { bibliographicInfo, publicationInfo } = request.illRequest ?? {};
   const getSIURL = useGetSIURL();
-  const siURL = getSIURL(bibliographicInfo?.supplierUniqueRecordId);
+  const siURL = getSIURL(request.bibRecordId);
 
   return (
     <Card

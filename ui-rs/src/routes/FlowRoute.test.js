@@ -114,10 +114,11 @@ const requestFixture = {
   requesterRequestId: 'rrid-1',
   requesterSymbol: 'ISIL:REQ',
   supplierSymbol: 'ISIL:SUP',
+  bibRecordId: 'instance-1',
   illRequest: {
     bibliographicInfo: {
       title: 'Test Title',
-      supplierUniqueRecordId: 'instance-1',
+      supplierUniqueRecordId: 'local-1',
     },
     serviceInfo: {
       note: 'patron-service-note',

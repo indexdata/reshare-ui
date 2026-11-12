@@ -33,7 +33,8 @@ const request = {
   supplierName: 'Supplier Library',
   internalNote: 'Fragile',
   state: 'SEARCHING',
-  illRequest: { bibliographicInfo: { title: 'A Title', author: 'An Author', supplierUniqueRecordId: 'inst-1' } },
+  bibRecordId: 'inst-1',
+  illRequest: { bibliographicInfo: { title: 'A Title', author: 'An Author', supplierUniqueRecordId: 'local-1' } },
 };
 
 const actionOk = () => ({ json: async () => ({ outcome: 'success' }) });
