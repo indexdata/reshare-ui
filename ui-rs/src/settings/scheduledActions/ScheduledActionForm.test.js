@@ -318,25 +318,29 @@ describe('ScheduledActionForm', () => {
     expect(byId('scheduled-action-preset')).toBeNull();
   });
 
-  it('requires a positive archive retention duration independently of the schedule interval', async () => {
+  it.each([
+    ['request-aging', 'age'],
+    ['archive-borrowing-requests', 'archive'],
+  ])('%s requires a positive duration independently of the schedule interval', async (actionName, fieldPrefix) => {
     await renderForm(jest.fn());
-    fireEvent.change(byId('scheduled-action-actionName'), { target: { value: 'archive-borrowing-requests' } });
+    fireEvent.change(byId('scheduled-action-actionName'), { target: { value: actionName } });
+    const duration = byId(`scheduled-action-${fieldPrefix}-interval`);
     fillRequired();
     expect(byId(RECIPIENT_0)).toBeNull();
     expect(save()).toBeDisabled();
 
-    for (const interval of ['0h', '-24h', '30d', 'abc', '1h trailing', '999999999h', '0.1ns']) {
-      fireEvent.change(byId('scheduled-action-archive-interval'), { target: { value: interval } });
+    for (const interval of ['0h', '0h0m0s', '-24h', '30d', 'abc', '1h trailing', '500ms', '0.1ns']) {
+      fireEvent.change(duration, { target: { value: interval } });
       await waitFor(() => expect(save()).toBeDisabled());
     }
-    for (const interval of ['720h', '72h3m30s', '1.5h', '500ms']) {
-      fireEvent.change(byId('scheduled-action-archive-interval'), { target: { value: interval } });
+    for (const interval of ['720h', '72h3m30s', '1.5h', '30m', '45s']) {
+      fireEvent.change(duration, { target: { value: interval } });
       await waitFor(() => expect(save()).not.toBeDisabled());
     }
     fireEvent.change(byId('scheduled-action-frequency'), { target: { value: 'minutely' } });
     fireEvent.change(byId('scheduled-action-interval'), { target: { value: '15' } });
     await waitFor(() => expect(save()).not.toBeDisabled());
-    fireEvent.change(byId('scheduled-action-archive-interval'), { target: { value: '' } });
+    fireEvent.change(duration, { target: { value: '' } });
     await waitFor(() => expect(save()).toBeDisabled());
   });
 

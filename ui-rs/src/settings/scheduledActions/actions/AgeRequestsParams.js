@@ -3,13 +3,12 @@ import { Field } from 'react-final-form';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { Col, KeyValue, Row, TextField } from '@folio/stripes/components';
 
-// Positive Go duration using second/minute/hour units, e.g. "72h3m30s".
-const GO_DURATION = /^([0-9]*\.?[0-9]+(s|m|h))+$/;
+import isPositiveDuration from './isPositiveDuration';
 
 const AgeRequestsParams = () => {
   const intl = useIntl();
   const validateInterval = (value) => (
-    value && GO_DURATION.test(value.trim())
+    isPositiveDuration(value)
       ? undefined
       : intl.formatMessage({ id: 'ui-rs.settings.scheduledActions.validate.interval' })
   );
