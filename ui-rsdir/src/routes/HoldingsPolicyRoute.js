@@ -5,6 +5,7 @@ import EntryPane, { EntryLoadingPane } from '../components/EntryPane';
 import SettingsConfigEditor from '../components/SettingsConfigEditor';
 import { configSection } from '../config/configSections';
 import useEffectiveSections from '../hooks/useEffectiveSections';
+import useDirectoryPermissions from '../hooks/useDirectoryPermissions';
 
 const STALE_QUERY_TIME = 2 * 60 * 1000;
 const entryPath = id => `directory/entries/by-id/${id}`;
@@ -18,6 +19,7 @@ const HoldingsPolicyRoute = () => {
   });
 
   const { sections, policyReady } = useEffectiveSections(entryQuery.data);
+  const { canEditEntry } = useDirectoryPermissions(entryQuery.data);
   const fieldMap = sections.find(row => row.configKey === 'holdingsPolicy').fieldMap;
 
   if (!entryQuery.isSuccess || !policyReady) return <EntryLoadingPane />;
@@ -37,6 +39,7 @@ const HoldingsPolicyRoute = () => {
           fieldLabelId={fieldLabelId}
           fieldMapping={fieldMap}
           initialResource={entryQuery.data}
+          readOnly={!canEditEntry}
           resourcePath={entryPath(id)}
           searchWords={searchWords}
           shownFields={shownFields}

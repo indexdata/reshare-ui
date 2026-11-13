@@ -27,6 +27,10 @@ jest.mock('../components/SettingsConfigEditor', () => ({
   __esModule: true,
   default: jest.fn(() => null),
 }));
+jest.mock('../hooks/useDirectoryPermissions', () => ({
+  __esModule: true,
+  default: () => ({ isConsortiumAdmin: true, canEditEntry: true }),
+}));
 jest.mock('../components/HostProfilesError', () => ({
   __esModule: true,
   default: () => null,

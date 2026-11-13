@@ -5,6 +5,7 @@ import { Button } from '@folio/stripes/components';
 import { DirectLink, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import EntryPane, { EntryLoadingPane } from '../components/EntryPane';
 import ViewEntry from '../components/ViewEntry';
+import useDirectoryPermissions from '../hooks/useDirectoryPermissions';
 
 const ViewEntryRoute = () => {
   const { id } = useParams();
@@ -14,13 +15,14 @@ const ViewEntryRoute = () => {
     staleTime: 2 * 60 * 1000,
     cacheTime: 8 * 60 * 60 * 1000,
   });
+  const { canEditEntry } = useDirectoryPermissions(entryQuery.data);
 
   if (!entryQuery.isSuccess) return <EntryLoadingPane />;
 
   return (
     <EntryPane
       entry={entryQuery.data}
-      actions={
+      actions={canEditEntry &&
         <DirectLink
           component={Button}
           id="clickable-edit-entry"
