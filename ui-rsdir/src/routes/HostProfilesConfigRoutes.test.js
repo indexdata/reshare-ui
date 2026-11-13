@@ -21,6 +21,10 @@ jest.mock('react-intl', () => ({
 jest.mock('@folio/stripes/components', () => ({
   Button: ({ children, ...props }) => <button type="button" {...props}>{children}</button>,
 }));
+jest.mock('../hooks/useDirectoryPermissions', () => ({
+  __esModule: true,
+  default: () => ({ isConsortiumAdmin: true, canEditEntry: true }),
+}));
 jest.mock('../components/EntryPane', () => ({
   __esModule: true,
   default: ({ children }) => <div>{typeof children === 'function' ? children({ searchWords: [] }) : children}</div>,

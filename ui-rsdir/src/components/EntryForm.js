@@ -110,7 +110,7 @@ const ParentField = () => {
   );
 };
 
-const EntryForm = ({ addressPlugin }) => {
+const EntryForm = ({ addressPlugin, disableTenant }) => {
   const form = useForm();
 
   return (
@@ -164,6 +164,8 @@ const EntryForm = ({ addressPlugin }) => {
             <Field
               name="tenant"
               component={TextField}
+              // Only consortium admins may change an entry's tenant.
+              disabled={disableTenant}
               label={<FormattedMessage id="ui-rsdir.entry.tenant" />}
             />
           </Col>

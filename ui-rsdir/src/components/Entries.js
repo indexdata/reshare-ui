@@ -10,6 +10,7 @@ import {
   LoadingPane,
   PaneMenu,
 } from '@folio/stripes/components';
+import { IfPermission } from '@folio/stripes/core';
 import { DirectLink } from '@projectreshare/stripes-reshare';
 import SearchAndFilter from './SearchAndFilter';
 
@@ -72,16 +73,18 @@ const Entries = ({
           paneTitle={intl.formatMessage({ id: 'ui-rsdir.entries.resultsCount' }, { count: totalCount })}
           lastMenu={
             <PaneMenu>
-              <DirectLink
-                component={Button}
-                id="clickable-new-entry"
-                to={`${match.url}/create`}
-                preserveSearch
-                buttonStyle="primary paneHeaderNewButton"
-                marginBottom0
-              >
-                <FormattedMessage id="ui-rsdir.new" />
-              </DirectLink>
+              <IfPermission perm="directory.consortium.all">
+                <DirectLink
+                  component={Button}
+                  id="clickable-new-entry"
+                  to={`${match.url}/create`}
+                  preserveSearch
+                  buttonStyle="primary paneHeaderNewButton"
+                  marginBottom0
+                >
+                  <FormattedMessage id="ui-rsdir.new" />
+                </DirectLink>
+              </IfPermission>
             </PaneMenu>
           }
         >

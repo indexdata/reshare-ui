@@ -42,6 +42,10 @@ jest.mock('react-router-dom', () => ({
   useLocation: () => ({ search: '' }),
 }));
 
+jest.mock('../hooks/useDirectoryPermissions', () => ({
+  __esModule: true,
+  default: () => ({ isConsortiumAdmin: true, canEditEntry: true }),
+}));
 jest.mock('./AddressesField', () => () => null);
 jest.mock('./SymbolsField', () => () => null);
 jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);

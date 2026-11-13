@@ -3,7 +3,7 @@ import { FormattedMessage } from 'react-intl';
 import { Form } from 'react-final-form';
 import arrayMutators from 'final-form-arrays';
 import { useMutation, useQueryClient } from 'react-query';
-import { Prompt, useParams, useHistory, useLocation } from 'react-router-dom';
+import { Prompt, Redirect, useParams, useHistory, useLocation } from 'react-router-dom';
 import { Button, KeyValue, Pane, PaneFooter } from '@folio/stripes/components';
 import { CalloutContext, useOkapiKy, useStripes } from '@folio/stripes/core';
 import { useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
@@ -16,6 +16,7 @@ import {
   apiAddressesToFormAddresses,
   pluginAddressesToApiAddresses,
 } from '../util/addressAdapter';
+import useDirectoryPermissions from '../hooks/useDirectoryPermissions';
 
 // Possible operations performed by submitting this form
 const CREATE = 'create';
@@ -41,6 +42,7 @@ const EditEntryRoute = () => {
     staleTime: 2 * 60 * 1000,
     enabled: !!id,
   });
+  const { canEditEntry, isConsortiumAdmin } = useDirectoryPermissions(entryQuery.data);
 
   const creator = useMutation({
     mutationFn: (newRecord) => okapiKy
@@ -106,6 +108,14 @@ const EditEntryRoute = () => {
   }, [addressPlugin, entryQuery.data, op]);
 
   if (op === EDIT && !entryQuery.isSuccess) return <EntryLoadingPane />;
+
+  // Users who reach the form by URL without permission go back to the read-only view.
+  if (op === CREATE && !isConsortiumAdmin) {
+    return <Redirect to={`/directory/entries${location.search}`} />;
+  }
+  if (op === EDIT && !canEditEntry) {
+    return <Redirect to={`/directory/entries/${id}${location.search}`} />;
+  }
 
   const submit = (values, form) => {
     const submitValues = {
@@ -185,7 +195,7 @@ const EditEntryRoute = () => {
         const body = (
           <>
             <form onSubmit={handleSubmit} id="form-entry">
-              <EntryForm addressPlugin={addressPlugin} />
+              <EntryForm addressPlugin={addressPlugin} disableTenant={!isConsortiumAdmin} />
             </form>
             <FormattedMessage id="ui-rsdir.confirmDirtyNavigate">
               {prompt => <Prompt when={!pristine && !(submitting || submitSucceeded)} message={prompt[0]} />}

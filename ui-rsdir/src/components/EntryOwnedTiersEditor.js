@@ -14,6 +14,7 @@ import {
   Row,
 } from '@folio/stripes/components';
 import { SimpleTable, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import useDirectoryPermissions from '../hooks/useDirectoryPermissions';
 import TierForm from './TierForm';
 
 const entryPath = id => `directory/entries/by-id/${id}`;
@@ -39,6 +40,8 @@ const tierLabel = tier => tier?.name || tier?.id || '';
 const EntryOwnedTiersEditor = ({ id }) => {
   const callout = useContext(CalloutContext);
   const intl = useIntl();
+  // Only consortium admins may change tiers, networks and closures.
+  const { isConsortiumAdmin } = useDirectoryPermissions();
   const stripes = useStripes();
   const ky = useOkapiKy();
   const queryClient = useQueryClient();
@@ -236,17 +239,19 @@ const EntryOwnedTiersEditor = ({ id }) => {
 
   return (
     <div>
-      <Row end="xs">
-        <Col xs={12}>
-          <Button
-            buttonStyle="primary"
-            id="clickable-add-entry-owned-tier"
-            onClick={openCreateModal}
-          >
-            <FormattedMessage id="ui-rsdir.add" />
-          </Button>
-        </Col>
-      </Row>
+      {isConsortiumAdmin && (
+        <Row end="xs">
+          <Col xs={12}>
+            <Button
+              buttonStyle="primary"
+              id="clickable-add-entry-owned-tier"
+              onClick={openCreateModal}
+            >
+              <FormattedMessage id="ui-rsdir.add" />
+            </Button>
+          </Col>
+        </Row>
+      )}
       {isModalOpen && (
         <Form
           key={editingTier?.id || 'create'}
@@ -298,7 +303,7 @@ const EntryOwnedTiersEditor = ({ id }) => {
         id="entry-owned-tiers-list"
         defaultSortColumn="name"
         caption={intl.formatMessage({ id: 'ui-rsdir.entry.section.tiers' })}
-        columns={columns}
+        columns={isConsortiumAdmin ? columns : columns.filter(column => column.key !== 'actions')}
         rows={tiers}
         emptyMessage={intl.formatMessage({ id: 'ui-rsdir.tiers.empty' })}
         loading={tiersQuery.isFetching}

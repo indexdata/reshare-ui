@@ -6,6 +6,7 @@ import SettingsConfigEditor from '../components/SettingsConfigEditor';
 import { configSection } from '../config/configSections';
 import HostProfilesError from '../components/HostProfilesError';
 import useEffectiveSections from '../hooks/useEffectiveSections';
+import useDirectoryPermissions from '../hooks/useDirectoryPermissions';
 import { selectionChangeImpact } from '../config/vendorFieldMapping';
 
 const STALE_QUERY_TIME = 2 * 60 * 1000;
@@ -18,6 +19,7 @@ const CatalogConfigRoute = () => {
     staleTime: STALE_QUERY_TIME,
   });
   const { sections, hostProfiles: { catalogConfig: hostProfiles } } = useEffectiveSections(entryQuery.data);
+  const { canEditEntry } = useDirectoryPermissions(entryQuery.data);
   const { metadata } = hostProfiles;
   const mappedFields = sections.find(row => row.configKey === 'catalogConfig').fieldMap;
 
@@ -51,6 +53,7 @@ const CatalogConfigRoute = () => {
             }) : undefined
           )}
           initialResource={entryQuery.data}
+          readOnly={!canEditEntry}
           resourcePath={entryPath(id)}
           searchWords={searchWords}
           shownFields={shownFields}
