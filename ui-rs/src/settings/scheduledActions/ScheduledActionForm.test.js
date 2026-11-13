@@ -317,4 +317,78 @@ describe('ScheduledActionForm', () => {
     await waitFor(() => expect(byId('scheduled-action-actionName')).toBeInTheDocument());
     expect(byId('scheduled-action-preset')).toBeNull();
   });
+
+  it.each([
+    ['request-aging', 'age'],
+    ['archive-borrowing-requests', 'archive'],
+  ])('%s requires a positive duration independently of the schedule interval', async (actionName, fieldPrefix) => {
+    await renderForm(jest.fn());
+    fireEvent.change(byId('scheduled-action-actionName'), { target: { value: actionName } });
+    const duration = byId(`scheduled-action-${fieldPrefix}-interval`);
+    fillRequired();
+    expect(byId(RECIPIENT_0)).toBeNull();
+    expect(save()).toBeDisabled();
+
+    for (const interval of ['0h', '0h0m0s', '-24h', '30d', 'abc', '1h trailing', '500ms', '0.1ns']) {
+      fireEvent.change(duration, { target: { value: interval } });
+      await waitFor(() => expect(save()).toBeDisabled());
+    }
+    for (const interval of ['720h', '72h3m30s', '1.5h', '30m', '45s']) {
+      fireEvent.change(duration, { target: { value: interval } });
+      await waitFor(() => expect(save()).not.toBeDisabled());
+    }
+    fireEvent.change(byId('scheduled-action-frequency'), { target: { value: 'minutely' } });
+    fireEvent.change(byId('scheduled-action-interval'), { target: { value: '15' } });
+    await waitFor(() => expect(save()).not.toBeDisabled());
+    fireEvent.change(duration, { target: { value: '' } });
+    await waitFor(() => expect(save()).toBeDisabled());
+  });
+
+  it.each(['archive-borrowing-requests', 'archive-lending-requests'])(
+    'loads the broker preset for %s with its schedule and options',
+    async (actionName) => {
+      const preset = {
+        actionName,
+        titleKey: actionName,
+        title: 'Archive closed requests',
+        batchQuery: 'terminal_state = true',
+        schedule: 'FREQ=DAILY;BYHOUR=3',
+        actionParams: { interval: '720h', anonymize: false },
+      };
+      mockOkapi.setResponses({
+        'broker/state_model/batch_actions': [preset],
+        'broker/templates': TEMPLATES,
+      });
+      const onSubmit = jest.fn();
+      await renderForm(onSubmit);
+      fireEvent.change(byId('scheduled-action-preset'), { target: { value: '0' } });
+      expect(byId('scheduled-action-actionName')).toHaveValue(actionName);
+      expect(byId('scheduled-action-archive-interval')).toHaveValue('720h');
+      expect(byId('scheduled-action-archive-anonymize')).not.toBeChecked();
+      expect(byId('scheduled-action-hours')).toHaveValue('3');
+      await waitFor(() => expect(save()).not.toBeDisabled());
+      fireEvent.click(save());
+      await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+        title: preset.title,
+        batchQuery: preset.batchQuery,
+        days: [1, 2, 3, 4, 5, 6, 0],
+        actionParams: { interval: '720h', anonymize: false },
+      }), expect.anything(), expect.anything()));
+    },
+  );
+
+  it('clears archive options when switching to another action type', async () => {
+    const onSubmit = jest.fn();
+    await renderForm(onSubmit);
+    fireEvent.change(byId('scheduled-action-actionName'), { target: { value: 'archive-lending-requests' } });
+    fireEvent.change(byId('scheduled-action-archive-interval'), { target: { value: '720h' } });
+    fireEvent.click(byId('scheduled-action-archive-anonymize'));
+    fireEvent.change(byId('scheduled-action-actionName'), { target: { value: 'request-aging' } });
+    fillRequired();
+    expect(byId('scheduled-action-age-interval')).toHaveValue('');
+    fireEvent.change(byId('scheduled-action-age-interval'), { target: { value: '24h' } });
+    fireEvent.click(save());
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit.mock.calls[0][0].actionParams).toEqual({ interval: '24h' });
+  });
 });

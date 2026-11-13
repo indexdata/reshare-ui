@@ -26,6 +26,10 @@ const { CalloutContext } = require('@folio/stripes/core');
 const PATH = '/settings/rs/scheduled-actions';
 
 const NO_EVENTS = { about: { count: 0 }, items: [] };
+const ARCHIVE_ACTIONS = ['archive-borrowing-requests', 'archive-lending-requests', 'archive-ill-transactions'];
+const archiveQuery = actionName => (actionName === 'archive-ill-transactions'
+  ? 'last_supplier_status==LoanCompleted'
+  : 'terminal_state = true');
 
 // The schedule summary needs an ICU template to preserve interpolated values.
 const messages = {
@@ -127,6 +131,86 @@ describe('ScheduledActions list', () => {
     expect(mockOkapi.put).toHaveBeenCalledWith('broker/batch_actions/a1', {
       json: expect.objectContaining({ title: 'Taken' }),
     });
+  });
+
+  it.each(ARCHIVE_ACTIONS)('creates %s with retention and anonymization options', async (actionName) => {
+    mockOkapi.setResponses({
+      'broker/state_model/batch_actions': [],
+      'broker/templates': { items: [] },
+      'broker/batch_actions': { about: { count: 0 }, items: [] },
+    });
+    renderList(`${PATH}/new`);
+    const actionSelect = await screen.findByLabelText('ui-rs.settings.scheduledActions.field.actionName');
+    fireEvent.change(actionSelect, { target: { value: actionName } });
+    fireEvent.change(screen.getByLabelText(/ui-rs.settings.scheduledActions.field.title/), { target: { value: 'Archive' } });
+    fireEvent.change(screen.getByLabelText(/ui-rs.settings.scheduledActions.field.batchQuery/), { target: { value: archiveQuery(actionName) } });
+    fireEvent.change(screen.getByLabelText('ui-rs.settings.scheduledActions.field.frequency'), { target: { value: 'hourly' } });
+    fireEvent.change(screen.getByLabelText(/ui-rs.settings.scheduledActions.params.archiveInterval/), { target: { value: '720h' } });
+    fireEvent.click(screen.getByLabelText('ui-rs.settings.scheduledActions.params.anonymize'));
+    const create = screen.getByRole('button', { name: 'ui-rs.create' });
+    await waitFor(() => expect(create).not.toBeDisabled());
+    fireEvent.click(create);
+    await waitFor(() => expect(mockOkapi.post).toHaveBeenCalledWith('broker/batch_actions', {
+      json: {
+        actionName,
+        title: 'Archive',
+        batchQuery: archiveQuery(actionName),
+        schedule: 'FREQ=HOURLY;BYMINUTE=0',
+        actionParams: { interval: '720h', anonymize: true },
+      },
+    }));
+  });
+
+  it.each(ARCHIVE_ACTIONS)('loads and updates %s without changing its action type', async (actionName) => {
+    mockOkapi.setResponses({
+      'broker/batch_actions/a1': {
+        id: 'a1',
+        actionName,
+        title: 'Archive',
+        batchQuery: archiveQuery(actionName),
+        schedule: 'FREQ=DAILY;BYHOUR=3',
+        actionParams: { interval: '720h', anonymize: true },
+      },
+      'broker/batch_actions/a1/events': NO_EVENTS,
+    });
+    renderList(`${PATH}/a1/edit`);
+    const interval = await screen.findByLabelText(/ui-rs.settings.scheduledActions.params.archiveInterval/);
+    expect(interval).toHaveValue('720h');
+    expect(screen.getByLabelText('ui-rs.settings.scheduledActions.field.actionName')).toBeDisabled();
+    const anonymize = screen.getByLabelText('ui-rs.settings.scheduledActions.params.anonymize');
+    expect(anonymize).toBeChecked();
+    fireEvent.change(interval, { target: { value: '1440h' } });
+    fireEvent.click(anonymize);
+    fireEvent.change(screen.getByLabelText(/ui-rs.settings.scheduledActions.field.batchQuery/), { target: { value: `${archiveQuery(actionName)} and id = test` } });
+    fireEvent.change(screen.getByLabelText(/ui-rs.settings.scheduledActions.field.hours/), { target: { value: '4' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ui-rs.save' }));
+    await waitFor(() => expect(mockOkapi.put).toHaveBeenCalledWith('broker/batch_actions/a1', {
+      json: {
+        actionName,
+        title: 'Archive',
+        batchQuery: `${archiveQuery(actionName)} and id = test`,
+        schedule: 'FREQ=DAILY;BYHOUR=4;BYMINUTE=0',
+        actionParams: { interval: '1440h', anonymize: false },
+      },
+    }));
+  });
+
+  it.each(ARCHIVE_ACTIONS)('shows the saved %s options', async (actionName) => {
+    mockOkapi.setResponses({
+      'broker/batch_actions/a1': {
+        id: 'a1',
+        actionName,
+        title: 'Archive',
+        batchQuery: archiveQuery(actionName),
+        schedule: 'FREQ=DAILY;BYHOUR=3',
+        actionParams: { interval: '720h', anonymize: true },
+      },
+      'broker/batch_actions/a1/events': NO_EVENTS,
+    });
+    renderList(`${PATH}/a1`);
+    expect(await screen.findByText('720h')).toBeInTheDocument();
+    expect(screen.getByText('ui-rs.settings.scheduledActions.params.anonymize')).toBeInTheDocument();
+    expect(screen.getByText('ui-rs.yes')).toBeInTheDocument();
   });
 
   describe('event history', () => {
