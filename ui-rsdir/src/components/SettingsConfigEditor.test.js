@@ -138,6 +138,7 @@ const renderEditor = ({
   initialResource,
   onSave,
   getSelectionChangeImpact,
+  readOnly,
 } = {}) => render(
   <SettingsConfigEditor
     configKey={configKey}
@@ -146,6 +147,7 @@ const renderEditor = ({
     initialResource={initialResource || { [configKey]: {} }}
     getSelectionChangeImpact={getSelectionChangeImpact}
     onSave={onSave}
+    readOnly={readOnly}
     resourcePath="directory/entries/by-id/entry-id"
     successMessage="Saved"
   />
@@ -1337,6 +1339,17 @@ describe('SettingsConfigEditor disabled fields', () => {
     expect(screen.getByText('inheritedField').closest('section')).toHaveClass('disabledField');
     expect(screen.getByText('Inherited value')).toBeInTheDocument();
     expect(document.getElementById('edit-settings-config-inheritedField')).not.toBeInTheDocument();
+  });
+
+  it('shows saved values without edit controls when the editor is read-only', () => {
+    renderEditor({
+      fieldMapping: [{ fieldName: 'plainField' }],
+      initialResource: { config: { plainField: 'Saved value' } },
+      readOnly: true,
+    });
+
+    expect(screen.getByText('Saved value')).toBeInTheDocument();
+    expect(document.getElementById('edit-settings-config-plainField')).not.toBeInTheDocument();
   });
 
   it('greys out a disabled card without rendering its content or edit control', () => {

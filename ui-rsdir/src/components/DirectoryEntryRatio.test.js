@@ -8,6 +8,8 @@ import ViewEntry from './ViewEntry';
 const mockPost = jest.fn();
 const mockPatch = jest.fn();
 let mockEntry;
+let mockPerms;
+let mockSearch;
 
 jest.mock('react-intl', () => ({
   FormattedMessage: ({ children, id }) => (typeof children === 'function' ? children([id]) : id),
@@ -37,14 +39,15 @@ jest.mock('react-query', () => ({
 
 jest.mock('react-router-dom', () => ({
   Prompt: () => null,
+  Redirect: ({ to }) => <div data-testid="redirect">{to}</div>,
   useParams: () => ({ id: mockEntry?.id }),
   useHistory: () => ({ push: jest.fn() }),
-  useLocation: () => ({ search: '' }),
+  useLocation: () => ({ search: mockSearch }),
 }));
 
 jest.mock('../hooks/useDirectoryPermissions', () => ({
   __esModule: true,
-  default: () => ({ isConsortiumAdmin: true, canEditEntry: true }),
+  default: () => mockPerms,
 }));
 jest.mock('./AddressesField', () => () => null);
 jest.mock('./SymbolsField', () => () => null);
@@ -82,9 +85,12 @@ jest.mock('@folio/stripes/components', () => {
 
 const ratioInput = () => screen.getByRole('textbox', { name: /ui-rsdir.entry.lendToBorrowRatio/ });
 const saveButton = () => screen.getByRole('button', { name: mockEntry ? 'ui-rsdir.edit.submit' : 'ui-rsdir.create' });
+const tenantInput = () => screen.getByRole('textbox', { name: 'ui-rsdir.entry.tenant' });
 
 beforeEach(() => {
   mockEntry = undefined;
+  mockPerms = { isConsortiumAdmin: true, canEditEntry: true };
+  mockSearch = '';
   mockPost.mockReset();
   mockPatch.mockReset();
   mockPost.mockResolvedValue({ json: () => Promise.resolve({ id: 'new-entry' }) });
@@ -133,6 +139,7 @@ describe('Directory Entry ratio', () => {
   it('populates existing values, normalizes on blur, and patches only the ratio', async () => {
     mockEntry = { id: 'entry-id', name: 'Library', type: 'Institution', lendToBorrowRatio: '50:2' };
     render(<EditEntryRoute />);
+    expect(tenantInput().disabled).toBe(false);
     expect(ratioInput().value).toBe('50:2');
     fireEvent.change(ratioInput(), { target: { value: '0000.01:0002.50' } });
     fireEvent.blur(ratioInput());
@@ -174,5 +181,34 @@ describe('Directory Entry ratio', () => {
     expect(screen.getByText('01:0.50')).toBeTruthy();
     expect(entry.lendToBorrowRatio).toBe('0001:0000.50');
     expect(mockPatch).not.toHaveBeenCalled();
+  });
+});
+
+describe('Directory Entry route permissions', () => {
+  beforeEach(() => {
+    mockSearch = '?query=lib';
+  });
+
+  it('redirects users who cannot create entries back to the list', () => {
+    mockPerms = { isConsortiumAdmin: false, canEditEntry: false };
+    render(<EditEntryRoute />);
+    expect(screen.getByTestId('redirect')).toHaveTextContent('/directory/entries?query=lib');
+    expect(document.getElementById('form-entry')).toBeNull();
+  });
+
+  it('redirects users who cannot edit an entry back to its view', () => {
+    mockEntry = { id: 'entry-id', name: 'Library', type: 'Institution', tenant: 'other' };
+    mockPerms = { isConsortiumAdmin: false, canEditEntry: false };
+    render(<EditEntryRoute />);
+    expect(screen.getByTestId('redirect')).toHaveTextContent('/directory/entries/entry-id?query=lib');
+    expect(document.getElementById('form-entry')).toBeNull();
+  });
+
+  it('lets an institution admin edit their own entry without changing its tenant', () => {
+    mockEntry = { id: 'entry-id', name: 'Library', type: 'Institution', tenant: 'inst1' };
+    mockPerms = { isConsortiumAdmin: false, canEditEntry: true };
+    render(<EditEntryRoute />);
+    expect(screen.queryByTestId('redirect')).toBeNull();
+    expect(tenantInput().disabled).toBe(true);
   });
 });
