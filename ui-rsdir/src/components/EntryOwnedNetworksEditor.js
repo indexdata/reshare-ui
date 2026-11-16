@@ -14,6 +14,7 @@ import {
   Row,
 } from '@folio/stripes/components';
 import { SimpleTable, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import useDirectoryPermissions from '../hooks/useDirectoryPermissions';
 import NetworkForm from './NetworkForm';
 
 const entryPath = id => `directory/entries/by-id/${id}`;
@@ -41,6 +42,8 @@ const reciprocalMessageId = value => {
 const EntryOwnedNetworksEditor = ({ id }) => {
   const callout = useContext(CalloutContext);
   const intl = useIntl();
+  // Only consortium admins may change tiers, networks and closures.
+  const { isConsortiumAdmin } = useDirectoryPermissions();
   const ky = useOkapiKy();
   const queryClient = useQueryClient();
   const [editingNetwork, setEditingNetwork] = useState();
@@ -229,17 +232,19 @@ const EntryOwnedNetworksEditor = ({ id }) => {
 
   return (
     <div>
-      <Row end="xs">
-        <Col xs={12}>
-          <Button
-            buttonStyle="primary"
-            id="clickable-add-entry-owned-network"
-            onClick={openCreateModal}
-          >
-            <FormattedMessage id="ui-rsdir.add" />
-          </Button>
-        </Col>
-      </Row>
+      {isConsortiumAdmin && (
+        <Row end="xs">
+          <Col xs={12}>
+            <Button
+              buttonStyle="primary"
+              id="clickable-add-entry-owned-network"
+              onClick={openCreateModal}
+            >
+              <FormattedMessage id="ui-rsdir.add" />
+            </Button>
+          </Col>
+        </Row>
+      )}
       {isModalOpen && (
         <Form
           key={editingNetwork?.id || 'create'}
@@ -291,7 +296,7 @@ const EntryOwnedNetworksEditor = ({ id }) => {
         id="entry-owned-networks-list"
         defaultSortColumn="name"
         caption={intl.formatMessage({ id: 'ui-rsdir.entry.section.networks' })}
-        columns={columns}
+        columns={isConsortiumAdmin ? columns : columns.filter(column => column.key !== 'actions')}
         rows={networks}
         emptyMessage={intl.formatMessage({ id: 'ui-rsdir.networks.empty' })}
         loading={networksQuery.isFetching}

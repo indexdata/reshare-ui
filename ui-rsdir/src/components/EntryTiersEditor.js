@@ -11,6 +11,7 @@ import {
   Select,
 } from '@folio/stripes/components';
 import { SimpleTable, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import useDirectoryPermissions from '../hooks/useDirectoryPermissions';
 
 const entryTiersPath = id => `directory/entries/by-id/${id}/tiers`;
 const tiersPath = 'directory/tiers';
@@ -29,6 +30,8 @@ const tierLabel = tier => tier?.name || tier?.id || '';
 const EntryTiersEditor = ({ id }) => {
   const ky = useOkapiKy();
   const intl = useIntl();
+  // Only consortium admins may change tiers, networks and closures.
+  const { isConsortiumAdmin } = useDirectoryPermissions();
   const callout = useContext(CalloutContext);
   const queryClient = useQueryClient();
   const [selectedTierId, setSelectedTierId] = useState('');
@@ -153,32 +156,34 @@ const EntryTiersEditor = ({ id }) => {
 
   return (
     <div>
-      <Row bottom="xs">
-        <Col xs={8}>
-          <Select
-            dataOptions={availableTierOptions}
-            id="add-entry-tier-select"
-            label={<FormattedMessage id="ui-rsdir.tiers.available" />}
-            onChange={event => setSelectedTierId(event.target.value)}
-            value={selectedTierId}
-          />
-        </Col>
-        <Col xs={4}>
-          <Button
-            buttonStyle="primary"
-            disabled={!selectedTierId || addTier.isLoading}
-            id="clickable-add-entry-tier"
-            onClick={handleAddTier}
-          >
-            <FormattedMessage id="ui-rsdir.tiers.add" />
-          </Button>
-        </Col>
-      </Row>
+      {isConsortiumAdmin && (
+        <Row bottom="xs">
+          <Col xs={8}>
+            <Select
+              dataOptions={availableTierOptions}
+              id="add-entry-tier-select"
+              label={<FormattedMessage id="ui-rsdir.tiers.available" />}
+              onChange={event => setSelectedTierId(event.target.value)}
+              value={selectedTierId}
+            />
+          </Col>
+          <Col xs={4}>
+            <Button
+              buttonStyle="primary"
+              disabled={!selectedTierId || addTier.isLoading}
+              id="clickable-add-entry-tier"
+              onClick={handleAddTier}
+            >
+              <FormattedMessage id="ui-rsdir.tiers.add" />
+            </Button>
+          </Col>
+        </Row>
+      )}
       <SimpleTable
         id="entry-tiers-list"
         defaultSortColumn="name"
         caption={intl.formatMessage({ id: 'ui-rsdir.entry.section.tiers' })}
-        columns={columns}
+        columns={isConsortiumAdmin ? columns : columns.filter(column => column.key !== 'actions')}
         rows={entryTiers}
         emptyMessage={intl.formatMessage({ id: 'ui-rsdir.tiers.empty' })}
         loading={entryTiersQuery.isFetching || tiersQuery.isFetching}

@@ -16,6 +16,7 @@ import {
   Row,
 } from '@folio/stripes/components';
 import { SimpleTable, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import useDirectoryPermissions from '../hooks/useDirectoryPermissions';
 import ClosureForm, { validateClosure } from './ClosureForm';
 
 const entryPath = id => `directory/entries/by-id/${id}`;
@@ -33,6 +34,8 @@ const byDate = (column, other) => (a, b) => (
 const EntryClosuresEditor = ({ id }) => {
   const callout = useContext(CalloutContext);
   const intl = useIntl();
+  // Only consortium admins may change tiers, networks and closures.
+  const { isConsortiumAdmin } = useDirectoryPermissions();
   const ky = useOkapiKy();
   const queryClient = useQueryClient();
   const [editingClosure, setEditingClosure] = useState();
@@ -210,17 +213,19 @@ const EntryClosuresEditor = ({ id }) => {
 
   return (
     <div>
-      <Row end="xs">
-        <Col xs={12}>
-          <Button
-            buttonStyle="primary"
-            id="clickable-add-closure"
-            onClick={openCreateModal}
-          >
-            <FormattedMessage id="ui-rsdir.add" />
-          </Button>
-        </Col>
-      </Row>
+      {isConsortiumAdmin && (
+        <Row end="xs">
+          <Col xs={12}>
+            <Button
+              buttonStyle="primary"
+              id="clickable-add-closure"
+              onClick={openCreateModal}
+            >
+              <FormattedMessage id="ui-rsdir.add" />
+            </Button>
+          </Col>
+        </Row>
+      )}
       {isModalOpen && (
         <Form
           key={editingClosure?.id || 'create'}
@@ -273,7 +278,7 @@ const EntryClosuresEditor = ({ id }) => {
       <SimpleTable
         id="entry-closures-list"
         caption={intl.formatMessage({ id: 'ui-rsdir.entry.section.closures' })}
-        columns={columns}
+        columns={isConsortiumAdmin ? columns : columns.filter(column => column.key !== 'actions')}
         rows={closures}
         emptyMessage={intl.formatMessage({ id: 'ui-rsdir.closures.empty' })}
         loading={entryQuery.isFetching}

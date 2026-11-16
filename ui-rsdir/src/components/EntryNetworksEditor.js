@@ -12,6 +12,7 @@ import {
   TextField,
 } from '@folio/stripes/components';
 import { SimpleTable, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import useDirectoryPermissions from '../hooks/useDirectoryPermissions';
 
 const entryNetworksPath = id => `directory/entries/by-id/${id}/networks`;
 const networksPath = 'directory/networks';
@@ -35,6 +36,8 @@ const networkLabel = network => network?.name || network?.id || '';
 const EntryNetworksEditor = ({ id }) => {
   const ky = useOkapiKy();
   const intl = useIntl();
+  // Only consortium admins may change tiers, networks and closures.
+  const { isConsortiumAdmin } = useDirectoryPermissions();
   const callout = useContext(CalloutContext);
   const queryClient = useQueryClient();
   const [selectedNetworkId, setSelectedNetworkId] = useState('');
@@ -250,18 +253,20 @@ const EntryNetworksEditor = ({ id }) => {
         return (
           <>
             {network.priority ?? ''}
-            <IconButton
-              aria-label={intl.formatMessage({ id: 'ui-rsdir.network.priority.edit' }, { name: networkLabel(network) })}
-              disabled={!membershipsQuery.isSuccess || !membership?.id || !!editingPriority || deleteNetwork.isLoading}
-              icon="edit"
-              id={`clickable-edit-network-priority-${network.id}`}
-              onClick={() => setEditingPriority({
-                entryId: id,
-                networkId: network.id,
-                value: String(network.priority ?? membership.priority),
-                originalValue: network.priority ?? membership.priority,
-              })}
-            />
+            {isConsortiumAdmin &&
+              <IconButton
+                aria-label={intl.formatMessage({ id: 'ui-rsdir.network.priority.edit' }, { name: networkLabel(network) })}
+                disabled={!membershipsQuery.isSuccess || !membership?.id || !!editingPriority || deleteNetwork.isLoading}
+                icon="edit"
+                id={`clickable-edit-network-priority-${network.id}`}
+                onClick={() => setEditingPriority({
+                  entryId: id,
+                  networkId: network.id,
+                  value: String(network.priority ?? membership.priority),
+                  originalValue: network.priority ?? membership.priority,
+                })}
+              />
+            }
           </>
         );
       },
@@ -289,42 +294,44 @@ const EntryNetworksEditor = ({ id }) => {
 
   return (
     <div>
-      <Row bottom="xs">
-        <Col xs={6}>
-          <Select
-            dataOptions={availableNetworkOptions}
-            disabled={addNetwork.isLoading}
-            id="add-entry-network-select"
-            label={<FormattedMessage id="ui-rsdir.networks.available" />}
-            onChange={event => setSelectedNetworkId(event.target.value)}
-            value={selectedNetworkId}
-          />
-        </Col>
-        <Col xs={3}>
-          <TextField
-            id="add-entry-network-priority"
-            label={<FormattedMessage id="ui-rsdir.network.priority" />}
-            type="number"
-            min={-2147483648}
-            max={2147483647}
-            step={1}
-            value={newPriority}
-            disabled={addNetwork.isLoading}
-            error={validPriority(newPriority) ? undefined : priorityError}
-            onChange={event => setNewPriority(event.target.value)}
-          />
-        </Col>
-        <Col xs={3}>
-          <Button
-            buttonStyle="primary"
-            disabled={!selectedNetworkId || !validPriority(newPriority) || addNetwork.isLoading}
-            id="clickable-add-entry-network"
-            onClick={handleAddNetwork}
-          >
-            <FormattedMessage id="ui-rsdir.networks.add" />
-          </Button>
-        </Col>
-      </Row>
+      {isConsortiumAdmin && (
+        <Row bottom="xs">
+          <Col xs={6}>
+            <Select
+              dataOptions={availableNetworkOptions}
+              disabled={addNetwork.isLoading}
+              id="add-entry-network-select"
+              label={<FormattedMessage id="ui-rsdir.networks.available" />}
+              onChange={event => setSelectedNetworkId(event.target.value)}
+              value={selectedNetworkId}
+            />
+          </Col>
+          <Col xs={3}>
+            <TextField
+              id="add-entry-network-priority"
+              label={<FormattedMessage id="ui-rsdir.network.priority" />}
+              type="number"
+              min={-2147483648}
+              max={2147483647}
+              step={1}
+              value={newPriority}
+              disabled={addNetwork.isLoading}
+              error={validPriority(newPriority) ? undefined : priorityError}
+              onChange={event => setNewPriority(event.target.value)}
+            />
+          </Col>
+          <Col xs={3}>
+            <Button
+              buttonStyle="primary"
+              disabled={!selectedNetworkId || !validPriority(newPriority) || addNetwork.isLoading}
+              id="clickable-add-entry-network"
+              onClick={handleAddNetwork}
+            >
+              <FormattedMessage id="ui-rsdir.networks.add" />
+            </Button>
+          </Col>
+        </Row>
+      )}
       {membershipsQuery.isError && (
         <div role="alert">
           <FormattedMessage id="ui-rsdir.network.priority.load.error" />
@@ -334,7 +341,7 @@ const EntryNetworksEditor = ({ id }) => {
         id="entry-networks-list"
         defaultSortColumn="name"
         caption={intl.formatMessage({ id: 'ui-rsdir.entry.section.networks' })}
-        columns={columns}
+        columns={isConsortiumAdmin ? columns : columns.filter(column => column.key !== 'actions')}
         rows={entryNetworks}
         emptyMessage={intl.formatMessage({ id: 'ui-rsdir.networks.empty' })}
         loading={entryNetworksQuery.isFetching || networksQuery.isFetching}

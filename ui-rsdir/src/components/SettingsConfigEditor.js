@@ -367,6 +367,7 @@ const SettingsConfigEditor = ({
   getSelectionChangeImpact,
   initialResource,
   onSave,
+  readOnly = false,
   resourcePath,
   searchWords = [],
   shownFields,
@@ -2694,8 +2695,8 @@ const SettingsConfigEditor = ({
         const cannotEdit = isCodeDescription && !committedTopLevelValue(field) &&
           codeDescriptionChoices(field, fieldName).length === 0;
 
-        if (field.readOnly && !field.disabled) {
-          // Inherited-only setting: show the resolved value without editing controls.
+        if ((readOnly || field.readOnly) && !field.disabled) {
+          // Inherited-only setting, or no permission to edit: show the resolved value without editing controls.
           return (
             <Card
               cardClass={`${css.disabledField} ${css.readOnlyField}`}
