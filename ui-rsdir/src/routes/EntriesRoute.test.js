@@ -7,9 +7,12 @@ import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKy
 import EntriesRoute from './EntriesRoute';
 
 const mockOkapi = makeOkapiKyMock();
+let mockTenant;
 
-jest.mock('@folio/stripes/core', () => require('@projectreshare/stripes-reshare/testing/stripesCore')
-  .makeStripesCoreMock(() => mockOkapi));
+jest.mock('@folio/stripes/core', () => {
+  const core = require('@projectreshare/stripes-reshare/testing/stripesCore').makeStripesCoreMock(() => mockOkapi);
+  return { ...core, useStripes: () => ({ ...core.useStripes(), okapi: { tenant: mockTenant } }) };
+});
 jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
 jest.mock('@projectreshare/stripes-reshare', () => ({
   ...jest.requireActual('@projectreshare/stripes-reshare'),
@@ -33,6 +36,7 @@ jest.mock('@folio/stripes/components', () => ({
 const queryInput = () => document.querySelector('input[name="query"]');
 const indexInput = () => document.querySelector('select[name="qindex"]');
 const pickupCheckbox = () => screen.getByRole('checkbox', { name: 'ui-rsdir.filter.pickupLocation' });
+const ownedCheckbox = () => screen.getByRole('checkbox', { name: 'ui-rsdir.filter.ownedEntry' });
 const typeInput = () => screen.getByRole('combobox', { name: 'ui-rsdir.entry.type' });
 const lastParams = () => new URLSearchParams(mockOkapi.calledUrls().at(-1).split('?')[1]);
 
@@ -51,6 +55,7 @@ const submitSearch = (query, index = '') => {
 };
 
 beforeEach(() => {
+  mockTenant = 'inst1';
   mockOkapi.mockClear();
   mockOkapi.setResponses({
     'directory/entries': url => {
@@ -351,6 +356,30 @@ it('returns to page one when changing type, including cached results', async () 
   expect(screen.queryByText('Second page entry')).not.toBeInTheDocument();
   expect(mockOkapi.calledUrls()).toHaveLength(requestsBeforeChange);
   queryClient.clear();
+});
+
+it('restricts to entries owned by the current tenant and removes the restriction', async () => {
+  const { history } = renderList('?filters=type.Institution');
+  await screen.findByText('University Central Library');
+  expect(ownedCheckbox()).not.toBeChecked();
+
+  fireEvent.click(ownedCheckbox());
+  await waitFor(() => expect(lastParams().get('cql')).toBe('type=="Institution" and tenant=="inst1"'));
+  expect(ownedCheckbox()).toBeChecked();
+  expect(new URLSearchParams(history.location.search).get('filters')).toBe('type.Institution,owned.true');
+
+  fireEvent.click(ownedCheckbox());
+  await waitFor(() => expect(new URLSearchParams(history.location.search).get('filters')).toBe('type.Institution'));
+  expect(ownedCheckbox()).not.toBeChecked();
+});
+
+it('disables the owned filter and does not restrict by tenant when there is no tenant', async () => {
+  mockTenant = undefined;
+  renderList('?filters=type.Institution,owned.true');
+  await screen.findByText('University Central Library');
+  expect(ownedCheckbox()).toBeDisabled();
+  expect(ownedCheckbox()).not.toBeChecked();
+  expect(lastParams().get('cql')).toBe('type=="Institution" and cql.allRecords=1');
 });
 
 it('immediately applies and removes the pickup filter without a text query', async () => {
