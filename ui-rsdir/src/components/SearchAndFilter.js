@@ -1,5 +1,6 @@
 import React from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
+import { useStripes } from '@folio/stripes/core';
 import { Button, Checkbox, Icon, SearchField, Select } from '@folio/stripes/components';
 
 const defaultSearchableIndexes = [
@@ -25,6 +26,7 @@ const SearchAndFilter = ({
   searchableIndexes = defaultSearchableIndexes,
 }) => {
   const intl = useIntl();
+  const tenant = useStripes().okapi?.tenant;
 
   const indexes = searchableIndexes.map(x => ({
     label: intl.formatMessage({ id: `ui-rsdir.index.${x.label}` }),
@@ -64,6 +66,13 @@ const SearchAndFilter = ({
         name="isPickupLocation.true"
         label={<FormattedMessage id="ui-rsdir.filter.pickupLocation" />}
         checked={activeFilters.isPickupLocation?.includes('true') || false}
+        onChange={filterHandlers.checkbox}
+      />
+      <Checkbox
+        name="owned.true"
+        label={<FormattedMessage id="ui-rsdir.filter.ownedEntry" />}
+        disabled={!tenant}
+        checked={(!!tenant && activeFilters.owned?.includes('true')) || false}
         onChange={filterHandlers.checkbox}
       />
       <Select

@@ -6,6 +6,7 @@
   "index.description" : "Description",
   "index.symbol" : "Symbol",
   "filter.pickupLocation" : "Pickup Location",
+  "filter.ownedEntry" : "Owned Entry",
   "empty" : "No LMS configuration present for this entry",
   "address.header" : "{type} address",
   "entry.contactName" : "Contact name",

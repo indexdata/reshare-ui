@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import queryString from 'query-string';
 
+import { useStripes } from '@folio/stripes/core';
 import { SearchAndSortQuery, makeQueryFunction } from '@folio/stripes/smart-components';
+import { escapeCqlWildcards } from '@folio/stripes/util';
 import { useOkapiQuery } from '@projectreshare/stripes-reshare';
 
 import Entries from '../components/Entries';
@@ -31,7 +33,7 @@ const setDirectoryQuery = ({ location, history, nsValues }) => {
   if (`${location.pathname}${location.search}` !== url) history.push(url);
 };
 
-const FILTER_CONFIG = [{
+const filterConfig = (tenant) => [{
   name: 'type',
   cql: 'type',
   values: ['Consortium', 'Institution', 'Branch'],
@@ -44,11 +46,21 @@ const FILTER_CONFIG = [{
   restrictWhenAllSelected: true,
   parse: values => `isPickupLocation=${values[0]}`,
 },
+{
+  // Entries owned by the current user's tenant. Without a tenant the checkbox is
+  // disabled, but a URL may still carry the filter, so it matches everything.
+  name: 'owned',
+  cql: 'tenant',
+  values: ['true'],
+  restrictWhenAllSelected: true,
+  parse: () => (tenant ? `tenant=="${escapeCqlWildcards(tenant)}"` : 'cql.allRecords=1'),
+},
 ];
 
 const EntriesRoute = ({ children }) => {
   const history = useHistory();
   const location = useLocation();
+  const tenant = useStripes().okapi?.tenant;
   const urlParams = queryString.parse(location.search);
   const needsFilterNormalization = urlParams.filters === undefined;
   const [initializingFilters, setInitializingFilters] = useState(needsFilterNormalization);
@@ -89,7 +101,7 @@ const EntriesRoute = ({ children }) => {
     'cql.allRecords=1',  // fallback when no search/filters
     selectedTemplate,
     {},  // sortMap (empty for now)
-    FILTER_CONFIG,
+    filterConfig(tenant),
     0,   // don't fail on empty query
     undefined,
     { rightTrunc: false, escape: true },
