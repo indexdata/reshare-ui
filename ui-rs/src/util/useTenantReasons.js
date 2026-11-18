@@ -1,4 +1,4 @@
-import { useOwnedEntries } from './useOwnedEntries';
+import { useOwnedEntries } from '@projectreshare/stripes-reshare';
 
 const useTenantReasons = ({ field, enabled }) => {
   const owned = useOwnedEntries({ enabled });

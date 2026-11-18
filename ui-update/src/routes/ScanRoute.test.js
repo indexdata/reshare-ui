@@ -11,10 +11,7 @@ const mockOkapi = makeOkapiKyMock();
 
 jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
 jest.mock('@folio/stripes/core', () => ({
-  ...require('@projectreshare/stripes-reshare/testing/stripesCore').makeStripesCoreMock(
-    () => mockOkapi,
-    () => ({ sharedIndex: { item: 'https://shared-index.example/item/{itemid}' } })
-  ),
+  ...require('@projectreshare/stripes-reshare/testing/stripesCore').makeStripesCoreMock(() => mockOkapi),
   coreEvents: { LOGIN: 'LOGIN' },
 }));
 
@@ -59,6 +56,7 @@ describe('ScanRoute', () => {
     mockOkapi.setResponses({
       'broker/patron_requests': { items: [request] },
       'broker/patron_requests/pr-1': request,
+      'directory/entries/owned': { items: [{ id: 'inst', type: 'Institution', discoveryConfig: { itemLinkTemplate: 'https://discovery.example/item/{itemid}' } }] },
     });
     mockOkapi.post.mockImplementation(async () => actionOk());
   });
@@ -97,7 +95,7 @@ describe('ScanRoute', () => {
     expect(item.getByText('A Title')).toBeInTheDocument();
     expect(item.getByText('An Author')).toBeInTheDocument();
     expect(item.getByRole('link', { name: 'stripes-reshare.viewInSharedIndex' }))
-      .toHaveAttribute('href', 'https://shared-index.example/item/inst-1');
+      .toHaveAttribute('href', 'https://discovery.example/item/inst-1');
   });
 
   it('shows an earlier scan when its row is selected', async () => {

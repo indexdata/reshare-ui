@@ -57,7 +57,7 @@ The argument names the tenant configuration to build against. The platform is bu
 
 The Okapi you point at has to allow requests from your development origin. If it does not, the browser blocks them with a CORS error, and the `--start-proxy` option of `stripes-cli` will run a local proxy in front of Okapi and point the bundle at that instead.
 
-Besides the Okapi URL, the tenant and the module list, a stripes config carries a `config` block of settings that module code can read. ReShare's own settings live under `config.reshare` and cover things like the shared index to search and which optional fields to show.
+Besides the Okapi URL, the tenant and the module list, a stripes config carries a `config` block of settings that module code can read. ReShare's own settings live under `config.reshare` and cover things like which optional fields to show and whether live updates are on.
 
 Anything matching `*.local.js` is gitignored, so the convention for pointing a server somewhere else is to copy the config and serve that instead:
 

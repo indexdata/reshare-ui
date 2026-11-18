@@ -10,6 +10,7 @@ export const SECTIONS = [
   { key: 'lmsconfig', segment: 'lmsconfig', labelId: 'ui-rsdir.entry.section.lmsConfig' },
   { key: 'catalogconfig', segment: 'catalogconfig', labelId: 'ui-rsdir.entry.section.catalogConfig' },
   { key: 'holdingspolicy', segment: 'holdingspolicy', labelId: 'ui-rsdir.entry.section.holdingsPolicy' },
+  { key: 'discoveryconfig', segment: 'discoveryconfig', labelId: 'ui-rsdir.entry.section.discoveryConfig' },
   { key: 'illconfig', segment: 'illconfig', labelId: 'ui-rsdir.entry.section.illConfig' },
   { key: 'tiers', segment: 'tiers', labelId: 'ui-rsdir.entry.section.tiers' },
   { key: 'networks', segment: 'networks', labelId: 'ui-rsdir.entry.section.networks' },

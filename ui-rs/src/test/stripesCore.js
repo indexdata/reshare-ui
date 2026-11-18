@@ -4,7 +4,6 @@ import { makeStripesCoreMock as makeSharedMock } from '@projectreshare/stripes-r
 // One stub serves every route test; a test's own overrides layer over it.
 const reshareConfigStub = {
   showCost: true,
-  sharedIndex: { item: 'https://shared-index.example/inventory/view/{itemid}' },
   patronURL: '/users?qindex=barcode&query={patronid}',
 };
 

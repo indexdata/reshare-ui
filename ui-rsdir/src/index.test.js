@@ -635,6 +635,24 @@ describe('directory entries', () => {
     ));
   });
 
+  it('edits the discovery item link template of a consortium', async () => {
+    mockOkapi.setResponses(responses({
+      'directory/entries/by-id/e1': { ...entry, type: 'Consortium', discoveryConfig: { queryUrl: 'https://discovery.example/search' } },
+    }));
+    renderDirectory(['/directory/entries/e1/discoveryconfig']);
+
+    expect(await screen.findByText('https://discovery.example/search')).toBeInTheDocument();
+    expect(sectionLink('discoveryConfig')).toHaveAttribute('aria-current', 'page');
+
+    fireEvent.click(document.getElementById('edit-discovery-config-itemLinkTemplate'));
+    fireEvent.change(screen.getByRole('textbox', { name: 'itemLinkTemplate' }), { target: { value: 'https://discovery.example/item/{itemid}' } });
+    fireEvent.click(document.getElementById('save-discovery-config-itemLinkTemplate'));
+    await waitFor(() => expect(mockOkapi.patch).toHaveBeenCalledWith(
+      'directory/entries/by-id/e1',
+      { json: { discoveryConfig: { itemLinkTemplate: 'https://discovery.example/item/{itemid}' } } }
+    ));
+  });
+
   it('shows a request ID prefix error on a rejected save and saves a corrected value', async () => {
     renderDirectory(['/directory/entries/e1/illconfig']);
 

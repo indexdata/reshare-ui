@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import uniqBy from 'lodash/uniqBy';
-import { PublicationType, useOkapiQuery } from '@projectreshare/stripes-reshare';
-import { usePickupLocations, useTenantInstitution, useTiers } from '#/util/useOwnedEntries';
+import { PublicationType, useOkapiQuery, usePickupLocations, useTenantInstitution, useTiers } from '@projectreshare/stripes-reshare';
 
 const publicationTypes = PublicationType.map(code => ({ label: code, value: code }));
 
