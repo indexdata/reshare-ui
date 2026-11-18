@@ -48,7 +48,7 @@
   "actions.override-limit" : "Override request limit",
   "actions.send-notification": "Send notification",
   "actions.skip-metadata-update": "Skip metadata update",
-  "actions.skip-patron-validaton": "Skip patron validation",
+  "actions.skip-patron-validation": "Skip patron validation",
   "actions.update-metadata": "Update metadata",
   "actions.validate-patron": "Validate patron",
   "actions.reject-renewal": "Reject renewal",
