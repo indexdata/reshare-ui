@@ -673,8 +673,8 @@ describe('directory entries', () => {
     const table = within(document.getElementById('entry-owned-networks-list'));
     expect(table.getByRole('columnheader', { name: 'ui-rsdir.network.reciprocal' })).toBeInTheDocument();
     expect(table.queryByRole('columnheader', { name: 'ui-rsdir.network.priority' })).not.toBeInTheDocument();
-    expect(table.getByText('stripes-components.boolean.true')).toBeInTheDocument();
-    expect(table.getByText('stripes-components.boolean.false')).toBeInTheDocument();
+    expect(table.getByText('ui-rsdir.boolean.true')).toBeInTheDocument();
+    expect(table.getByText('ui-rsdir.boolean.false')).toBeInTheDocument();
     expect(table.getByText('ui-rsdir.network.reciprocal.unspecified')).toBeInTheDocument();
   });
 

@@ -34,8 +34,8 @@ const normalizeList = data => {
 const networkLabel = network => network?.name || network?.id || '';
 
 const reciprocalMessageId = value => {
-  if (value === true) return 'stripes-components.boolean.true';
-  if (value === false) return 'stripes-components.boolean.false';
+  if (value === true) return 'ui-rsdir.boolean.true';
+  if (value === false) return 'ui-rsdir.boolean.false';
   return 'ui-rsdir.network.reciprocal.unspecified';
 };
 
