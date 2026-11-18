@@ -422,8 +422,8 @@ const SettingsConfigEditor = ({
 
   const booleanOptions = useMemo(() => [
     { label: '', value: '' },
-    { label: intl.formatMessage({ id: 'stripes-components.boolean.true', defaultMessage: 'True' }), value: 'true' },
-    { label: intl.formatMessage({ id: 'stripes-components.boolean.false', defaultMessage: 'False' }), value: 'false' },
+    { label: intl.formatMessage({ id: 'ui-rsdir.boolean.true', defaultMessage: 'True' }), value: 'true' },
+    { label: intl.formatMessage({ id: 'ui-rsdir.boolean.false', defaultMessage: 'False' }), value: 'false' },
   ], [intl]);
 
   useEffect(() => {
