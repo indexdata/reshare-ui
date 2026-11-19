@@ -24,7 +24,7 @@ import css from './SettingsConfigEditor.css';
 import useDirectoryOpenApi from '../hooks/useDirectoryOpenApi';
 import { configFieldDefaultData, configFieldDescription, supportsConfigDescriptions } from '../util/configFieldDescription';
 import fieldLabel from '../util/fieldLabel';
-import { fieldCanInherit } from '../util/inheritancePolicy';
+import { fieldCanInherit, inheritingTypes, mergeUnitFieldNames } from '../util/inheritancePolicy';
 import { foldForHighlight } from '../util/settingsIndex';
 
 const LOCAL_ONLY = { 'resolve-inherit': 'false' };
@@ -36,6 +36,8 @@ const SYMBOL_LIST = 'symbollist';
 const SUB_FIELD = 'subfield';
 const OBJECT_ARRAY = 'objectarray';
 const CODE_DESCRIPTION = 'codedescription';
+// Values shown inline in inheritance notes; other types expand on request.
+const SCALAR_TYPES = ['string', 'integer', 'number', 'boolean', CODE_DESCRIPTION];
 const INTEGER_PATTERN = /^-?\d+$/;
 
 const normalizedValueType = valueType => valueType?.toLowerCase?.() || 'string';
@@ -46,6 +48,20 @@ const sameCodeDescription = (left, right) => !!left && !!right &&
 const selectedSubFields = (value, field) => field.subMap.filter(child => value?.[child.fieldName] != null);
 
 const isValidSymbol = value => !!value?.authority && !!value?.symbol;
+
+// Joins the save impacts of fields saved together into one confirmation.
+const combinedImpact = impacts => {
+  const present = impacts.filter(Boolean);
+  if (present.length <= 1) return present[0];
+
+  return {
+    heading: present[0].heading,
+    message: present.map((item, index) => <React.Fragment key={index}>{index > 0 && ' '}{item.message}</React.Fragment>),
+    confirmLabel: present[0].confirmLabel,
+    discardChangesMessage: present.find(item => item.discardChangesMessage)?.discardChangesMessage,
+    additionalValues: Object.assign({}, ...present.map(item => item.additionalValues)),
+  };
+};
 
 const symbolKey = value => JSON.stringify([value.authority, value.symbol]);
 
@@ -405,7 +421,14 @@ const SettingsConfigEditor = ({
   const [pendingSelection, setPendingSelection] = useState(null);
   const [pendingSave, setPendingSave] = useState(null);
   const [pendingInherit, setPendingInherit] = useState(null);
+  const [pendingRestore, setPendingRestore] = useState(null);
+  const [expandedParentValues, setExpandedParentValues] = useState({});
   const editingFieldsRef = useRef({});
+  // A restore removes the focused Restore button; focus then moves to the card's
+  // Override button once it is enabled again after the save.
+  const focusAfterRestoreRef = useRef(null);
+  // The restore whose parent read is in flight; cancelling the dialog clears it.
+  const restoreRequestRef = useRef(null);
   const savingFieldsRef = useRef({});
   const activeResourcePathRef = useRef(resourcePath);
   const previousResourcePathRef = useRef(resourcePath);
@@ -418,7 +441,20 @@ const SettingsConfigEditor = ({
   useEffect(() => {
     setPendingSave(null);
     setPendingInherit(null);
+    setPendingRestore(null);
+    restoreRequestRef.current = null;
+    setExpandedParentValues({});
   }, [configKey, resourcePath]);
+
+  const spec = openApiQuery.data;
+  const entryType = resource?.type;
+  const canInherit = field => fieldCanInherit(spec, configKey, field.fieldName, entryType);
+  // The parent's merged view is what this entry would inherit if it stored nothing.
+  const parentQuery = useOkapiQuery(`directory/entries/by-id/${resource?.parent}`, {
+    enabled: !!resource?.parent && fieldMapping.some(canInherit),
+    staleTime: LOCAL_STALE_TIME,
+    useErrorBoundary: false,
+  });
 
   const booleanOptions = useMemo(() => [
     { label: '', value: '' },
@@ -463,10 +499,18 @@ const SettingsConfigEditor = ({
     previousResourcePathRef.current = resourcePath;
   }, [configKey, fieldMapping, initialResource, resourcePath]);
 
+  // A context's source, when set, replaces the merged config as the committed value
+  // being displayed, e.g. to show the parent's value. Its instance, when set, marks a
+  // second display of a field on the same card: it keeps label ids unique and leaves
+  // the field's errors to the primary display.
   const contextForField = (field, parentContext) => ({
     path: [...(parentContext?.path || []), field.fieldName],
     topField: parentContext?.topField || field,
+    source: parentContext?.source,
+    instance: parentContext?.instance,
   });
+
+  const instanceId = (...parts) => parts.filter(Boolean).join('-');
 
   const pathForField = (field, parentContext) => contextForField(field, parentContext).path.join('.');
 
@@ -594,8 +638,8 @@ const SettingsConfigEditor = ({
     );
   };
 
-  const committedTopLevelValue = field => toEditorValue(
-    resource?.[configKey]?.[field.fieldName],
+  const committedTopLevelValue = (field, source = resource?.[configKey]) => toEditorValue(
+    source?.[field.fieldName],
     field,
   );
 
@@ -612,9 +656,66 @@ const SettingsConfigEditor = ({
       fieldCanInherit(openApiQuery.data, configKey, field.fieldName, resource?.type);
   };
 
+  const hasValue = (value, field) => value != null && !isEmptyFieldValue(toEditorValue(value, field), field);
+
+  // inherited: no field of the merge unit is stored locally and the merged view has a value.
+  // overriding: the unit is stored locally while the parent has a value to inherit.
+  const inheritanceStatus = field => {
+    if (!localQuery.isSuccess || !canInherit(field)) return null;
+
+    const localConfig = localQuery.data?.[configKey];
+    const parentConfig = parentQuery.data?.[configKey];
+    const unitFields = mergeUnitFieldNames(spec, configKey, field.fieldName, fieldMapping.map(item => item.fieldName))
+      .map(name => fieldMapping.find(item => item.fieldName === name));
+    const localFieldNames = unitFields.filter(item => localConfig?.[item.fieldName] != null)
+      .map(item => item.fieldName);
+
+    if (localFieldNames.length === 0) {
+      return hasValue(resource?.[configKey]?.[field.fieldName], field) ? { inherited: true } : null;
+    }
+    if (!unitFields.some(item => hasValue(parentConfig?.[item.fieldName], item))) return null;
+
+    return {
+      overriding: true,
+      localFieldNames,
+      // An off value is stored locally but omitted from the merged view.
+      localConfig: resource?.[configKey]?.[field.fieldName] == null ? localConfig : undefined,
+    };
+  };
+
+  // The merged value of each other field in field's merge unit, when none of the unit is
+  // stored locally. Storing any field of the unit stops the whole unit inheriting, so a
+  // save stores these alongside it to keep the values the entry has now.
+  const inheritedUnitValues = field => {
+    if (!localQuery.isSuccess || !canInherit(field)) return {};
+
+    const localConfig = localQuery.data?.[configKey];
+    const unitFieldNames = mergeUnitFieldNames(spec, configKey, field.fieldName, fieldMapping.map(item => item.fieldName));
+    if (unitFieldNames.some(name => localConfig?.[name] != null)) return {};
+
+    return Object.fromEntries(unitFieldNames
+      .filter(name => name !== field.fieldName && resource?.[configKey]?.[name] != null)
+      .map(name => [name, resource[configKey][name]]));
+  };
+
+  // Overriding an inherited value starts from that value.
+  const editStartValue = field => (inheritanceStatus(field)?.inherited ? committedTopLevelValue(field) : editBaseValue(field));
+
+  const hasUnsavedDraft = field => !!editingFields[field.fieldName] &&
+    JSON.stringify(valueForPatch(values[field.fieldName], field)) !==
+    JSON.stringify(valueForPatch(editStartValue(field), field));
+
+  const renderDiscardDraftsMessage = fieldNames => (
+    <FormattedMessage
+      id="ui-rsdir.settingsConfig.discardDrafts.fields"
+      defaultMessage="Unsaved changes to {fields} will be discarded."
+      values={{ fields: fieldNames.map(name => labelForPath(name)).join(', ') }}
+    />
+  );
+
   const committedFieldValue = (field, parentContext) => {
     const context = contextForField(field, parentContext);
-    const topLevelValue = committedTopLevelValue(context.topField);
+    const topLevelValue = committedTopLevelValue(context.topField, context.source ?? resource?.[configKey]);
 
     return context.path.length === 1 ? topLevelValue : valueAtPath(topLevelValue, context.path.slice(1));
   };
@@ -698,7 +799,7 @@ const SettingsConfigEditor = ({
   const editField = field => {
     setValues(current => ({
       ...current,
-      [field.fieldName]: editBaseValue(field),
+      [field.fieldName]: editStartValue(field),
     }));
     clearTransientState(field.fieldName);
     setFieldEditing(field.fieldName, true);
@@ -1219,10 +1320,13 @@ const SettingsConfigEditor = ({
 
   // confirmedSave.choice records the inheritance answer: 'inherit' saves null, 'keep'
   // saves the empty value. confirmedSave.inheritedValue is the parent's value for 'inherit'.
+  // confirmedSave.restoreFieldNames lists the merge unit's local fields, all cleared together;
+  // confirmedSave.parentConfig, when set, is a fresh read of the parent's config for their impacts.
   const saveField = (field, confirmedSave) => {
     const { fieldName } = field;
     const savedResourcePath = resourcePath;
     const choice = confirmedSave?.choice;
+    const restoreFieldNames = confirmedSave?.restoreFieldNames ?? [];
 
     if (!choice && offersInheritance(field)) {
       setPendingInherit({ field });
@@ -1230,7 +1334,16 @@ const SettingsConfigEditor = ({
     }
 
     // An empty unset field already inherits (or has nothing to inherit); there is nothing to save.
-    if (choice !== 'keep' && isLocallyUnset(field) && isEmptyFieldValue(values[fieldName], field)) {
+    if (choice !== 'keep' && restoreFieldNames.length === 0 && isLocallyUnset(field) &&
+      isEmptyFieldValue(values[fieldName], field)) {
+      cancelEditingField(field);
+      return;
+    }
+
+    // Saving an unchanged inherited value would only copy the parent's value and stop
+    // inheriting it; there is nothing to save.
+    if (!choice && inheritanceStatus(field)?.inherited && JSON.stringify(valueForPatch(values[fieldName], field)) ===
+      JSON.stringify(valueForPatch(committedTopLevelValue(field), field))) {
       cancelEditingField(field);
       return;
     }
@@ -1246,29 +1359,62 @@ const SettingsConfigEditor = ({
     }
 
     const patchValue = choice === 'inherit' ? null : valueForPatch(values[fieldName], field);
-    const impact = field.getSaveImpact?.({
-      nextValue: choice === 'inherit' ? (confirmedSave.inheritedValue ?? []) : patchValue,
-      resource,
-    });
-    const configPatch = { ...impact?.additionalValues, [fieldName]: patchValue };
+    // A restore clears every local field of the merge unit, so each one's save impact applies.
+    const impact = combinedImpact([
+      field.getSaveImpact?.({
+        nextValue: choice === 'inherit' ? (confirmedSave.inheritedValue ?? []) : patchValue,
+        resource,
+      }),
+      ...restoreFieldNames.filter(name => name !== fieldName).map(name => (
+        fieldMapping.find(item => item.fieldName === name)?.getSaveImpact?.({
+          nextValue: (confirmedSave.parentConfig ?? parentQuery.data?.[configKey])?.[name] ?? [],
+          resource,
+        })
+      )),
+    ]);
+    const configPatch = {
+      ...impact?.additionalValues,
+      ...Object.fromEntries(restoreFieldNames.map(name => [name, null])),
+      ...(patchValue !== null && inheritedUnitValues(field)),
+      [fieldName]: patchValue,
+    };
     const affectedFieldNames = Object.keys(configPatch);
     const affectedFields = fieldMapping.filter(item => affectedFieldNames.includes(item.fieldName));
     const lockedFieldNames = saveLockFieldNames(affectedFieldNames);
     if (lockedFieldNames.some(name => savingFieldsRef.current[name])) return;
 
-    const discardedDrafts = affectedFields.filter(item => (
-      item.fieldName !== fieldName && editingFields[item.fieldName] &&
-      JSON.stringify(valueForPatch(values[item.fieldName], item)) !==
-      JSON.stringify(valueForPatch(editBaseValue(item), item))
-    )).map(item => item.fieldName);
+    const discardedDrafts = affectedFields.filter(item => item.fieldName !== fieldName && hasUnsavedDraft(item))
+      .map(item => item.fieldName);
+    // A save that closes other fields' editors confirms first unless the caller already did.
+    const confirmImpact = impact ?? (discardedDrafts.length > 0 && !confirmedSave?.draftsConfirmed ? {
+      heading: <FormattedMessage id="ui-rsdir.settingsConfig.discardDrafts.heading" defaultMessage="Discard unsaved changes?" />,
+      message: (
+        <FormattedMessage
+          id="ui-rsdir.settingsConfig.discardDrafts.message"
+          defaultMessage="Saving {field} also saves {fields}."
+          values={{ field: labelForPath(fieldName), fields: discardedDrafts.map(name => labelForPath(name)).join(', ') }}
+        />
+      ),
+      confirmLabel: <FormattedMessage id="ui-rsdir.settingsConfig.discardDrafts.confirm" defaultMessage="Save and discard changes" />,
+    } : undefined);
     // Refresh confirmation if the draft or committed values change while the modal is open.
     const confirmationKey = JSON.stringify({
       configPatch,
       originalValues: affectedFieldNames.map(name => resource?.[configKey]?.[name]),
       discardedDrafts,
     });
-    if (impact && confirmedSave?.confirmationKey !== confirmationKey) {
-      setPendingSave({ field, impact, confirmationKey, lockedFieldNames, hasUnsavedChanges: discardedDrafts.length > 0, choice, inheritedValue: confirmedSave?.inheritedValue });
+    if (confirmImpact && confirmedSave?.confirmationKey !== confirmationKey) {
+      setPendingSave({
+        field,
+        impact: confirmImpact,
+        confirmationKey,
+        lockedFieldNames,
+        discardedDrafts,
+        choice,
+        inheritedValue: confirmedSave?.inheritedValue,
+        parentConfig: confirmedSave?.parentConfig,
+        restoreFieldNames,
+      });
       return;
     }
 
@@ -1314,6 +1460,7 @@ const SettingsConfigEditor = ({
             item.fieldName, toEditorValue(nextResource?.[configKey]?.[item.fieldName], item),
           ])),
         }));
+        if (restoreFieldNames.length > 0) focusAfterRestoreRef.current = fieldName;
         affectedFieldNames.forEach(name => {
           clearTransientState(name);
           setFieldEditing(name, false);
@@ -1742,7 +1889,7 @@ const SettingsConfigEditor = ({
   };
 
   // Profile values are display metadata; never read them into drafts or PATCH values.
-  const renderOverrideValue = (field, value, path) => {
+  const renderOverrideValue = (field, value, path, instance) => {
     if (value === null) return 'null';
     if (value === '') return '""';
     if (Array.isArray(value)) {
@@ -1759,11 +1906,11 @@ const SettingsConfigEditor = ({
                   {field.objectMap.filter(child => item[child.fieldName] !== undefined).map(child => (
                     <div className={css.objectArrayComponent} key={child.fieldName}>
                       <span className={css.objectArrayComponentLabel}>
-                        {renderFieldLabel(child, `${path}.${child.fieldName}`, `override-${index}`)}:
+                        {renderFieldLabel(child, `${path}.${child.fieldName}`, instanceId(instance, `override-${index}`))}:
                       </span>
                       <div className={css.objectArrayComponentValue}>
                         {renderOverrideValue(child, child.fieldName === 'defaultDesc' && isCodeDescriptionArray(field) ?
-                          objectDescription(path, item) : item[child.fieldName], `${path}.${child.fieldName}`)}
+                          objectDescription(path, item) : item[child.fieldName], `${path}.${child.fieldName}`, instance)}
                       </div>
                     </div>
                   ))}
@@ -2186,11 +2333,11 @@ const SettingsConfigEditor = ({
                     key={child.fieldName}
                   >
                     <span className={css.objectArrayComponentLabel}>
-                      {renderFieldLabel(child, `${path}.${child.fieldName}`, `value-${index}`)}:
+                      {renderFieldLabel(child, `${path}.${child.fieldName}`, instanceId(parentField?.instance, `value-${index}`))}:
                     </span>
                     {child.disabled && child.overrideValue !== undefined &&
                       <div className={css.objectArrayComponentValue}>
-                        {renderOverrideValue(child, child.overrideValue, `${path}.${child.fieldName}`)}
+                        {renderOverrideValue(child, child.overrideValue, `${path}.${child.fieldName}`, parentField?.instance)}
                       </div>
                     }
                     {!child.disabled &&
@@ -2199,7 +2346,7 @@ const SettingsConfigEditor = ({
                           {renderObjectChildValue(child, child.fieldName === 'defaultDesc' && isCodeDescriptionArray(field) ?
                             objectDescription(path, objectValue) : objectValue[child.fieldName])}
                         </div>
-                        {fieldErrors[childPath] &&
+                        {!parentField?.instance && fieldErrors[childPath] &&
                           <div className={css.subFieldError} role="alert">{fieldErrors[childPath]}</div>
                         }
                       </>
@@ -2207,7 +2354,7 @@ const SettingsConfigEditor = ({
                   </div>
                 );
               })}
-              {fieldErrors[`${path}.${index}`] &&
+              {!parentField?.instance && fieldErrors[`${path}.${index}`] &&
                 <div className={css.subFieldError} role="alert">{fieldErrors[`${path}.${index}`]}</div>
               }
             </div>
@@ -2509,7 +2656,7 @@ const SettingsConfigEditor = ({
 
   const renderFieldDisplay = (field, parentField) => {
     if (field.disabled && field.overrideValue !== undefined) {
-      return renderOverrideValue(field, field.overrideValue, pathForField(field, parentField));
+      return renderOverrideValue(field, field.overrideValue, pathForField(field, parentField), parentField?.instance);
     }
     const type = normalizedValueType(field.valueType);
 
@@ -2547,7 +2694,7 @@ const SettingsConfigEditor = ({
 
     return (
       <div className={css.subFields}>
-        {fieldErrors[path] &&
+        {!context.instance && fieldErrors[path] &&
           <div className={css.subFieldError} role="alert">
             {fieldErrors[path]}
           </div>
@@ -2581,7 +2728,7 @@ const SettingsConfigEditor = ({
               className={`${css.subField} ${child.disabled ? css.disabledField : ''}`}
               key={child.fieldName}
             >
-              <div className={css.subFieldLabel}>{renderFieldLabel(child, childPath)}</div>
+              <div className={css.subFieldLabel}>{renderFieldLabel(child, childPath, context.instance)}</div>
               {child.disabled && child.overrideValue !== undefined &&
                 renderFieldDisplay(child, context)
               }
@@ -2592,6 +2739,256 @@ const SettingsConfigEditor = ({
             </div>
           );
         })}
+      </div>
+    );
+  };
+
+  // A restore saves every local field of the merge unit; it cannot run while any of them saves.
+  const isUnitSaving = localFieldNames => saveLockFieldNames(localFieldNames).some(name => savingFields[name]);
+
+  // Save impacts can clear related fields, so as in chooseInherit they are checked against
+  // a fresh read of the parent rather than the cached one. A failed read keeps the dialog
+  // open with an error so the user can retry. Restores without save impacts use the cache.
+  const confirmRestore = async () => {
+    const { field, localFieldNames } = pendingRestore;
+    const savedResourcePath = resourcePath;
+    const request = {};
+    let parentConfig = parentQuery.data?.[configKey];
+
+    if ([field.fieldName, ...localFieldNames].some(name => (
+      fieldMapping.find(item => item.fieldName === name)?.getSaveImpact
+    ))) {
+      restoreRequestRef.current = request;
+      setPendingRestore({ field, localFieldNames, loading: true });
+      try {
+        const parent = await ky(`directory/entries/by-id/${resource.parent}`).json();
+        parentConfig = parent?.[configKey];
+      } catch (error) {
+        if (restoreRequestRef.current === request && activeResourcePathRef.current === savedResourcePath) {
+          setPendingRestore({ field, localFieldNames, error: true });
+        }
+        return;
+      }
+      if (restoreRequestRef.current !== request || activeResourcePathRef.current !== savedResourcePath) return;
+    }
+
+    restoreRequestRef.current = null;
+    setPendingRestore(null);
+    saveField(field, {
+      choice: 'inherit',
+      inheritedValue: parentConfig?.[field.fieldName],
+      parentConfig,
+      restoreFieldNames: localFieldNames,
+      // The restore dialog already warned about the drafts the restore discards.
+      draftsConfirmed: true,
+    });
+  };
+
+  const cancelRestore = () => {
+    restoreRequestRef.current = null;
+    setPendingRestore(null);
+  };
+
+  const renderRestoreModal = () => {
+    const { field, localFieldNames, loading, error } = pendingRestore;
+    const discardedDrafts = localFieldNames.filter(name => (
+      name !== field.fieldName && hasUnsavedDraft(fieldMapping.find(item => item.fieldName === name))
+    ));
+
+    return (
+      <ConfirmationModal
+        bodyTag="div"
+        isConfirmButtonDisabled={loading || isUnitSaving(localFieldNames)}
+        open
+        heading={<FormattedMessage id="ui-rsdir.settingsConfig.inheritance.restore.heading" defaultMessage="Restore inherited value?" />}
+        confirmLabel={<FormattedMessage id="ui-rsdir.settingsConfig.inheritance.restore.confirm" defaultMessage="Restore inherited value" />}
+        cancelLabel={<FormattedMessage id="stripes-components.cancel" defaultMessage="Cancel" />}
+        onCancel={cancelRestore}
+        onConfirm={confirmRestore}
+        message={
+          <div>
+            <p>
+              <FormattedMessage
+                id="ui-rsdir.settingsConfig.inheritance.restore.message"
+                defaultMessage="Clear this entry's value for {fields} so that it inherits the value from its parent entry?"
+                values={{ fields: localFieldNames.map(name => labelForPath(name)).join(', ') }}
+              />
+            </p>
+            {discardedDrafts.length > 0 && <p>{renderDiscardDraftsMessage(discardedDrafts)}</p>}
+            {error &&
+              <p className={css.inheritError} role="alert">
+                <FormattedMessage
+                  id="ui-rsdir.settingsConfig.inherit.parentError"
+                  defaultMessage="The parent entry's value could not be loaded, so its effect on related fields can't be checked. Try again."
+                />
+              </p>
+            }
+          </div>
+        }
+      />
+    );
+  };
+
+  // A display of the field's value as stored in source (a config object).
+  const renderSourceValue = (field, source, instance) => {
+    const context = { path: [], source, instance };
+    return normalizedValueType(field.valueType) === SUB_FIELD ?
+      renderSubField(field, false, context) : renderFieldDisplay(field, context);
+  };
+
+  const renderParentValue = field => {
+    const { fieldName } = field;
+    const parentConfig = parentQuery.data?.[configKey];
+    if (!hasValue(parentConfig?.[fieldName], field)) {
+      return <FormattedMessage id="ui-rsdir.settingsConfig.inheritance.overridingUnset" defaultMessage="Overriding parent value" />;
+    }
+    if (SCALAR_TYPES.includes(normalizedValueType(field.valueType)) || field.validChoices?.length > 0) {
+      return (
+        <FormattedMessage
+          id="ui-rsdir.settingsConfig.inheritance.overriding"
+          defaultMessage="Overriding parent value of {value}"
+          values={{ value: renderSourceValue(field, parentConfig, 'parent') }}
+        />
+      );
+    }
+
+    const expanded = !!expandedParentValues[fieldName];
+    return (
+      <>
+        <FormattedMessage id="ui-rsdir.settingsConfig.inheritance.overridingUnset" defaultMessage="Overriding parent value" />
+        {' '}
+        <Button
+          aria-expanded={expanded}
+          aria-label={intl.formatMessage(expanded ? {
+            id: 'ui-rsdir.settingsConfig.inheritance.hideParentField',
+            defaultMessage: 'Hide parent value for {field}',
+          } : {
+            id: 'ui-rsdir.settingsConfig.inheritance.showParentField',
+            defaultMessage: 'Show parent value for {field}',
+          }, { field: labelForPath(fieldName) })}
+          buttonStyle="link"
+          id={`toggle-parent-${controlIdPrefix}-${fieldName}`}
+          marginBottom0
+          onClick={() => setExpandedParentValues(current => ({ ...current, [fieldName]: !expanded }))}
+        >
+          {expanded ?
+            <FormattedMessage id="ui-rsdir.settingsConfig.inheritance.hideParent" defaultMessage="Hide parent value" /> :
+            <FormattedMessage id="ui-rsdir.settingsConfig.inheritance.showParent" defaultMessage="Show parent value" />
+          }
+        </Button>
+        {expanded && <div className={css.parentValue}>{renderSourceValue(field, parentConfig, 'parent')}</div>}
+      </>
+    );
+  };
+
+  // The inline ref callback runs on every render, so focus lands once the button
+  // is enabled after the save; a disabled button cannot take focus.
+  const focusAfterRestore = (node, fieldName) => {
+    if (!node || node.disabled || focusAfterRestoreRef.current !== fieldName) return;
+    focusAfterRestoreRef.current = null;
+    node.focus();
+  };
+
+  const inheritingTypeLabels = types => types
+    .map(type => intl.formatMessage({ id: `ui-rsdir.entryType.${type}`, defaultMessage: type }))
+    .join(', ');
+
+  const editingNoteId = (fieldName, note) => `${controlIdPrefix}-${fieldName}-${note}`;
+
+  // Notes shown while editing: the entry types that would inherit the value being entered,
+  // and the merge-unit fields whose inherited values a save also stores.
+  const editingInheritanceNotes = field => {
+    const { fieldName } = field;
+    const types = inheritingTypes(spec, configKey, fieldName, entryType);
+    const unitFieldNames = Object.keys(inheritedUnitValues(field));
+
+    return [
+      types.length > 0 && {
+        id: editingNoteId(fieldName, 'inheriting-types'),
+        icon: 'arrow-down',
+        message: (
+          <FormattedMessage
+            id="ui-rsdir.settingsConfig.inheritance.willBeInheritedBy"
+            defaultMessage="Will be inherited by {types}"
+            values={{ types: inheritingTypeLabels(types) }}
+          />
+        ),
+      },
+      unitFieldNames.length > 0 && {
+        id: editingNoteId(fieldName, 'merge-unit'),
+        icon: 'replace',
+        message: (
+          <FormattedMessage
+            id="ui-rsdir.settingsConfig.inheritance.storesUnit"
+            defaultMessage="Saving also stores the inherited values of {fields}, which are inherited together with this field."
+            values={{ fields: unitFieldNames.map(name => labelForPath(name)).join(', ') }}
+          />
+        ),
+      },
+    ].filter(Boolean);
+  };
+
+  const renderEditingInheritanceNotes = notes => notes.length > 0 && (
+    <div className={css.inheritanceNotes}>
+      {notes.map(note => (
+        <p className={css.inheritanceNote} id={note.id} key={note.id}>
+          <Icon icon={note.icon} size="small" aria-hidden="true" />
+          {note.message}
+        </p>
+      ))}
+    </div>
+  );
+
+  const renderInheritanceNotes = (field, status, canEdit) => {
+    const types = inheritingTypes(spec, configKey, field.fieldName, entryType);
+    // An unset field has nothing for lower entries to inherit.
+    const showInheritedBy = types.length > 0 && hasValue(resource?.[configKey]?.[field.fieldName], field);
+    if (!status && !showInheritedBy) return null;
+
+    return (
+      <div className={css.inheritanceNotes}>
+        {status?.inherited &&
+          <p className={css.inheritanceNote}>
+            <Icon icon="arrow-up" size="small" aria-hidden="true" />
+            <FormattedMessage id="ui-rsdir.settingsConfig.inheritance.inherited" defaultMessage="Inherited from parent" />
+          </p>
+        }
+        {status?.overriding &&
+          <div className={css.inheritanceNote}>
+            <Icon icon="replace" size="small" aria-hidden="true" />
+            <div>
+              {renderParentValue(field)}
+              {canEdit &&
+                <>
+                  {' '}
+                  <Button
+                    aria-label={intl.formatMessage({
+                      id: 'ui-rsdir.settingsConfig.inheritance.restoreField',
+                      defaultMessage: 'Restore inherited value for {field}',
+                    }, { field: labelForPath(field.fieldName) })}
+                    buttonStyle="link"
+                    disabled={isUnitSaving(status.localFieldNames)}
+                    id={`restore-${controlIdPrefix}-${field.fieldName}`}
+                    marginBottom0
+                    onClick={() => setPendingRestore({ field, localFieldNames: status.localFieldNames })}
+                  >
+                    <FormattedMessage id="ui-rsdir.settingsConfig.inheritance.restore" defaultMessage="Restore inherited value" />
+                  </Button>
+                </>
+              }
+            </div>
+          </div>
+        }
+        {showInheritedBy &&
+          <p className={css.inheritanceNote}>
+            <Icon icon="arrow-down" size="small" aria-hidden="true" />
+            <FormattedMessage
+              id="ui-rsdir.settingsConfig.inheritance.inheritedBy"
+              defaultMessage="Inherited by {types}"
+              values={{ types: inheritingTypeLabels(types) }}
+            />
+          </p>
+        }
       </div>
     );
   };
@@ -2607,6 +3004,7 @@ const SettingsConfigEditor = ({
         </div>
       }
       {pendingInherit && renderInheritModal()}
+      {pendingRestore && renderRestoreModal()}
       {pendingSave &&
         <ConfirmationModal
           bodyTag="div"
@@ -2620,7 +3018,11 @@ const SettingsConfigEditor = ({
           message={
             <div>
               <p>{pendingSave.impact.message}</p>
-              {pendingSave.hasUnsavedChanges && <p>{pendingSave.impact.discardChangesMessage}</p>}
+              {pendingSave.discardedDrafts.length > 0 &&
+                <p>
+                  {pendingSave.impact.discardChangesMessage ?? renderDiscardDraftsMessage(pendingSave.discardedDrafts)}
+                </p>
+              }
             </div>
           }
         />
@@ -2692,8 +3094,12 @@ const SettingsConfigEditor = ({
         const isSaving = savingFields[fieldName];
         const isSubField = normalizedValueType(field.valueType) === SUB_FIELD;
         const isCodeDescription = normalizedValueType(field.valueType) === CODE_DESCRIPTION;
+        const editingNotes = isEditing ? editingInheritanceNotes(field) : [];
         const cannotEdit = isCodeDescription && !committedTopLevelValue(field) &&
           codeDescriptionChoices(field, fieldName).length === 0;
+        const status = field.disabled ? null : inheritanceStatus(field);
+        const renderValue = () => (status?.localConfig ? renderSourceValue(field, status.localConfig) :
+          isSubField ? renderSubField(field, false) : renderFieldDisplay(field));
 
         if ((readOnly || field.readOnly) && !field.disabled) {
           // Inherited-only setting, or no permission to edit: show the resolved value without editing controls.
@@ -2705,7 +3111,8 @@ const SettingsConfigEditor = ({
               hidden={shownFields ? !shownFields.includes(fieldName) : undefined}
               headerStart={renderFieldLabel(field, fieldName)}
             >
-              {isSubField ? renderSubField(field, false) : renderFieldDisplay(field)}
+              {renderValue()}
+              {renderInheritanceNotes(field, status, false)}
             </Card>
           );
         }
@@ -2721,6 +3128,11 @@ const SettingsConfigEditor = ({
             headerStart={renderFieldLabel(field, fieldName)}
             headerEnd={!field.disabled &&
               <Button
+                aria-label={!isEditing && status?.inherited ? intl.formatMessage({
+                  id: 'ui-rsdir.settingsConfig.inheritance.overrideField',
+                  defaultMessage: 'Override {field}',
+                }, { field: labelForPath(fieldName) }) : undefined}
+                buttonRef={node => focusAfterRestore(node, fieldName)}
                 buttonStyle={isEditing ? 'primary' : undefined}
                 disabled={isSaving || (!isEditing && (cannotEdit || !localQuery.isSuccess))}
                 id={`${isEditing ? 'save' : 'edit'}-${controlIdPrefix}-${fieldName}`}
@@ -2728,14 +3140,25 @@ const SettingsConfigEditor = ({
               >
                 {isEditing ?
                   <FormattedMessage id="stripes-components.saveAndClose.save" defaultMessage="Save" /> :
-                  <FormattedMessage id="ui-rsdir.edit" defaultMessage="Edit" />
+                  status?.inherited ?
+                    <FormattedMessage id="ui-rsdir.settingsConfig.inheritance.override" defaultMessage="Override" /> :
+                    <FormattedMessage id="ui-rsdir.edit" defaultMessage="Edit" />
                 }
               </Button>
             }
           >
             {field.disabled && field.overrideValue !== undefined && renderFieldDisplay(field)}
             {!field.disabled && (isEditing ?
-              <div className={css.fieldEditor}>
+              <div
+                className={css.fieldEditor}
+                // Names the editing controls as a group so the inheritance notes below are
+                // announced on entering them, whatever controls the field type renders.
+                {...(editingNotes.length > 0 && {
+                  role: 'group',
+                  'aria-label': labelForPath(fieldName),
+                  'aria-describedby': editingNotes.map(note => note.id).join(' '),
+                })}
+              >
                 <div className={css.fieldInput}>
                   {isSubField ? renderSubField(field, true) : renderFieldInput(field)}
                 </div>
@@ -2749,7 +3172,7 @@ const SettingsConfigEditor = ({
                   size="small"
                 />
               </div> :
-              isSubField ? renderSubField(field, false) : renderFieldDisplay(field)
+              renderValue()
             )}
             {isEditing && isLocallyUnset(field) &&
               <p className={css.localUnset}>
@@ -2760,6 +3183,13 @@ const SettingsConfigEditor = ({
               </p>
             }
             {!field.disabled && isCodeDescription && renderCodeDescriptionStatus(field, fieldName)}
+            {renderEditingInheritanceNotes(editingNotes)}
+            {!isEditing && !field.disabled && renderInheritanceNotes(field, status, !readOnly)}
+            {/* A save made outside edit mode, such as a restore, has no editing control to show
+                its error; sub-field cards already show it with their values. */}
+            {!isEditing && !isSubField && fieldErrors[fieldName] &&
+              <div className={css.subFieldError} role="alert">{fieldErrors[fieldName]}</div>
+            }
           </Card>
         );
       })}

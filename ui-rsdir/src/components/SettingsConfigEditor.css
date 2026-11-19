@@ -218,3 +218,30 @@
   margin-top: var(--gutter-static-two-thirds);
   margin-bottom: var(--gutter-static-two-thirds);
 }
+
+/* Inheritance annotations below a field's value, grouped in a shaded box. */
+.inheritanceNotes {
+  margin-top: var(--gutter-static-two-thirds);
+  padding: var(--gutter-static-one-third) var(--gutter-static-two-thirds);
+  background: var(--color-fill-table-row-even);
+  border-left: 3px solid var(--color-border-p2);
+  border-radius: var(--radius);
+}
+
+.inheritanceNote {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gutter-static-one-third);
+  margin: 0;
+  font-size: var(--font-size-small);
+  color: var(--color-text-p2);
+}
+
+.inheritanceNote + .inheritanceNote {
+  margin-top: var(--gutter-static-one-third);
+}
+
+.parentValue {
+  margin-top: var(--gutter-static-one-third);
+  color: var(--color-text);
+}

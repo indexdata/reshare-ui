@@ -26,13 +26,15 @@ jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/s
 
 // The editor fetches the entry's local-only copy. Unless a test sets
 // mockLocalResource, that copy mirrors the rendered initialResource.
+// The other query, the parent entry's merged view, comes from mockParentResource.
 let mockLocalResource;
 let mockRenderedResource;
+let mockParentResource;
 jest.mock('@projectreshare/stripes-reshare', () => ({
-  useOkapiQuery: () => ({
+  useOkapiQuery: (path, { searchParams } = {}) => (searchParams?.['resolve-inherit'] === 'false' ? {
     isSuccess: true,
     data: mockLocalResource === undefined ? mockRenderedResource : mockLocalResource,
-  }),
+  } : { isSuccess: !!mockParentResource, data: mockParentResource }),
 }));
 const SettingsConfigEditor = props => {
   mockRenderedResource = props.initialResource;
@@ -94,8 +96,18 @@ jest.mock('@folio/stripes/components', () => ({
   ModalFooter: ({ children }) => <div>{children}</div>,
   Icon: ({ icon, 'aria-hidden': ariaHidden }) => <svg aria-hidden={ariaHidden} data-icon={icon} />,
   Popover: jest.requireActual('@folio/stripes-components/lib/Popover').default,
-  Button: ({ children, disabled, id, onClick }) => (
-    <button disabled={disabled} id={id} onClick={onClick} type="button">{children}</button>
+  Button: ({ 'aria-expanded': ariaExpanded, 'aria-label': ariaLabel, buttonRef, children, disabled, id, onClick }) => (
+    <button
+      aria-expanded={ariaExpanded}
+      aria-label={ariaLabel}
+      disabled={disabled}
+      id={id}
+      onClick={onClick}
+      ref={buttonRef}
+      type="button"
+    >
+      {children}
+    </button>
   ),
   Card: ({ cardClass, children, headerEnd, headerStart }) => (
     <section className={cardClass}>{headerStart}{headerEnd}{children}</section>
@@ -155,6 +167,7 @@ const renderEditor = ({
 
 beforeEach(() => {
   mockLocalResource = undefined;
+  mockParentResource = undefined;
   mockOpenApiData = undefined;
   mockOpenApiState = {};
   mockMessages = {};
@@ -1266,6 +1279,8 @@ describe('SettingsConfigEditor inheritance prompt', () => {
         initialResource: { type: 'Institution', illConfig: { items: ['Parent'] } },
       });
       fireEvent.click(document.getElementById('edit-settings-config-items'));
+      // Overriding starts from the inherited value; clear it to save an empty value.
+      fireEvent.click(document.getElementById('remove-settings-config-items-0'));
       fireEvent.click(document.getElementById('save-settings-config-items'));
       expect(screen.getByRole('dialog')).toHaveTextContent('is currently inherited');
     };
@@ -1326,6 +1341,196 @@ describe('SettingsConfigEditor inheritance prompt', () => {
     }));
     expect(mockKy).toHaveBeenCalledWith('directory/entries/by-id/parent-id');
     expect(screen.queryByText('Save and clear default')).not.toBeInTheDocument();
+  });
+});
+
+describe('SettingsConfigEditor inheritance annotations', () => {
+  const annotationSpec = { components: { schemas: {
+    EntryProperties: { properties: {
+      illConfig: {
+        allOf: [{ $ref: '#/components/schemas/IllConfig' }],
+        'x-inheritance-root': 'Consortium',
+        'x-editable-on': ['Consortium', 'Institution'],
+      },
+    } },
+    IllConfig: { properties: {
+      url: { type: 'string', 'x-merge-unit': 'peer' },
+      vendor: { type: 'string', 'x-merge-unit': 'peer' },
+    } },
+  } } };
+  const fields = [
+    { fieldName: 'prefix' },
+    { fieldName: 'items', valueType: 'stringArray' },
+    { fieldName: 'url' },
+    { fieldName: 'vendor' },
+  ];
+  const renderIll = (type, illConfig, local, options = {}) => {
+    mockLocalResource = local && { illConfig: local };
+    renderEditor({
+      configKey: 'illConfig',
+      fieldMapping: fields,
+      initialResource: { type, parent: 'parent-id', illConfig },
+      ...options,
+    });
+  };
+
+  beforeEach(() => { mockOpenApiData = annotationSpec; });
+
+  it('lists the entry types that inherit a set value', () => {
+    renderIll('Consortium', { prefix: 'Value' });
+    expect(screen.getAllByText('Inherited by Institution, Branch')).toHaveLength(1);
+  });
+
+  it('names the inheriting entry types only while editing an unset field', () => {
+    renderIll('Consortium', {}, {});
+    expect(screen.queryByText('Inherited by Institution, Branch')).not.toBeInTheDocument();
+    fireEvent.click(document.getElementById('edit-settings-config-items'));
+    expect(screen.getByRole('group', { name: 'items' })).toHaveAccessibleDescription('Will be inherited by Institution, Branch');
+    fireEvent.click(document.getElementById('cancel-settings-config-items'));
+    expect(screen.queryByText('Will be inherited by Institution, Branch')).not.toBeInTheDocument();
+    expect(screen.queryByText('Inherited by Institution, Branch')).not.toBeInTheDocument();
+  });
+
+  it('marks inherited values and offers to override them starting from the inherited value', () => {
+    renderIll('Institution', { prefix: 'Parent' }, {});
+    expect(screen.getByText('Inherited from parent')).toBeInTheDocument();
+    const button = document.getElementById('edit-settings-config-prefix');
+    expect(button).toHaveTextContent('Override');
+    expect(button).toHaveAccessibleName('Override {field}');
+    expect(document.getElementById('edit-settings-config-items')).toHaveTextContent('Edit');
+    fireEvent.click(button);
+    expect(document.getElementById('settings-config-prefix')).toHaveValue('Parent');
+  });
+
+  it('shows the inherited tag without editing controls when read-only', () => {
+    mockParentResource = { illConfig: { prefix: 'Parent', items: ['Theirs'] } };
+    renderIll('Institution', { prefix: 'Parent', items: ['Mine'] }, { items: ['Mine'] }, { readOnly: true });
+    expect(screen.getByText('Inherited from parent')).toBeInTheDocument();
+    expect(screen.getByText('Overriding parent value')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Override|Restore/ })).not.toBeInTheDocument();
+  });
+
+  it('shows a complex parent value on request', () => {
+    mockParentResource = { illConfig: { items: ['Theirs'] } };
+    renderIll('Institution', { items: ['Mine'] }, { items: ['Mine'] });
+    expect(screen.queryByText('Theirs')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Show parent value for {field}' }));
+    expect(screen.getByText('Theirs')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hide parent value for {field}' })).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('restores a whole merge unit after confirmation', async () => {
+    mockParentResource = { illConfig: { url: 'https://parent', vendor: 'Parent vendor' } };
+    renderIll('Institution', { url: 'https://local', vendor: 'Local vendor' },
+      { url: 'https://local', vendor: 'Local vendor' });
+    expect(screen.getByText('Overriding parent value of https://parent')).toBeInTheDocument();
+    fireEvent.click(document.getElementById('restore-settings-config-url'));
+    expect(mockPatch).not.toHaveBeenCalled();
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('for url, vendor so that');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Restore inherited value' }));
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+      json: { illConfig: { url: null, vendor: null } },
+    }));
+    // The Restore button is gone after the save, so focus moves to the card's Override button.
+    await waitFor(() => expect(document.getElementById('edit-settings-config-url')).toHaveFocus());
+    // No field has a save impact, so the cached parent is enough.
+    expect(mockKy).not.toHaveBeenCalled();
+  });
+
+  it('saves nothing for an unchanged override and keeps the rest of the merge unit when overriding', async () => {
+    renderIll('Institution', { url: 'https://parent', vendor: 'Parent vendor' }, {});
+    fireEvent.click(document.getElementById('edit-settings-config-url'));
+    expect(screen.getByText(/^Saving also stores the inherited values of/)).toBeInTheDocument();
+    fireEvent.click(document.getElementById('save-settings-config-url'));
+    expect(document.getElementById('edit-settings-config-url')).toBeInTheDocument();
+    expect(mockPatch).not.toHaveBeenCalled();
+
+    fireEvent.click(document.getElementById('edit-settings-config-url'));
+    fireEvent.change(document.getElementById('settings-config-url'), { target: { value: 'https://new' } });
+    fireEvent.click(document.getElementById('save-settings-config-url'));
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+      json: { illConfig: { url: 'https://new', vendor: 'Parent vendor' } },
+    }));
+  });
+
+  describe('restoring a merge unit with another field', () => {
+    const local = { url: 'https://local', vendor: 'Local vendor' };
+    beforeEach(() => { mockParentResource = { illConfig: { url: 'https://parent', vendor: 'Parent vendor' } }; });
+
+    it('warns once about discarding an unsaved draft in the unit', async () => {
+      renderIll('Institution', local, local);
+      fireEvent.click(document.getElementById('edit-settings-config-vendor'));
+      fireEvent.change(document.getElementById('settings-config-vendor'), { target: { value: 'New vendor' } });
+      fireEvent.click(document.getElementById('restore-settings-config-url'));
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toHaveTextContent('Unsaved changes to vendor will be discarded.');
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Restore inherited value' }));
+      await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+        json: { illConfig: { url: null, vendor: null } },
+      }));
+    });
+
+    it('disables the restore while another field of the unit is saving', () => {
+      mockPatch.mockImplementationOnce(() => new Promise(() => {}));
+      renderIll('Institution', local, local);
+      fireEvent.click(document.getElementById('edit-settings-config-vendor'));
+      fireEvent.change(document.getElementById('settings-config-vendor'), { target: { value: 'New vendor' } });
+      fireEvent.click(document.getElementById('save-settings-config-vendor'));
+      expect(document.getElementById('restore-settings-config-url')).toBeDisabled();
+    });
+
+    it('shows a failed restore on the closed card and clears it when the editor opens', async () => {
+      mockPatch.mockRejectedValueOnce(new Error('Restore failed'));
+      renderIll('Institution', local, local);
+      fireEvent.click(document.getElementById('restore-settings-config-url'));
+      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Restore inherited value' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent('Restore failed');
+      fireEvent.click(document.getElementById('edit-settings-config-url'));
+      expect(screen.queryByText('Restore failed')).not.toBeInTheDocument();
+    });
+
+    it('saves nothing when the dialog is cancelled during the parent read', async () => {
+      let finishRead;
+      mockKy.mockReturnValue({ json: () => new Promise(resolve => { finishRead = resolve; }) });
+      renderIll('Institution', local, local, {
+        fieldMapping: fields.map(field => (field.fieldName === 'vendor' ? { ...field, getSaveImpact: jest.fn() } : field)),
+      });
+      fireEvent.click(document.getElementById('restore-settings-config-url'));
+      const dialog = screen.getByRole('dialog');
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Restore inherited value' }));
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+      await act(async () => finishRead({ illConfig: { url: 'https://parent', vendor: 'Parent vendor' } }));
+      expect(mockPatch).not.toHaveBeenCalled();
+    });
+
+    it("applies the other field's save impact against a fresh parent read, retrying a failed read", async () => {
+      const getSaveImpact = jest.fn(() => ({
+        heading: 'Vendor impact',
+        message: 'Vendor message',
+        confirmLabel: 'Confirm vendor',
+        additionalValues: { prefix: null },
+      }));
+      mockKy
+        .mockReturnValueOnce({ json: () => Promise.reject(new Error('offline')) })
+        .mockReturnValue({ json: () => Promise.resolve({ illConfig: { url: 'https://parent', vendor: 'Fresh vendor' } }) });
+      renderIll('Institution', local, local, {
+        fieldMapping: fields.map(field => (field.fieldName === 'vendor' ? { ...field, getSaveImpact } : field)),
+      });
+      fireEvent.click(document.getElementById('restore-settings-config-url'));
+      const dialog = screen.getByRole('dialog');
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Restore inherited value' }));
+      expect(await within(dialog).findByRole('alert')).toHaveTextContent(/could not be loaded/);
+      expect(getSaveImpact).not.toHaveBeenCalled();
+
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Restore inherited value' }));
+      await waitFor(() => expect(getSaveImpact).toHaveBeenCalledWith(expect.objectContaining({ nextValue: 'Fresh vendor' })));
+      expect(mockKy).toHaveBeenCalledWith('directory/entries/by-id/parent-id');
+      fireEvent.click(await screen.findByRole('button', { name: 'Confirm vendor' }));
+      await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(expect.anything(), {
+        json: { illConfig: { prefix: null, url: null, vendor: null } },
+      }));
+    });
   });
 });
 
