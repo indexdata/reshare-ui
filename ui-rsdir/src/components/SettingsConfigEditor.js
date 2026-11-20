@@ -1374,10 +1374,11 @@ const SettingsConfigEditor = ({
         })
       )),
     ]);
+    // Inherited unit values come first so a confirmed save impact can override them.
     const configPatch = {
+      ...(patchValue !== null && inheritedUnitValues(field)),
       ...impact?.additionalValues,
       ...Object.fromEntries(restoreFieldNames.map(name => [name, null])),
-      ...(patchValue !== null && inheritedUnitValues(field)),
       [fieldName]: patchValue,
     };
     const affectedFieldNames = Object.keys(configPatch);
