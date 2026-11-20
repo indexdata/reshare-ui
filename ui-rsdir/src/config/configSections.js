@@ -570,6 +570,19 @@ const illConfigFields = [
   },
 ];
 
+const discoveryConfigFields = [
+  {
+    fieldName: 'queryUrl',
+    valueType: 'string',
+    nullOnEmpty: true,
+  },
+  {
+    fieldName: 'itemLinkTemplate',
+    valueType: 'string',
+    nullOnEmpty: true,
+  },
+];
+
 // All configuration sections, whatever the entry type.
 export const CONFIG_SECTIONS = [
   {
@@ -592,6 +605,13 @@ export const CONFIG_SECTIONS = [
     controlIdPrefix: 'holdings-policy',
     labelPrefix: 'ui-rsdir.holdingsPolicy',
     fieldMap: holdingsPolicyFields,
+  },
+  {
+    configKey: 'discoveryConfig',
+    segment: 'discoveryconfig',
+    controlIdPrefix: 'discovery-config',
+    labelPrefix: 'ui-rsdir.discoveryConfig',
+    fieldMap: discoveryConfigFields,
   },
   {
     configKey: 'illConfig',

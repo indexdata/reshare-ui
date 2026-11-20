@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import uniqBy from 'lodash/uniqBy';
 import { useStripes } from '@folio/stripes/core';
-import { useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { useOkapiQuery } from './useOkapiQuery';
 
-// Directory entries whose tenant is ours. A failed lookup (e.g. a user without
-// directory permissions) leaves them empty rather than tripping the error boundary.
+// Directory entries whose tenant is ours, as merged reads with inherited
+// configuration filled in. A failed lookup (e.g. a user without directory
+// permissions) leaves them empty rather than tripping the error boundary.
 const useOwnedEntries = ({ enabled = true } = {}) => {
   const query = useOkapiQuery('directory/entries/owned', {
     searchParams: { limit: '1000' },
@@ -27,6 +28,8 @@ const useOwnedEntries = ({ enabled = true } = {}) => {
   };
 };
 
+// The owned institution, whose merged read also carries what it inherits from
+// the consortium, such as `discoveryConfig`.
 const useTenantInstitution = ({ enabled = true } = {}) => {
   const { entries, isSettled, hasData, isError, isFetching } = useOwnedEntries({ enabled });
   const institution = useMemo(() => entries.find(entry => entry.type === 'Institution'), [entries]);

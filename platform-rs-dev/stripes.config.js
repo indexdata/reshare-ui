@@ -12,10 +12,6 @@ module.exports = {
     staleBundleWarning: { path: '/bundle.js', header: 'etag', interval: 2 },
     reshare: {
       maxDMSUpload: 100,
-      sharedIndex: {
-        item: 'https://shared-index.example/item/{itemid}',
-        query: 'https://borrowdirect.reshare.indexdata.com',
-      },
       showCost: true,
       showRefresh: true,
       liveUpdates: true,

@@ -7,6 +7,7 @@ import SymbolEntryRoute from './routes/SymbolEntryRoute';
 import EditEntryRoute from './routes/EditEntryRoute';
 import CatalogConfigRoute from './routes/CatalogConfigRoute';
 import ClosuresRoute from './routes/ClosuresRoute';
+import DiscoveryConfigRoute from './routes/DiscoveryConfigRoute';
 import HoldingsPolicyRoute from './routes/HoldingsPolicyRoute';
 import ILLConfigRoute from './routes/ILLConfigRoute';
 import LMSConfigRoute from './routes/LMSConfigRoute';
@@ -39,6 +40,7 @@ const RSDir = (props) => {
           <Route path={`${path}/entries/:id/lmsconfig`} component={LMSConfigRoute} />
           <Route path={`${path}/entries/:id/catalogconfig`} component={CatalogConfigRoute} />
           <Route path={`${path}/entries/:id/holdingspolicy`} component={HoldingsPolicyRoute} />
+          <Route path={`${path}/entries/:id/discoveryconfig`} component={DiscoveryConfigRoute} />
           <Route path={`${path}/entries/:id/illconfig`} component={ILLConfigRoute} />
           <Route path={`${path}/entries/:id/tiers`} component={TiersRoute} />
           <Route path={`${path}/entries/:id/networks`} component={NetworksRoute} />
