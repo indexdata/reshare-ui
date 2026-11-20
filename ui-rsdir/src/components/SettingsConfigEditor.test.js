@@ -1480,6 +1480,38 @@ describe('SettingsConfigEditor inheritance annotations', () => {
       expect(document.getElementById('restore-settings-config-url')).toBeDisabled();
     });
 
+    describe('when a field of the unit is unset', () => {
+      const renderPartial = () => renderIll('Institution', { url: 'https://local', vendor: 'Parent vendor' },
+        { url: 'https://local' });
+      const editVendor = () => {
+        fireEvent.click(document.getElementById('edit-settings-config-vendor'));
+        fireEvent.change(document.getElementById('settings-config-vendor'), { target: { value: 'New vendor' } });
+      };
+
+      it('disables the restore while that field is saving', async () => {
+        let finishSave;
+        mockPatch.mockImplementationOnce(() => new Promise(resolve => { finishSave = resolve; }));
+        renderPartial();
+        editVendor();
+        fireEvent.click(document.getElementById('save-settings-config-vendor'));
+        expect(document.getElementById('restore-settings-config-url')).toBeDisabled();
+        finishSave({ text: async () => '' });
+        await waitFor(() => expect(document.getElementById('restore-settings-config-url')).toBeEnabled());
+      });
+
+      it('blocks saving that field while the restore runs', () => {
+        mockPatch.mockImplementationOnce(() => new Promise(() => {}));
+        renderPartial();
+        editVendor();
+        fireEvent.click(document.getElementById('restore-settings-config-url'));
+        fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Restore inherited value' }));
+        expect(mockPatch).toHaveBeenCalledWith(expect.anything(), { json: { illConfig: { url: null } } });
+        expect(document.getElementById('save-settings-config-vendor')).toBeDisabled();
+        fireEvent.click(document.getElementById('save-settings-config-vendor'));
+        expect(mockPatch).toHaveBeenCalledTimes(1);
+      });
+    });
+
     it('shows a failed restore on the closed card and clears it when the editor opens', async () => {
       mockPatch.mockRejectedValueOnce(new Error('Restore failed'));
       renderIll('Institution', local, local);

@@ -658,6 +658,9 @@ const SettingsConfigEditor = ({
 
   const hasValue = (value, field) => value != null && !isEmptyFieldValue(toEditorValue(value, field), field);
 
+  const unitMemberNames = fieldName => mergeUnitFieldNames(spec, configKey, fieldName,
+    fieldMapping.map(item => item.fieldName));
+
   // inherited: no field of the merge unit is stored locally and the merged view has a value.
   // overriding: the unit is stored locally while the parent has a value to inherit.
   const inheritanceStatus = field => {
@@ -665,8 +668,7 @@ const SettingsConfigEditor = ({
 
     const localConfig = localQuery.data?.[configKey];
     const parentConfig = parentQuery.data?.[configKey];
-    const unitFields = mergeUnitFieldNames(spec, configKey, field.fieldName, fieldMapping.map(item => item.fieldName))
-      .map(name => fieldMapping.find(item => item.fieldName === name));
+    const unitFields = unitMemberNames(field.fieldName).map(name => fieldMapping.find(item => item.fieldName === name));
     const localFieldNames = unitFields.filter(item => localConfig?.[item.fieldName] != null)
       .map(item => item.fieldName);
 
@@ -690,7 +692,7 @@ const SettingsConfigEditor = ({
     if (!localQuery.isSuccess || !canInherit(field)) return {};
 
     const localConfig = localQuery.data?.[configKey];
-    const unitFieldNames = mergeUnitFieldNames(spec, configKey, field.fieldName, fieldMapping.map(item => item.fieldName));
+    const unitFieldNames = unitMemberNames(field.fieldName);
     if (unitFieldNames.some(name => localConfig?.[name] != null)) return {};
 
     return Object.fromEntries(unitFieldNames
@@ -1380,7 +1382,10 @@ const SettingsConfigEditor = ({
     };
     const affectedFieldNames = Object.keys(configPatch);
     const affectedFields = fieldMapping.filter(item => affectedFieldNames.includes(item.fieldName));
-    const lockedFieldNames = saveLockFieldNames(affectedFieldNames);
+    // A restore locks the whole merge unit: a concurrent save of a field it does not clear
+    // would leave that field stored locally and keep the unit from inheriting.
+    const lockedFieldNames = saveLockFieldNames(restoreFieldNames.length > 0 ?
+      [...affectedFieldNames, ...unitMemberNames(fieldName)] : affectedFieldNames);
     if (lockedFieldNames.some(name => savingFieldsRef.current[name])) return;
 
     const discardedDrafts = affectedFields.filter(item => item.fieldName !== fieldName && hasUnsavedDraft(item))
@@ -2743,8 +2748,8 @@ const SettingsConfigEditor = ({
     );
   };
 
-  // A restore saves every local field of the merge unit; it cannot run while any of them saves.
-  const isUnitSaving = localFieldNames => saveLockFieldNames(localFieldNames).some(name => savingFields[name]);
+  // A restore locks every field of the merge unit; it cannot run while any of them saves.
+  const isUnitSaving = field => saveLockFieldNames(unitMemberNames(field.fieldName)).some(name => savingFields[name]);
 
   // Save impacts can clear related fields, so as in chooseInherit they are checked against
   // a fresh read of the parent rather than the cached one. A failed read keeps the dialog
@@ -2798,7 +2803,7 @@ const SettingsConfigEditor = ({
     return (
       <ConfirmationModal
         bodyTag="div"
-        isConfirmButtonDisabled={loading || isUnitSaving(localFieldNames)}
+        isConfirmButtonDisabled={loading || isUnitSaving(field)}
         open
         heading={<FormattedMessage id="ui-rsdir.settingsConfig.inheritance.restore.heading" defaultMessage="Restore inherited value?" />}
         confirmLabel={<FormattedMessage id="ui-rsdir.settingsConfig.inheritance.restore.confirm" defaultMessage="Restore inherited value" />}
@@ -2967,7 +2972,7 @@ const SettingsConfigEditor = ({
                       defaultMessage: 'Restore inherited value for {field}',
                     }, { field: labelForPath(field.fieldName) })}
                     buttonStyle="link"
-                    disabled={isUnitSaving(status.localFieldNames)}
+                    disabled={isUnitSaving(field)}
                     id={`restore-${controlIdPrefix}-${field.fieldName}`}
                     marginBottom0
                     onClick={() => setPendingRestore({ field, localFieldNames: status.localFieldNames })}
