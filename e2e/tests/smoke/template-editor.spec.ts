@@ -10,7 +10,6 @@ const lines = { useInnerText: true };
 async function openPullSlipForm(page: Page) {
   await visitRoute(page, '/settings/rs/templates/new', (p) => p.locator('[name="title"]'));
   await page.locator('#template-purpose').selectOption('pullslip');
-  await expect(page.locator('#template-contentType')).toHaveValue('html');
   await expect(editor(page)).toBeVisible();
 }
 

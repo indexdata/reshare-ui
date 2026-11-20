@@ -11,8 +11,8 @@ import { required } from '../util/validators';
 
 const reciprocalOptions = [
   { label: <FormattedMessage id="ui-rsdir.network.reciprocal.unspecified" />, value: '' },
-  { label: <FormattedMessage id="stripes-components.boolean.true" />, value: 'true' },
-  { label: <FormattedMessage id="stripes-components.boolean.false" />, value: 'false' },
+  { label: <FormattedMessage id="ui-rsdir.boolean.true" />, value: 'true' },
+  { label: <FormattedMessage id="ui-rsdir.boolean.false" />, value: 'false' },
 ];
 
 const formatReciprocal = value => {
