@@ -1,4 +1,4 @@
-import { applyInheritancePolicy, EDITABLE, fieldAccess, fieldCanInherit, HIDDEN, READ_ONLY } from './inheritancePolicy';
+import { applyInheritancePolicy, EDITABLE, fieldAccess, fieldCanInherit, HIDDEN, inheritingTypes, mergeUnitFieldNames, READ_ONLY } from './inheritancePolicy';
 
 // Mirrors the shape of crosslink/directory/api.yaml: containers reference
 // their schema through allOf, and children may override container policy.
@@ -17,6 +17,12 @@ const spec = {
             'x-inheritance-root': 'Consortium',
             'x-editable-on': ['Consortium', 'Institution'],
           },
+          // An atomic container, like holdingsPolicy in the real spec.
+          atomicConfig: {
+            'x-inheritance-root': 'Institution',
+            'x-editable-on': ['Institution'],
+            'x-merge-unit': 'atomicConfig',
+          },
           timeZone: { type: 'string' },
         },
       },
@@ -34,6 +40,8 @@ const spec = {
         properties: {
           loadBalancingPolicy: { 'x-inheritance-root': 'none', 'x-editable-on': ['Consortium'] },
           requestIdPrefix: { type: 'string', 'x-inheritance-root': 'Institution' },
+          iso18626Url: { type: 'string', 'x-inheritance-root': 'Institution', 'x-merge-unit': 'iso18626Peer' },
+          iso18626Vendor: { type: 'string', 'x-inheritance-root': 'Institution', 'x-merge-unit': 'iso18626Peer' },
         },
       },
     },
@@ -78,4 +86,27 @@ it('applyInheritancePolicy marks inherited fields read-only and removes hidden o
     { fieldName: 'requesterPickupLocation' },
   ]);
   expect(applyInheritancePolicy(fieldMap, spec, 'lmsConfig', 'Consortium')).toEqual([]);
+});
+
+describe('inheritingTypes', () => {
+  it.each([
+    ['illConfig', 'requestIdPrefix', 'Consortium', []],
+    ['illConfig', 'requestIdPrefix', 'Institution', ['Branch']],
+    ['illConfig', 'unannotated', 'Consortium', ['Institution', 'Branch']],
+    ['illConfig', 'loadBalancingPolicy', 'Consortium', []],
+    ['illConfig', 'unannotated', 'Branch', []],
+  ])('%s.%s on %s is inherited by %j', (configKey, fieldName, entryType, expected) => {
+    expect(inheritingTypes(spec, configKey, fieldName, entryType)).toEqual(expected);
+  });
+});
+
+describe('mergeUnitFieldNames', () => {
+  const illFields = ['requestIdPrefix', 'iso18626Url', 'iso18626Vendor'];
+
+  it('groups fields sharing a unit, and every field of a unit container', () => {
+    expect(mergeUnitFieldNames(spec, 'illConfig', 'iso18626Url', illFields)).toEqual(['iso18626Url', 'iso18626Vendor']);
+    expect(mergeUnitFieldNames(spec, 'illConfig', 'requestIdPrefix', illFields)).toEqual(['requestIdPrefix']);
+    expect(mergeUnitFieldNames(spec, 'atomicConfig', 'locations', ['locations', 'shelvingLocations']))
+      .toEqual(['locations', 'shelvingLocations']);
+  });
 });
