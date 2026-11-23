@@ -78,6 +78,7 @@
   "states.RECALLED": "Recalled",
   "states.RECEIVED": "Received",
   "states.RENEWAL_PENDING": "Renewal pending",
+  "states.RENEWAL_REJECTED": "Renewal rejected",
   "states.RENEWED": "Renewed",
   "states.RETRY_ACCEPTED": "Retry accepted",
   "states.RETRY_PENDING": "Retry pending",
