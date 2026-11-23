@@ -375,7 +375,7 @@
   "illConfig.cancellationReasons": "Cancellation reasons",
   "illConfig.cancellationReasons.code": "Code",
   "illConfig.cancellationReasons.defaultDesc": "Description",
-  "discoveryConfig.queryUrl": "Search URL",
+  "discoveryConfig.queryUrl": "Discovery base URL",
   "discoveryConfig.itemLinkTemplate": "Item link template",
   "discoveryConfig.edit.success": "Discovery configuration updated successfully",
   "discoveryConfig.empty": "No discovery configuration has been saved for this entry.",

@@ -228,7 +228,8 @@ const PatronRequestForm = ({ prefillId, selectOptions, requireTier = false }) =>
 
       <Accordion
         label={<FormattedMessage id="ui-rs.information.heading.requestedTitle" />}
-        displayWhenOpen={<Pluggable
+        // Sites without discovery leave queryUrl unset and expect no search button.
+        displayWhenOpen={queryUrl && <Pluggable
           type="rs-siquery"
           endpoint={queryUrl}
           searchButtonStyle="primary marginBottom0"
