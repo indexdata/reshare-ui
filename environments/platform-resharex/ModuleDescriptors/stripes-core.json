@@ -1,0 +1,56 @@
+{
+  "id": "folio_stripes-core-11.0.15",
+  "name": "The starting point for Stripes applications",
+  "permissionSets": [
+    {
+      "permissionName": "settings.enabled",
+      "displayName": "UI: settings area is enabled"
+    },
+    {
+      "permissionName": "mod-settings.owner.read.stripes-core.prefs.manage",
+      "displayName": "UI: read the user's own central preferences, such as order of links in the main navigation.",
+      "visible": false
+    },
+    {
+      "permissionName": "mod-settings.owner.write.stripes-core.prefs.manage",
+      "displayName": "UI: update the user's own central preferences, such as order of links in the main navigation.",
+      "visible": false
+    }
+  ],
+  "requires": [
+    {
+      "id": "users-bl",
+      "version": "5.0 6.0"
+    },
+    {
+      "id": "authtoken",
+      "version": "1.0 2.0"
+    },
+    {
+      "id": "configuration",
+      "version": "2.0"
+    },
+    {
+      "id": "settings",
+      "version": "1.0"
+    }
+  ],
+  "optional": [
+    {
+      "id": "consortia",
+      "version": "1.0"
+    },
+    {
+      "id": "login-saml",
+      "version": "2.0"
+    },
+    {
+      "id": "roles",
+      "version": "1.1"
+    },
+    {
+      "id": "users-keycloak",
+      "version": "1.0"
+    }
+  ]
+}

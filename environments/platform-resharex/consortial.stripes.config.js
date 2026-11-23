@@ -33,6 +33,7 @@ module.exports = {
     "@folio/tags": {},
     "@folio/tenant-settings": {},
     "@folio/users": {},
+    "@projectreshare/rs": {},
     "@projectreshare/rsdir": {}
   },
   branding: {
