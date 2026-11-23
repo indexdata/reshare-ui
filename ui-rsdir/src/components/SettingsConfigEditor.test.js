@@ -109,8 +109,8 @@ jest.mock('@folio/stripes/components', () => ({
       {children}
     </button>
   ),
-  Card: ({ cardClass, children, headerEnd, headerStart }) => (
-    <section className={cardClass}>{headerStart}{headerEnd}{children}</section>
+  Card: ({ cardClass, children, headerEnd, headerStart, onKeyDown }) => (
+    <section className={cardClass} onKeyDown={onKeyDown} role="presentation">{headerStart}{headerEnd}{children}</section>
   ),
   IconButton: jest.requireActual('react').forwardRef(({ icon, iconSize: _iconSize, size: _size, ...props }, ref) => (
     <button {...props} data-icon={icon} ref={ref} type="button">×</button>
@@ -1005,6 +1005,32 @@ describe('SettingsConfigEditor save callback', () => {
     expect(document.getElementById('save-settings-config-isPickupLocation')).toBeDisabled();
     await waitFor(() => expect(document.getElementById('save-settings-config-isPickupLocation')).toBeEnabled());
     expect(onSave).not.toHaveBeenCalled();
+  });
+});
+
+describe('SettingsConfigEditor keyboard', () => {
+  it('cancels the open editor on Escape and saves a single-value field on Enter', async () => {
+    renderEditor({
+      fieldMapping: [{ fieldName: 'contact', valueType: 'string' }],
+      initialResource: { config: { contact: 'old' } },
+    });
+
+    fireEvent.click(document.getElementById('edit-settings-config-contact'));
+    fireEvent.change(screen.getByRole('textbox', { name: 'contact' }), { target: { value: 'draft' } });
+    fireEvent.keyDown(document.getElementById('save-settings-config-contact'), { key: 'Escape' });
+    expect(screen.queryByRole('textbox', { name: 'contact' })).not.toBeInTheDocument();
+    expect(screen.getByText('old')).toBeInTheDocument();
+
+    fireEvent.click(document.getElementById('edit-settings-config-contact'));
+    expect(screen.getByRole('textbox', { name: 'contact' })).toHaveValue('old');
+    fireEvent.change(screen.getByRole('textbox', { name: 'contact' }), { target: { value: 'new' } });
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'contact' }), { key: 'Enter' });
+
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledWith(
+      'directory/entries/by-id/entry-id',
+      { json: { config: { contact: 'new' } } },
+    ));
+    expect(mockPatch).toHaveBeenCalledTimes(1);
   });
 });
 

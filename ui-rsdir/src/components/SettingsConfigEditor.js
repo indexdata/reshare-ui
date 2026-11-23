@@ -2604,6 +2604,22 @@ const SettingsConfigEditor = ({
     );
   };
 
+  // Enter in a single-value input saves its card, as the Save button does.
+  const saveOnEnter = topField => event => {
+    if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    saveField(topField);
+  };
+
+  // Escape anywhere in a card open for editing cancels the edit, as the Cancel button does.
+  // A control that uses Escape itself, such as an open option list, prevents the default
+  // and keeps the key.
+  const cancelOnEscape = field => event => {
+    if (event.key !== 'Escape' || event.isDefaultPrevented() || event.nativeEvent.isComposing) return;
+    if (savingFields[field.fieldName]) return;
+    cancelEditingField(field);
+  };
+
   const renderFieldInput = (field, parentField) => {
     const { validChoices = [] } = field;
     const type = normalizedValueType(field.valueType);
@@ -2654,6 +2670,7 @@ const SettingsConfigEditor = ({
         {...commonProps}
         max={field.maxValue}
         min={field.minValue}
+        onKeyDown={saveOnEnter(contextForField(field, parentField).topField)}
         step={type === 'integer' ? 1 : undefined}
         type={type === 'integer' || type === 'number' ? 'number' : 'text'}
       />
@@ -3131,6 +3148,7 @@ const SettingsConfigEditor = ({
             // Keep hidden cards mounted to preserve their local state. A card open
             // for editing always shows, so a refetch or URL change cannot hide its draft.
             hidden={shownFields && !isEditing ? !shownFields.includes(fieldName) : undefined}
+            onKeyDown={isEditing ? cancelOnEscape(field) : undefined}
             headerStart={renderFieldLabel(field, fieldName)}
             headerEnd={!field.disabled &&
               <Button
