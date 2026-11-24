@@ -13,12 +13,8 @@ const branch = 'ISIL:US-TEST1-MAIN';
 const minimumCost = 'ill-config-minimumCost';
 const duplicateWindow = 'ill-config-duplicateCheckWindowHours';
 
-// The settings card holding this element. A card's body is the one part
-// stripes marks for tests, so the card is the body's parent.
-const card = (page: Page, has: Locator): Locator =>
-  page.locator('div:has(> [data-test-card-body])').filter({ has });
-const body = (card: Locator): Locator => card.locator(':scope > [data-test-card-body]');
-const cardBody = (page: Page, editId: string): Locator => body(card(page, page.locator(`#edit-${editId}`)));
+// A setting's value as its card shows it, without the inheritance notes below it.
+const value = (page: Page, id: string): Locator => page.locator(`#value-${id}`);
 
 // The captive directory, which trusts the permissions header as stack-up.sh does.
 const directory = 'http://localhost:8086/directory';
@@ -65,8 +61,8 @@ async function reloadSection(page: Page, id: string) {
 // the same section alone.
 test('a minimum cost saved on an institution reads back and clears, keeping its other settings', async ({ page }) => {
   await openSection(page, illmock.symbol, 'illconfig');
-  const shown = cardBody(page, minimumCost);
-  const sibling = cardBody(page, duplicateWindow);
+  const shown = value(page, minimumCost);
+  const sibling = value(page, duplicateWindow);
 
   await saveField(page, duplicateWindow, '48');
   await saveField(page, minimumCost, '2.5');
@@ -85,28 +81,35 @@ test("an institution inherits the consortium's minimum cost unless it sets its o
   await saveField(page, minimumCost, '1.25');
 
   await openSection(page, illmock.symbol, 'illconfig');
-  const shown = cardBody(page, minimumCost);
+  const shown = value(page, minimumCost);
+  const edit = page.locator(`#edit-${minimumCost}`);
+  const restore = page.locator(`#restore-${minimumCost}`);
   await expect(shown).toHaveText('1.25');
+  await expect(edit).toHaveText('Override');
+  await expect(restore).toHaveCount(0);
 
-  // A local value overrides the consortium's; clearing it inherits again.
+  // A local value overrides the consortium's; restoring inherits again.
   await saveField(page, minimumCost, '2.5');
   await reloadSection(page, minimumCost);
   await expect(shown).toHaveText('2.5');
-  await saveField(page, minimumCost, '');
+  await expect(edit).toHaveText('Edit');
+  await restore.click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Restore inherited value' }).click();
+  await expect(restore).toHaveCount(0);
   await reloadSection(page, minimumCost);
   await expect(shown).toHaveText('1.25');
+  await expect(edit).toHaveText('Override');
 
   await openSection(page, consortium, 'illconfig');
   await saveField(page, minimumCost, '');
   await openSection(page, illmock.symbol, 'illconfig');
-  await expect(page.locator(`#edit-${minimumCost}`)).toBeEnabled();
-  await expect(cardBody(page, minimumCost)).toHaveText('');
+  await expect(edit).toBeEnabled();
+  await expect(shown).toHaveText('');
 
   // A branch sets its own pickup location but shows its institution's NCIP
   // address read-only.
   await openSection(page, branch, 'lmsconfig');
   await expect(page.locator('#edit-lms-config-requesterPickupLocation')).toBeEnabled();
-  const address = card(page, page.getByText('Address', { exact: true }));
-  await expect(body(address)).toHaveText('http://illmock:8081/ncip');
-  await expect(address.getByRole('button', { name: 'Edit' })).toHaveCount(0);
+  await expect(value(page, 'lms-config-address')).toHaveText('http://illmock:8081/ncip');
+  await expect(page.locator('#edit-lms-config-address')).toHaveCount(0);
 });

@@ -3121,8 +3121,12 @@ const SettingsConfigEditor = ({
         const cannotEdit = isCodeDescription && !committedTopLevelValue(field) &&
           codeDescriptionChoices(field, fieldName).length === 0;
         const status = field.disabled ? null : inheritanceStatus(field);
-        const renderValue = () => (status?.localConfig ? renderSourceValue(field, status.localConfig) :
-          isSubField ? renderSubField(field, false) : renderFieldDisplay(field));
+        const renderValue = () => (
+          <div id={`value-${controlIdPrefix}-${fieldName}`}>
+            {status?.localConfig ? renderSourceValue(field, status.localConfig) :
+              isSubField ? renderSubField(field, false) : renderFieldDisplay(field)}
+          </div>
+        );
 
         if ((readOnly || field.readOnly) && !field.disabled) {
           // Inherited-only setting, or no permission to edit: show the resolved value without editing controls.

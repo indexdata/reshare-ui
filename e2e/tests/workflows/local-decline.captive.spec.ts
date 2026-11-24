@@ -17,8 +17,7 @@ test('local copy declined, supplied by the peer', async ({ ownPage: borrower, pe
   await step('borrower is asked to review the local holding and declines it', async () => {
     await expectState(borrower, 'Requires review - locally available');
     await expectSupplier(borrower, own.symbol);
-    // the action has no translation yet, so the button shows the message id
-    await clickAction(borrower, /cannot.supply.locally/i);
+    await clickAction(borrower, "Respond 'cannot supply'");
     await expectSupplier(borrower, peer.symbol);
     await expectState(borrower, 'Will supply');
   });
