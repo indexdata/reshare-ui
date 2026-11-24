@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
-import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
+import { CalloutContext } from '@folio/stripes/core';
 import {
   Button,
   Col,
@@ -11,7 +11,7 @@ import {
   Select,
   TextField,
 } from '@folio/stripes/components';
-import { SimpleTable, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { SimpleTable, useOkapiKy, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import useDirectoryPermissions from '../hooks/useDirectoryPermissions';
 
 const entryNetworksPath = id => `directory/entries/by-id/${id}/networks`;
@@ -143,7 +143,7 @@ const EntryNetworksEditor = ({ id }) => {
         message: (
           <KeyValue
             label={<FormattedMessage id="ui-rsdir.networks.add.error" />}
-            value={error.response?.statusText || error.message}
+            value={error.message}
           />
         ),
       });
@@ -168,7 +168,7 @@ const EntryNetworksEditor = ({ id }) => {
         message: (
           <KeyValue
             label={<FormattedMessage id="ui-rsdir.network.priority.update.error" />}
-            value={error.response?.statusText || error.message}
+            value={error.message}
           />
         ),
       });
@@ -193,7 +193,7 @@ const EntryNetworksEditor = ({ id }) => {
         message: (
           <KeyValue
             label={<FormattedMessage id="ui-rsdir.networks.delete.error" />}
-            value={error.response?.statusText || error.message}
+            value={error.message}
           />
         ),
       });

@@ -43,3 +43,23 @@ export const applyInheritancePolicy = (fieldMap, spec, configKey, entryType) => 
   if (access === HIDDEN) return [];
   return access === READ_ONLY ? [{ ...field, readOnly: true }] : [field];
 });
+
+// Entry types below entryType that may inherit this field from it, top-down.
+export const inheritingTypes = (spec, configKey, fieldName, entryType) => {
+  const root = policyValue(spec, configKey, fieldName, 'x-inheritance-root');
+  if (!(root in RANK) || !(entryType in RANK) || RANK[entryType] > RANK[root]) return [];
+
+  return Object.keys(RANK)
+    .filter(type => RANK[type] < RANK[entryType])
+    .sort((a, b) => RANK[b] - RANK[a]);
+};
+
+// Fields that resolve together with fieldName: those sharing its x-merge-unit,
+// or every field when the container itself is the unit.
+export const mergeUnitFieldNames = (spec, configKey, fieldName, fieldNames) => {
+  const unit = policyValue(spec, configKey, fieldName, 'x-merge-unit');
+  if (unit === undefined) return [fieldName];
+
+  return fieldNames.filter(name => name === fieldName ||
+    policyValue(spec, configKey, name, 'x-merge-unit') === unit);
+};

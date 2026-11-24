@@ -1,0 +1,1188 @@
+{
+  "id": "folio_inventory-13.0.8",
+  "name": "Inventory manager",
+  "permissionSets": [
+    {
+      "permissionName": "module.inventory.enabled",
+      "displayName": "Inventory: Module is enabled",
+      "subPermissions": [
+        "search.index.indices.item.post",
+        "search.index.mappings.item.post",
+        "search.index.records.collection.post",
+        "search.instances.collection.get",
+        "search.instances.ids.collection.get",
+        "search.holdings.ids.collection.get",
+        "search.config.languages.item.post",
+        "search.config.languages.collection.get",
+        "search.config.languages.item.delete",
+        "search.index.inventory.reindex.post",
+        "search.facets.collection.get",
+        "consortium-search.holdings.collection.get",
+        "consortium-search.items.collection.get"
+      ]
+    },
+    {
+      "permissionName": "ui-inventory.all",
+      "displayName": "Inventory: All permissions",
+      "replaces": [
+        "ui-inventory.all-permissions.TEMPORARY"
+      ],
+      "description": "Some subperms to support enabling/using the Inventory app",
+      "subPermissions": [
+        "ui-plugin-create-inventory-records.create",
+        "ui-inventory.instance.view",
+        "ui-inventory.instance.create",
+        "ui-inventory.holdings.create",
+        "ui-inventory.item.create",
+        "ui-inventory.instance.edit",
+        "ui-inventory.item.edit",
+        "ui-inventory.holdings.edit",
+        "ui-inventory.item.mark-as-missing.execute",
+        "ui-inventory.item.delete",
+        "ui-inventory.holdings.delete",
+        "browse.contributors.instances.collection.get",
+        "inventory-storage.bound-with-parts.collection.get",
+        "source-storage.records.matching.collection.post"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.call-number-browse.view",
+      "displayName": "Call number browse: View permissions ",
+      "description": "Enable call number browse feature",
+      "subPermissions": [
+        "ui-inventory.instance.view",
+        "browse.call-numbers.instances.collection.get",
+        "browse.authorities.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.subjects.view",
+      "displayName": "Subject browse: View permissions",
+      "description": "Enable subject browse feature",
+      "subPermissions": [
+        "ui-inventory.instance.view",
+        "browse.subjects.instances.collection.get",
+        "browse.authorities.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "settings.inventory.enabled",
+      "displayName": "Settings (Inventory): Module is enabled.",
+      "subPermissions": [
+        "settings.enabled",
+        "audit.config.groups.settings.audit.inventory.collection.get",
+        "perms.users.get"
+      ],
+      "visible": false
+    },
+    {
+      "permissionName": "ui-inventory.settings.material-types",
+      "displayName": "Settings (Inventory): Create, edit, delete material types",
+      "replaces": [
+        "ui-inventory.settings.materialtypes"
+      ],
+      "subPermissions": [
+        "inventory-storage.material-types.collection.get",
+        "inventory-storage.material-types.item.delete",
+        "inventory-storage.material-types.item.get",
+        "inventory-storage.material-types.item.post",
+        "inventory-storage.material-types.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.loan-types",
+      "displayName": "Settings (Inventory): Create, edit, delete loan types",
+      "replaces": [
+        "ui-inventory.settings.loantypes"
+      ],
+      "subPermissions": [
+        "inventory-storage.loan-types.collection.get",
+        "inventory-storage.loan-types.item.delete",
+        "inventory-storage.loan-types.item.get",
+        "inventory-storage.loan-types.item.post",
+        "inventory-storage.loan-types.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.statistical-code-types",
+      "displayName": "Settings (Inventory): Create, edit, delete statistical code types",
+      "subPermissions": [
+        "inventory-storage.statistical-code-types.collection.get",
+        "inventory-storage.statistical-code-types.item.delete",
+        "inventory-storage.statistical-code-types.item.get",
+        "inventory-storage.statistical-code-types.item.post",
+        "inventory-storage.statistical-code-types.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.instance-formats",
+      "displayName": "Settings (Inventory): Create, edit, delete formats",
+      "subPermissions": [
+        "inventory-storage.instance-formats.collection.get",
+        "inventory-storage.instance-formats.item.delete",
+        "inventory-storage.instance-formats.item.get",
+        "inventory-storage.instance-formats.item.post",
+        "inventory-storage.instance-formats.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.electronic-access-relationships",
+      "displayName": "Settings (Inventory): Create, edit, delete URL relationships",
+      "subPermissions": [
+        "inventory-storage.electronic-access-relationships.collection.get",
+        "inventory-storage.electronic-access-relationships.item.delete",
+        "inventory-storage.electronic-access-relationships.item.get",
+        "inventory-storage.electronic-access-relationships.item.post",
+        "inventory-storage.electronic-access-relationships.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.holdings-types",
+      "displayName": "Settings (Inventory): Create, edit, delete holdings types",
+      "subPermissions": [
+        "inventory-storage.holdings-types.collection.get",
+        "inventory-storage.holdings-types.item.delete",
+        "inventory-storage.holdings-types.item.get",
+        "inventory-storage.holdings-types.item.post",
+        "inventory-storage.holdings-types.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.call-number-browse",
+      "displayName": "Settings (Inventory): Configure call number browse",
+      "subPermissions": [
+        "settings.inventory.enabled",
+        "inventory-storage.call-number-types.collection.get",
+        "browse.config.collection.get",
+        "browse.config.item.put",
+        "perms.users.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.classification-browse",
+      "displayName": "Settings (Inventory): Configure classification browse",
+      "subPermissions": [
+        "settings.inventory.enabled",
+        "inventory-storage.classification-types.collection.get",
+        "browse.config.collection.get",
+        "browse.config.item.put",
+        "perms.users.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.classification-types",
+      "displayName": "Settings (Inventory): Create, edit, delete classification identifier types",
+      "subPermissions": [
+        "inventory-storage.classification-types.collection.get",
+        "inventory-storage.classification-types.item.delete",
+        "inventory-storage.classification-types.item.get",
+        "inventory-storage.classification-types.item.post",
+        "inventory-storage.classification-types.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.identifier-types",
+      "displayName": "Settings (Inventory): Create, edit, delete resource identifier types",
+      "subPermissions": [
+        "inventory-storage.identifier-types.collection.get",
+        "inventory-storage.identifier-types.item.delete",
+        "inventory-storage.identifier-types.item.get",
+        "inventory-storage.identifier-types.item.post",
+        "inventory-storage.identifier-types.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.subject-sources",
+      "displayName": "Settings (Inventory): Create, edit, delete subject sources",
+      "subPermissions": [
+        "inventory-storage.subject-sources.collection.get",
+        "inventory-storage.subject-sources.item.get",
+        "inventory-storage.subject-sources.item.post",
+        "inventory-storage.subject-sources.item.put",
+        "inventory-storage.subject-sources.item.delete",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.subject-types",
+      "displayName": "Settings (Inventory): Create, edit, delete subject types",
+      "subPermissions": [
+        "inventory-storage.subject-types.collection.get",
+        "inventory-storage.subject-types.item.get",
+        "inventory-storage.subject-types.item.post",
+        "inventory-storage.subject-types.item.put",
+        "inventory-storage.subject-types.item.delete",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.instance-statuses",
+      "displayName": "Settings (Inventory): Create, edit, delete instance status types",
+      "subPermissions": [
+        "inventory-storage.instance-statuses.collection.get",
+        "inventory-storage.instance-statuses.item.delete",
+        "inventory-storage.instance-statuses.item.get",
+        "inventory-storage.instance-statuses.item.post",
+        "inventory-storage.instance-statuses.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.statistical-codes",
+      "displayName": "Settings (Inventory): Create, edit, delete statistical codes",
+      "subPermissions": [
+        "inventory-storage.statistical-codes.collection.get",
+        "inventory-storage.statistical-codes.item.delete",
+        "inventory-storage.statistical-codes.item.get",
+        "inventory-storage.statistical-codes.item.post",
+        "inventory-storage.statistical-codes.item.put",
+        "settings.inventory.enabled",
+        "inventory-storage.statistical-code-types.collection.get",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.alternative-title-types",
+      "displayName": "Settings (Inventory): Create, edit, delete alternative title types",
+      "subPermissions": [
+        "inventory-storage.alternative-title-types.collection.get",
+        "inventory-storage.alternative-title-types.item.delete",
+        "inventory-storage.alternative-title-types.item.get",
+        "inventory-storage.alternative-title-types.item.post",
+        "inventory-storage.alternative-title-types.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.instance-types",
+      "displayName": "Settings (Inventory): Create, edit, delete locally defined resource types",
+      "subPermissions": [
+        "inventory-storage.instance-types.collection.get",
+        "inventory-storage.instance-types.item.delete",
+        "inventory-storage.instance-types.item.get",
+        "inventory-storage.instance-types.item.post",
+        "inventory-storage.instance-types.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.nature-of-content-terms",
+      "displayName": "Settings (Inventory): Create, edit, delete nature of content",
+      "subPermissions": [
+        "inventory-storage.nature-of-content-terms.collection.get",
+        "inventory-storage.nature-of-content-terms.item.delete",
+        "inventory-storage.nature-of-content-terms.item.get",
+        "inventory-storage.nature-of-content-terms.item.post",
+        "inventory-storage.nature-of-content-terms.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.modes-of-issuance",
+      "displayName": "Settings (Inventory): Create, edit, delete locally defined modes of issuance",
+      "subPermissions": [
+        "inventory-storage.modes-of-issuance.collection.get",
+        "inventory-storage.modes-of-issuance.item.delete",
+        "inventory-storage.modes-of-issuance.item.get",
+        "inventory-storage.modes-of-issuance.item.post",
+        "inventory-storage.modes-of-issuance.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.instance-note-types",
+      "displayName": "Settings (Inventory): Create, edit, delete instance note types",
+      "subPermissions": [
+        "inventory-storage.instance-note-types.collection.get",
+        "inventory-storage.instance-note-types.item.delete",
+        "inventory-storage.instance-note-types.item.get",
+        "inventory-storage.instance-note-types.item.post",
+        "inventory-storage.instance-note-types.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.ill-policies",
+      "displayName": "Settings (Inventory): Create, edit, delete ILL policies",
+      "subPermissions": [
+        "inventory-storage.ill-policies.collection.get",
+        "inventory-storage.ill-policies.item.delete",
+        "inventory-storage.ill-policies.item.get",
+        "inventory-storage.ill-policies.item.post",
+        "inventory-storage.ill-policies.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.contributor-types",
+      "displayName": "Settings (Inventory): Create, edit, delete contributor types",
+      "subPermissions": [
+        "inventory-storage.contributor-types.collection.get",
+        "inventory-storage.contributor-types.item.delete",
+        "inventory-storage.contributor-types.item.get",
+        "inventory-storage.contributor-types.item.post",
+        "inventory-storage.contributor-types.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.call-number-types",
+      "displayName": "Settings (Inventory): Create, edit, delete call number types",
+      "subPermissions": [
+        "inventory-storage.call-number-types.collection.get",
+        "inventory-storage.call-number-types.item.delete",
+        "inventory-storage.call-number-types.item.get",
+        "inventory-storage.call-number-types.item.post",
+        "inventory-storage.call-number-types.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.single-record-import",
+      "displayName": "Settings (Inventory): Configure single-record import",
+      "subPermissions": [
+        "settings.inventory.enabled",
+        "copycat.profiles.collection.get",
+        "copycat.profiles.item.get",
+        "copycat.profiles.item.post",
+        "copycat.profiles.item.put",
+        "copycat.profiles.item.delete",
+        "converter-storage.jobprofile.item.get",
+        "converter-storage.jobprofile.collection.get",
+        "inventory-storage.identifier-types.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.holdings-note-types",
+      "displayName": "Settings (Inventory): Create, edit, delete holdings note types",
+      "subPermissions": [
+        "inventory-storage.holdings-note-types.collection.get",
+        "inventory-storage.holdings-note-types.item.delete",
+        "inventory-storage.holdings-note-types.item.get",
+        "inventory-storage.holdings-note-types.item.post",
+        "inventory-storage.holdings-note-types.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.holdings-sources",
+      "displayName": "Settings (Inventory): Create, edit, delete holdings sources",
+      "subPermissions": [
+        "inventory-storage.holdings-sources.collection.get",
+        "inventory-storage.holdings-sources.item.delete",
+        "inventory-storage.holdings-sources.item.get",
+        "inventory-storage.holdings-sources.item.post",
+        "inventory-storage.holdings-sources.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.item-note-types",
+      "displayName": "Settings (Inventory): Create, edit, delete item note types",
+      "subPermissions": [
+        "inventory-storage.item-note-types.collection.get",
+        "inventory-storage.item-note-types.item.delete",
+        "inventory-storage.item-note-types.item.get",
+        "inventory-storage.item-note-types.item.post",
+        "inventory-storage.item-note-types.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.fast-add",
+      "displayName": "Settings (Inventory): Edit fast add settings",
+      "subPermissions": [
+        "inventory-storage.instance-statuses.collection.get",
+        "configuration.entries.collection.get",
+        "configuration.entries.item.post",
+        "configuration.entries.item.put",
+        "settings.inventory.enabled"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.hrid-handling",
+      "displayName": "Settings (Inventory): Create, edit and delete HRID handling",
+      "subPermissions": [
+        "configuration.entries.collection.get",
+        "inventory-storage.hrid-settings.item.get",
+        "inventory-storage.hrid-settings.item.put",
+        "settings.inventory.enabled",
+        "users.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "mod-settings.global.read.ui-inventory.number-generator-settings.manage",
+      "displayName": "Settings (Inventory): Read the settings in the 'Number generator' section",
+      "visible": false
+    },
+    {
+      "permissionName": "mod-settings.global.write.ui-inventory.number-generator-settings.manage",
+      "displayName": "Settings (Inventory): Write the settings in the 'Number generator' section",
+      "visible": false
+    },
+    {
+      "permissionName": "ui-inventory.settings.manage-number-generator-options",
+      "displayName": "Settings (Inventory): Manage number generator options",
+      "subPermissions": [
+        "settings.inventory.enabled",
+        "mod-settings.entries.collection.get",
+        "mod-settings.entries.item.post",
+        "mod-settings.entries.item.put",
+        "mod-settings.global.read.ui-inventory.number-generator-settings.manage",
+        "mod-settings.global.write.ui-inventory.number-generator-settings.manage"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.instance.view",
+      "displayName": "Inventory: View instances, holdings, and items",
+      "subPermissions": [
+        "module.inventory.enabled",
+        "users.collection.get",
+        "tags.collection.get",
+        "source-storage.records.collection.get",
+        "source-storage.records.item.get",
+        "source-storage.records.formatted.item.get",
+        "source-storage.stream.records.collection.get",
+        "circulation.loans.collection.get",
+        "circulation.loans.collection.get",
+        "circulation.requests.collection.get",
+        "configuration.entries.collection.get",
+        "inventory.config.instances.blocked-fields.get",
+        "inventory.instances.collection.get",
+        "inventory.instances.item.get",
+        "inventory.items.collection.get",
+        "inventory.items-by-holdings-id.collection.get",
+        "inventory.items.item.get",
+        "inventory-storage.items.item.get",
+        "inventory-storage.items.collection.get",
+        "inventory-storage.identifier-types.collection.get",
+        "inventory-storage.contributor-types.collection.get",
+        "inventory-storage.contributor-name-types.collection.get",
+        "inventory-storage.call-number-types.collection.get",
+        "inventory-storage.item-note-types.collection.get",
+        "inventory-storage.item-damaged-statuses.collection.get",
+        "inventory-storage.nature-of-content-terms.collection.get",
+        "inventory-storage.classification-types.collection.get",
+        "inventory-storage.alternative-title-types.collection.get",
+        "inventory-storage.locations.collection.get",
+        "inventory-storage.locations.item.get",
+        "inventory-storage.location-units.institutions.collection.get",
+        "inventory-storage.location-units.institutions.item.get",
+        "inventory-storage.location-units.campuses.collection.get",
+        "inventory-storage.location-units.campuses.item.get",
+        "inventory-storage.location-units.libraries.collection.get",
+        "inventory-storage.location-units.libraries.item.get",
+        "inventory-storage.modes-of-issuance.collection.get",
+        "inventory-storage.instance-formats.collection.get",
+        "inventory-storage.instance-statuses.collection.get",
+        "inventory-storage.instance-types.collection.get",
+        "inventory-storage.instance-relationship-types.collection.get",
+        "inventory-storage.instance-note-types.collection.get",
+        "inventory-storage.instances.item.get",
+        "inventory-storage.electronic-access-relationships.collection.get",
+        "inventory-storage.statistical-code-types.collection.get",
+        "inventory-storage.statistical-codes.collection.get",
+        "inventory-storage.ill-policies.collection.get",
+        "inventory-storage.holdings-note-types.collection.get",
+        "inventory-storage.holdings-sources.collection.get",
+        "inventory-storage.holdings-types.collection.get",
+        "inventory-storage.holdings.collection.get",
+        "inventory-storage.holdings.item.get",
+        "inventory-storage.material-types.collection.get",
+        "inventory-storage.loan-types.collection.get",
+        "inventory-storage.service-points.item.get",
+        "inventory-storage.service-points.collection.get",
+        "inventory-storage.hrid-settings.item.get",
+        "inventory-storage.record-bulk.ids.get",
+        "inventory-storage.subject-sources.collection.get",
+        "inventory-storage.subject-types.collection.get",
+        "data-export.quick.export.post",
+        "orders.holding-summary.collection.get",
+        "orders.pieces.collection.get",
+        "orders.po-lines.collection.get",
+        "orders.po-lines.item.get",
+        "orders.collection.get",
+        "orders.item.get",
+        "orders-storage.settings.collection.get",
+        "orders.titles.collection.get",
+        "organizations.organizations.item.get",
+        "acquisitions-units.units.collection.get",
+        "browse.call-numbers.instances.collection.get",
+        "browse.contributors.instances.collection.get",
+        "browse.subjects.instances.collection.get",
+        "browse.classification-numbers.instances.collection.get",
+        "perms.users.get",
+        "inventory-storage.bound-with-parts.collection.get",
+        "consortium-search.locations.collection.get",
+        "browse.config.collection.get",
+        "mod-settings.entries.collection.get",
+        "mod-settings.global.read.ui-inventory.display-settings.manage",
+        "inventory-storage.instance-date-types.collection.get",
+        "audit.inventory.instance.collection.get",
+        "audit.inventory.holdings.collection.get",
+        "audit.inventory.item.collection.get",
+        "audit.marc.bib.collection.get",
+        "audit.config.groups.settings.collection.get",
+        "audit.config.groups.settings.audit.inventory.collection.get",
+        "consortia.sharing-instances.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.instance.create",
+      "displayName": "Inventory: View, create instances",
+      "subPermissions": [
+        "ui-inventory.instance.view",
+        "inventory.instances.item.post",
+        "inventory-storage.instances.item.post",
+        "browse.contributors.instances.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.instance.edit",
+      "displayName": "Inventory: View, create, edit instances",
+      "subPermissions": [
+        "ui-inventory.instance.create",
+        "inventory.instances.item.put",
+        "inventory-storage.instances.item.put",
+        "browse.contributors.instances.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.instance.order.create",
+      "displayName": "Inventory: Create order from instance",
+      "replaces": [
+        "ui-inventory.instance.createOrder"
+      ],
+      "subPermissions": [
+        "ui-inventory.instance.view",
+        "acquisitions-units.memberships.collection.get",
+        "acquisitions-units.units.collection.get",
+        "data-export.config.collection.get",
+        "finance.exchange-rate.item.get",
+        "finance.expense-classes.collection.get",
+        "finance.funds.collection.get",
+        "finance.funds.expense-classes.collection.get",
+        "isbn-utils.convert-to-13.get",
+        "isbn-utils.validator.get",
+        "orders.acquisition-methods.collection.get",
+        "orders.configuration.prefixes.collection.get",
+        "orders.configuration.reasons-for-closure.collection.get",
+        "orders.configuration.suffixes.collection.get",
+        "orders.item.get",
+        "orders.item.post",
+        "orders.item.put",
+        "orders.order-templates.collection.get",
+        "orders.order-templates.item.get",
+        "orders.po-lines.item.post",
+        "orders.po-number.item.get",
+        "orders.po-number.item.post",
+        "organizations.organizations.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.item.create",
+      "displayName": "Inventory: View, create items",
+      "subPermissions": [
+        "ui-inventory.instance.view",
+        "inventory.items.item.post",
+        "inventory.instances.item.put",
+        "inventory-storage.instances.item.put",
+        "inventory-storage.bound-with-parts.item.post"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.item.edit",
+      "displayName": "Inventory: View, create, edit items",
+      "subPermissions": [
+        "ui-inventory.item.create",
+        "inventory.items.item.put",
+        "inventory-storage.bound-with-parts.item.delete",
+        "inventory-storage.bound-withs.collection.put"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.item.move",
+      "displayName": "Inventory: Move items",
+      "subPermissions": [
+        "ui-inventory.item.create",
+        "inventory.items.move.item.post"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.item.mark-as-missing.execute",
+      "displayName": "Inventory: View, create, edit, mark missing items",
+      "replaces": [
+        "ui-inventory.item.markasmissing"
+      ],
+      "subPermissions": [
+        "ui-inventory.item.edit",
+        "inventory.items.item.mark-missing.post"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.item.delete",
+      "displayName": "Inventory: View, create, edit, delete items",
+      "subPermissions": [
+        "ui-inventory.item.edit",
+        "inventory.items.item.delete"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.holdings.create",
+      "displayName": "Inventory: View, create holdings",
+      "subPermissions": [
+        "ui-inventory.instance.view",
+        "inventory-storage.holdings.item.post"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.holdings.edit",
+      "displayName": "Inventory: View, create, edit holdings",
+      "subPermissions": [
+        "ui-inventory.holdings.create",
+        "inventory-storage.holdings.item.put",
+        "inventory.config.holdings.blocked-fields.get",
+        "inventory.holdings.item.put"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.holdings.move",
+      "displayName": "Inventory: Move holdings",
+      "subPermissions": [
+        "ui-inventory.instance.edit",
+        "ui-inventory.holdings.create",
+        "inventory.holdings.move.item.post"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.holdings.delete",
+      "displayName": "Inventory: View, create, edit, delete holdings",
+      "subPermissions": [
+        "ui-inventory.holdings.edit",
+        "inventory-storage.holdings.item.delete"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.instance.staff-suppressed-records.view",
+      "displayName": "Inventory: Enable staff suppress facet",
+      "replaces": [
+        "ui-inventory.instance.view-staff-suppressed-records"
+      ],
+      "subPermissions": [
+        "ui-inventory.instance.view"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.instance.set-records-for-deletion.execute",
+      "displayName": "Inventory: Set records for deletion",
+      "replaces": [
+        "ui-inventory.instance.set-deletion-and-staff-suppress"
+      ],
+      "subPermissions": [
+        "ui-inventory.instance.view",
+        "source-storage.records.update"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.settings.list.view",
+      "displayName": "Settings (Inventory): View list of settings pages",
+      "subPermissions": [
+        "settings.inventory.enabled",
+        "users.collection.get",
+        "source-storage.records.collection.get",
+        "source-storage.records.item.get",
+        "source-storage.records.formatted.item.get",
+        "source-storage.stream.records.collection.get",
+        "inventory-storage.material-types.collection.get",
+        "inventory-storage.material-types.item.get",
+        "inventory-storage.loan-types.collection.get",
+        "inventory-storage.loan-types.item.get",
+        "inventory-storage.statistical-code-types.collection.get",
+        "inventory-storage.statistical-code-types.item.get",
+        "inventory-storage.instance-formats.collection.get",
+        "inventory-storage.instance-formats.item.get",
+        "inventory-storage.electronic-access-relationships.collection.get",
+        "inventory-storage.electronic-access-relationships.item.get",
+        "inventory-storage.holdings-types.collection.get",
+        "inventory-storage.holdings-types.item.get",
+        "inventory-storage.classification-types.collection.get",
+        "inventory-storage.classification-types.item.get",
+        "inventory-storage.identifier-types.collection.get",
+        "inventory-storage.identifier-types.item.get",
+        "inventory-storage.instance-statuses.collection.get",
+        "inventory-storage.instance-statuses.item.get",
+        "inventory-storage.statistical-codes.collection.get",
+        "inventory-storage.statistical-codes.item.get",
+        "inventory-storage.alternative-title-types.collection.get",
+        "inventory-storage.alternative-title-types.item.get",
+        "inventory-storage.instance-types.collection.get",
+        "inventory-storage.instance-types.item.get",
+        "inventory-storage.nature-of-content-terms.collection.get",
+        "inventory-storage.nature-of-content-terms.item.get",
+        "inventory-storage.modes-of-issuance.collection.get",
+        "inventory-storage.modes-of-issuance.item.get",
+        "inventory-storage.instance-note-types.collection.get",
+        "inventory-storage.instance-note-types.item.get",
+        "inventory-storage.ill-policies.collection.get",
+        "inventory-storage.ill-policies.item.get",
+        "inventory-storage.contributor-types.collection.get",
+        "inventory-storage.contributor-types.item.get",
+        "inventory-storage.call-number-types.collection.get",
+        "inventory-storage.call-number-types.item.get",
+        "inventory-storage.holdings-note-types.collection.get",
+        "inventory-storage.holdings-note-types.item.get",
+        "inventory-storage.holdings-sources.collection.get",
+        "inventory-storage.holdings-sources.item.get",
+        "inventory-storage.item-note-types.collection.get",
+        "inventory-storage.item-note-types.item.get",
+        "inventory-storage.hrid-settings.item.get",
+        "configuration.entries.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.items.mark-withdrawn.execute",
+      "displayName": "Inventory: Mark items withdrawn",
+      "replaces": [
+        "ui-inventory.items.mark-items-withdrawn"
+      ],
+      "subPermissions": [
+        "inventory.items.item.mark-withdrawn.post"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.items.mark-intellectual-item.execute",
+      "displayName": "Inventory: Mark items intellectual item",
+      "replaces": [
+        "ui-inventory.items.mark-intellectual-item"
+      ],
+      "subPermissions": [
+        "inventory.items.item.mark-intellectual-item.post"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.items.mark-restricted.execute",
+      "displayName": "Inventory: Mark items restricted",
+      "replaces": [
+        "ui-inventory.items.mark-restricted"
+      ],
+      "subPermissions": [
+        "inventory.items.item.mark-restricted.post"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.items.mark-unknown.execute",
+      "displayName": "Inventory: Mark items unknown",
+      "replaces": [
+        "ui-inventory.items.mark-unknown"
+      ],
+      "subPermissions": [
+        "inventory.items.item.mark-unknown.post"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.items.mark-unavailable.execute",
+      "displayName": "Inventory: Mark items unavailable",
+      "replaces": [
+        "ui-inventory.items.mark-unavailable"
+      ],
+      "subPermissions": [
+        "inventory.items.item.mark-unavailable.post"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.items.mark-long-missing.execute",
+      "displayName": "Inventory: Mark items long missing",
+      "replaces": [
+        "ui-inventory.items.mark-long-missing"
+      ],
+      "subPermissions": [
+        "inventory.items.item.mark-long-missing.post"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.items.mark-in-process-non-requestable.execute",
+      "displayName": "Inventory: Mark items in process (non-requestable)",
+      "replaces": [
+        "ui-inventory.items.mark-in-process-non-requestable"
+      ],
+      "subPermissions": [
+        "inventory.items.item.mark-in-process-non-requestable.post"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.items.mark-in-process.execute",
+      "displayName": "Inventory: Mark items in process",
+      "replaces": [
+        "ui-inventory.items.mark-in-process"
+      ],
+      "subPermissions": [
+        "inventory.items.item.mark-in-process.post"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.items.in-transit-report.create",
+      "displayName": "Inventory: Create and download In transit items report",
+      "replaces": [
+        "ui-inventory.items.create-in-transit-report"
+      ],
+      "subPermissions": [
+        "circulation.inventory.items-in-transit-report.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-inventory.single-record-import",
+      "displayName": "Inventory: Import single bibliographic records",
+      "subPermissions": [
+        "ui-inventory.instance.view",
+        "copycat.profiles.collection.get",
+        "copycat.imports.post",
+        "converter-storage.jobprofile.item.get",
+        "converter-storage.jobprofile.collection.get"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "mod-settings.global.read.ui-inventory.display-settings.manage",
+      "displayName": "Settings (Inventory): read the settings in the 'Display settings' section",
+      "visible": false
+    },
+    {
+      "permissionName": "mod-settings.global.write.ui-inventory.display-settings.manage",
+      "displayName": "Settings (Inventory): write the settings in the 'Display settings' section",
+      "visible": false
+    },
+    {
+      "permissionName": "ui-inventory.settings.displaySettings",
+      "displayName": "Settings (Inventory): Can view and edit general settings",
+      "subPermissions": [
+        "settings.inventory.enabled",
+        "mod-settings.entries.collection.get",
+        "mod-settings.entries.item.post",
+        "mod-settings.entries.item.put",
+        "mod-settings.global.read.ui-inventory.display-settings.manage",
+        "mod-settings.global.write.ui-inventory.display-settings.manage",
+        "audit.config.groups.collection.get",
+        "audit.config.groups.settings.audit.inventory.collection.get",
+        "audit.config.groups.settings.collection.get",
+        "audit.config.groups.settings.item.put",
+        "audit.config.groups.settings.audit.inventory.records.page.size.item.put"
+      ],
+      "visible": true
+    }
+  ],
+  "requires": [
+    {
+      "id": "alternative-title-types",
+      "version": "1.0"
+    },
+    {
+      "id": "audit-inventory",
+      "version": "1.0"
+    },
+    {
+      "id": "audit-config",
+      "version": "1.0"
+    },
+    {
+      "id": "audit-marc",
+      "version": "1.0"
+    },
+    {
+      "id": "call-number-types",
+      "version": "1.0"
+    },
+    {
+      "id": "browse",
+      "version": "2.0"
+    },
+    {
+      "id": "circulation",
+      "version": "9.0 10.0 11.0 12.0 13.0 14.0"
+    },
+    {
+      "id": "classification-types",
+      "version": "1.1"
+    },
+    {
+      "id": "configuration",
+      "version": "2.0"
+    },
+    {
+      "id": "contributor-name-types",
+      "version": "1.2"
+    },
+    {
+      "id": "contributor-types",
+      "version": "2.0"
+    },
+    {
+      "id": "data-export",
+      "version": "5.0"
+    },
+    {
+      "id": "data-import-converter-storage",
+      "version": "1.3 1.4 1.5"
+    },
+    {
+      "id": "electronic-access-relationships",
+      "version": "1.0"
+    },
+    {
+      "id": "holdings-note-types",
+      "version": "1.0"
+    },
+    {
+      "id": "holdings-sources",
+      "version": "1.0"
+    },
+    {
+      "id": "holdings-storage",
+      "version": "3.0 4.4 5.0 6.0 7.0 8.0"
+    },
+    {
+      "id": "holdings-types",
+      "version": "1.0"
+    },
+    {
+      "id": "identifier-types",
+      "version": "1.1"
+    },
+    {
+      "id": "ill-policies",
+      "version": "1.0"
+    },
+    {
+      "id": "instance-formats",
+      "version": "2.0"
+    },
+    {
+      "id": "instance-note-types",
+      "version": "1.0"
+    },
+    {
+      "id": "instance-relationship-types",
+      "version": "1.0"
+    },
+    {
+      "id": "instance-statuses",
+      "version": "1.0"
+    },
+    {
+      "id": "instance-storage",
+      "version": "7.0 8.0 9.0 10.0 11.0"
+    },
+    {
+      "id": "instance-types",
+      "version": "2.0"
+    },
+    {
+      "id": "inventory-record-bulk",
+      "version": "1.0"
+    },
+    {
+      "id": "inventory",
+      "version": "10.10 11.0 12.0 13.0 14.0"
+    },
+    {
+      "id": "item-note-types",
+      "version": "1.0"
+    },
+    {
+      "id": "item-storage",
+      "version": "8.0 9.0 10.0"
+    },
+    {
+      "id": "loan-types",
+      "version": "2.0"
+    },
+    {
+      "id": "location-units",
+      "version": "2.0"
+    },
+    {
+      "id": "locations",
+      "version": "3.0"
+    },
+    {
+      "id": "material-types",
+      "version": "2.0"
+    },
+    {
+      "id": "modes-of-issuance",
+      "version": "1.0"
+    },
+    {
+      "id": "nature-of-content-terms",
+      "version": "1.0"
+    },
+    {
+      "id": "search",
+      "version": "0.7 1.0 1.3"
+    },
+    {
+      "id": "settings",
+      "version": "1.1"
+    },
+    {
+      "id": "source-storage-records",
+      "version": "3.3"
+    },
+    {
+      "id": "statistical-code-types",
+      "version": "1.0"
+    },
+    {
+      "id": "statistical-codes",
+      "version": "1.0"
+    },
+    {
+      "id": "tags",
+      "version": "1.0"
+    },
+    {
+      "id": "users",
+      "version": "15.0 16.0"
+    }
+  ],
+  "optional": [
+    {
+      "id": "consortia",
+      "version": "1.0"
+    },
+    {
+      "id": "copycat-imports",
+      "version": "1.1"
+    },
+    {
+      "id": "copycat-profiles",
+      "version": "1.2"
+    },
+    {
+      "id": "remote-storage-mappings",
+      "version": "1.0 2.0"
+    },
+    {
+      "id": "acquisitions-units",
+      "version": "1.1"
+    },
+    {
+      "id": "orders",
+      "version": "11.0 12.0"
+    },
+    {
+      "id": "orders.holding-summary",
+      "version": "1.0"
+    },
+    {
+      "id": "order-lines",
+      "version": "2.0 3.0"
+    },
+    {
+      "id": "orders-storage.settings",
+      "version": "1.0"
+    },
+    {
+      "id": "organizations.organizations",
+      "version": "1.0"
+    },
+    {
+      "id": "pieces",
+      "version": "3.0"
+    },
+    {
+      "id": "titles",
+      "version": "1.2"
+    },
+    {
+      "id": "linked-data",
+      "version": "1.0"
+    }
+  ]
+}

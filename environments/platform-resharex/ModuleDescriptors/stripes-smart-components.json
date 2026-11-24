@@ -1,0 +1,37 @@
+{
+  "id": "folio_stripes-smart-components-10.0.4",
+  "name": "Connected Stripes components",
+  "permissionSets": [],
+  "requires": [
+    {
+      "id": "notes",
+      "version": "2.0 3.0 4.0"
+    },
+    {
+      "id": "tags",
+      "version": "1.0"
+    },
+    {
+      "id": "password-validator",
+      "version": "1.0"
+    }
+  ],
+  "optional": [
+    {
+      "id": "configuration",
+      "version": "2.0"
+    },
+    {
+      "id": "remote-storage-mappings",
+      "version": "1.0 2.0"
+    },
+    {
+      "id": "settings",
+      "version": "1.0"
+    },
+    {
+      "id": "users",
+      "version": "16.1"
+    }
+  ]
+}

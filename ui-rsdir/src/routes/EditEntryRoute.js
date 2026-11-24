@@ -5,8 +5,8 @@ import arrayMutators from 'final-form-arrays';
 import { useMutation, useQueryClient } from 'react-query';
 import { Prompt, Redirect, useParams, useHistory, useLocation } from 'react-router-dom';
 import { Button, KeyValue, Pane, PaneFooter } from '@folio/stripes/components';
-import { CalloutContext, useOkapiKy, useStripes } from '@folio/stripes/core';
-import { useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { CalloutContext, useStripes } from '@folio/stripes/core';
+import { useCloseDirect, useOkapiKy, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import EntryForm from '../components/EntryForm';
 import { ENTRY_PANE_ID, EntryLoadingPane } from '../components/EntryPane';
 import { getAddressPlugin } from '../util/addressPlugin';
@@ -62,7 +62,7 @@ const EditEntryRoute = () => {
         message: (
           <KeyValue
             label={<FormattedMessage id="ui-rsdir.create.error" />}
-            value={err.response?.statusText || ''}
+            value={err.message}
           />
         )
       });
@@ -87,7 +87,7 @@ const EditEntryRoute = () => {
         message: (
           <KeyValue
             label={<FormattedMessage id="ui-rsdir.edit.error" />}
-            value={err.response?.statusText || ''}
+            value={err.message}
           />
         )
       });

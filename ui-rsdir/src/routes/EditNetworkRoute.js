@@ -9,8 +9,8 @@ import {
   Pane,
   PaneFooter,
 } from '@folio/stripes/components';
-import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
-import { useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { CalloutContext } from '@folio/stripes/core';
+import { useCloseDirect, useOkapiKy, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import NetworkForm from '../components/NetworkForm';
 
 const CREATE = 'create';
@@ -67,7 +67,7 @@ const EditNetworkRoute = () => {
         message: (
           <KeyValue
             label={<FormattedMessage id="ui-rsdir.network.create.error" />}
-            value={err.response?.statusText || err.message}
+            value={err.message}
           />
         ),
       });
@@ -90,7 +90,7 @@ const EditNetworkRoute = () => {
         message: (
           <KeyValue
             label={<FormattedMessage id="ui-rsdir.network.edit.error" />}
-            value={err.response?.statusText || err.message}
+            value={err.message}
           />
         ),
       });
@@ -113,7 +113,7 @@ const EditNetworkRoute = () => {
         message: (
           <KeyValue
             label={<FormattedMessage id="ui-rsdir.network.delete.error" />}
-            value={err.response?.statusText || err.message}
+            value={err.message}
           />
         ),
       });

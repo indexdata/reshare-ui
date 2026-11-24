@@ -1,0 +1,70 @@
+{
+  "id": "folio_checkin-11.0.3",
+  "name": "Item Check-in",
+  "permissionSets": [
+    {
+      "permissionName": "module.checkin.enabled",
+      "displayName": "UI: Check in module is enabled"
+    },
+    {
+      "permissionName": "ui-checkin.all",
+      "displayName": "Check in: All permissions",
+      "description": "Entire set of permissions needed to use Checkin",
+      "visible": true,
+      "subPermissions": [
+        "users.collection.get",
+        "usergroups.collection.get",
+        "module.checkin.enabled",
+        "inventory.items.collection.get",
+        "circulation-bff.inventory.items.collection.get",
+        "inventory-storage.service-points.collection.get",
+        "accounts.collection.get",
+        "accounts.item.get",
+        "lost-item-fees-policies.collection.get",
+        "circulation.check-in-by-barcode.post",
+        "circulation-bff.loans.check-in-by-barcode.execute",
+        "circulation.requests.collection.get",
+        "feefineactions.collection.get",
+        "configuration.entries.collection.get",
+        "circulation.end-patron-action-session.post",
+        "circulation-storage.staff-slips.collection.get"
+      ]
+    }
+  ],
+  "requires": [
+    {
+      "id": "circulation",
+      "version": "9.0 10.0 11.0 12.0 13.0 14.0"
+    },
+    {
+      "id": "configuration",
+      "version": "2.0"
+    },
+    {
+      "id": "inventory",
+      "version": "10.0 11.0 12.0 13.0 14.0"
+    },
+    {
+      "id": "loan-policy-storage",
+      "version": "1.0 2.0"
+    },
+    {
+      "id": "users",
+      "version": "15.0 16.0"
+    },
+    {
+      "id": "feesfines",
+      "version": "17.0 18.0 19.0"
+    }
+  ],
+  "optional": [
+    {
+      "id": "circulation-bff-loans",
+      "version": "1.0"
+    },
+    {
+      "id": "circulation-bff-inventory",
+      "version": "1.0"
+    }
+  ]
+}

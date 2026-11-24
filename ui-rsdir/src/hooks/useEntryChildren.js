@@ -1,5 +1,5 @@
 import { useQuery } from 'react-query';
-import { useOkapiKy } from '@folio/stripes/core';
+import { useOkapiKy } from '@projectreshare/stripes-reshare';
 
 const pageSize = 1000;
 

@@ -1,0 +1,102 @@
+[
+  {
+    "id": "mod-settings-1.2.0",
+    "action": "enable"
+  },
+  {
+    "id": "directory-0.1.0-main.798+sha.08708dc",
+    "action": "enable"
+  },
+  {
+    "id": "folio_developer-10.0.2",
+    "action": "enable"
+  },
+  {
+    "id": "folio_stripes-core-11.0.15",
+    "action": "enable"
+  },
+  {
+    "id": "folio_stripes-smart-components-10.0.4",
+    "action": "enable"
+  },
+  {
+    "id": "folio_tenant-settings-10.0.0",
+    "action": "enable"
+  },
+  {
+    "id": "folio_users-12.1.17",
+    "action": "enable"
+  },
+  {
+    "id": "mod-any-0.1.2",
+    "action": "enable"
+  },
+  {
+    "id": "mod-authtoken-2.17.0",
+    "action": "enable"
+  },
+  {
+    "id": "mod-broker-0.1.0-main.642+sha.c524502",
+    "action": "enable"
+  },
+  {
+    "id": "mod-configuration-5.12.1",
+    "action": "enable"
+  },
+  {
+    "id": "mod-email-1.19.1",
+    "action": "enable"
+  },
+  {
+    "id": "mod-login-7.13.2",
+    "action": "enable"
+  },
+  {
+    "id": "mod-login-saml-2.10.4",
+    "action": "enable"
+  },
+  {
+    "id": "mod-notes-7.0.0",
+    "action": "enable"
+  },
+  {
+    "id": "mod-password-validator-3.4.1",
+    "action": "enable"
+  },
+  {
+    "id": "mod-permissions-6.7.1",
+    "action": "enable"
+  },
+  {
+    "id": "mod-sender-1.14.2",
+    "action": "enable"
+  },
+  {
+    "id": "mod-tags-2.4.1",
+    "action": "enable"
+  },
+  {
+    "id": "mod-template-engine-1.22.2",
+    "action": "enable"
+  },
+  {
+    "id": "mod-users-19.5.4",
+    "action": "enable"
+  },
+  {
+    "id": "mod-users-bl-7.10.4",
+    "action": "enable"
+  },
+  {
+    "id": "okapi-6.2.8",
+    "action": "enable"
+  },
+  {
+    "id": "projectreshare_rs-1.20.17",
+    "action": "enable"
+  },
+  {
+    "id": "projectreshare_rsdir-0.0.0",
+    "action": "enable"
+  }
+]

@@ -1,0 +1,39 @@
+{
+  "id": "projectreshare_rs-2.0.0",
+  "name": "Resource Sharing",
+  "permissionSets": [
+    {
+      "permissionName": "module.rs.enabled",
+      "displayName": "UI: resource-sharing module is enabled",
+      "visible": true
+    },
+    {
+      "permissionName": "settings.rs.enabled",
+      "displayName": "Settings (resource-sharing): settings enabled",
+      "subPermissions": [
+        "settings.enabled"
+      ],
+      "visible": false
+    }
+  ],
+  "requires": [
+    {
+      "id": "crosslink-broker",
+      "version": "1.0"
+    },
+    {
+      "id": "entries",
+      "version": "1.0"
+    },
+    {
+      "id": "tags",
+      "version": "1.0"
+    }
+  ],
+  "optional": [
+    {
+      "id": "dms",
+      "version": "0.0"
+    }
+  ]
+}

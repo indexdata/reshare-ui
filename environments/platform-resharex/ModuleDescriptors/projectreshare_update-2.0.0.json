@@ -1,0 +1,18 @@
+{
+  "id": "projectreshare_update-2.0.0",
+  "name": "Quickly change the status of items. Part of the ReShare project.",
+  "permissionSets": [
+    {
+      "permissionName": "module.update.enabled",
+      "displayName": "UI: update module is enabled",
+      "visible": true
+    }
+  ],
+  "requires": [
+    {
+      "id": "crosslink-broker",
+      "version": "1.0"
+    }
+  ],
+  "optional": []
+}

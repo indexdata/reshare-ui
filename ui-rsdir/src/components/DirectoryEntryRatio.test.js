@@ -18,12 +18,12 @@ jest.mock('react-intl', () => ({
 
 jest.mock('@folio/stripes/core', () => ({
   CalloutContext: jest.requireActual('react').createContext({ sendCallout: jest.fn() }),
-  useOkapiKy: () => ({ post: mockPost, patch: mockPatch }),
   useStripes: () => ({ config: {} }),
 }));
 
 jest.mock('@projectreshare/stripes-reshare', () => ({
   useCloseDirect: () => jest.fn(),
+  useOkapiKy: () => ({ post: mockPost, patch: mockPatch }),
   useOkapiQuery: path => ({
     data: path.includes('/by-id/') ? mockEntry : [],
     isSuccess: true,

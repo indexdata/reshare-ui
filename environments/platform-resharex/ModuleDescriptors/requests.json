@@ -1,0 +1,173 @@
+{
+  "id": "folio_requests-12.0.4",
+  "name": "Requests manager",
+  "permissionSets": [
+    {
+      "permissionName": "module.requests.enabled",
+      "displayName": "UI: Requests module is enabled"
+    },
+    {
+      "permissionName": "ui-requests.moveRequest.execute",
+      "displayName": "Requests: Move to new item, reorder queue",
+      "replaces": [
+        "ui-requests.moveRequest"
+      ],
+      "visible": true,
+      "subPermissions": [
+        "circulation.requests.item.move.post",
+        "circulation.rules.request-policy.get",
+        "ui-requests.reorderQueue.execute"
+      ]
+    },
+    {
+      "permissionName": "ui-requests.reorderQueue.execute",
+      "displayName": "Requests: Reorder queue",
+      "replaces": [
+        "ui-requests.reorderQueue"
+      ],
+      "visible": true,
+      "subPermissions": [
+        "circulation.requests.queue-item.collection.get",
+        "circulation.requests.queue-instance.collection.get",
+        "circulation.requests.queue.item-reorder.collection.post",
+        "circulation.requests.queue.instance-reorder.collection.post",
+        "circulation.requests.allowed-service-points.get",
+        "circulation-bff.requests.allowed-service-points.get",
+        "circulation.rules.request-policy.get"
+      ]
+    },
+    {
+      "permissionName": "ui-requests.all",
+      "displayName": "Requests: All permissions",
+      "description": "All permissions for the Requests app",
+      "subPermissions": [
+        "ui-requests.view",
+        "ui-requests.create",
+        "ui-requests.edit",
+        "ui-requests.moveRequest.execute",
+        "ui-requests.reorderQueue.execute"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-requests.view",
+      "displayName": "Requests: View",
+      "subPermissions": [
+        "module.requests.enabled",
+        "circulation.loans.collection.get",
+        "circulation.settings.item.get",
+        "circulation.requests.collection.get",
+        "circulation.requests.item.get",
+        "circulation-storage.cancellation-reasons.collection.get",
+        "circulation-storage.loans.collection.get",
+        "circulation-storage.loans.item.get",
+        "circulation-storage.requests.collection.get",
+        "circulation-storage.requests.item.get",
+        "users.collection.get",
+        "users.item.get",
+        "proxiesfor.collection.get",
+        "inventory-storage.service-points.collection.get",
+        "inventory-storage.service-points.item.get",
+        "addresstypes.collection.get",
+        "usergroups.collection.get",
+        "configuration.entries.collection.get",
+        "inventory.items.collection.get",
+        "inventory.items.item.get",
+        "inventory.instances.item.get",
+        "inventory.instances.collection.get",
+        "inventory-storage.items.collection.get",
+        "inventory-storage.items.item.get",
+        "inventory-storage.holdings.collection.get",
+        "inventory-storage.holdings.item.get",
+        "inventory-storage.instances.item.get",
+        "inventory-storage.instances.collection.get",
+        "inventory-storage.locations.collection.get",
+        "manualblocks.collection.get",
+        "circulation.requests.hold-shelf-clearance-report.get",
+        "circulation.settings.collection.get",
+        "tlr.settings.get",
+        "mod-settings.global.read.circulation",
+        "mod-settings.entries.collection.get",
+        "mod-settings.entries.item.get",
+        "circulation.search-slips.get",
+        "circulation.pick-slips.get",
+        "circulation-bff.search-slips.collection.get",
+        "circulation-bff.pick-slips.collection.get",
+        "circulation-storage.staff-slips.collection.get",
+        "tags.collection.get",
+        "circulation.print-events-entry.item.post"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-requests.create",
+      "displayName": "Requests: View, create",
+      "subPermissions": [
+        "ui-requests.view",
+        "automated-patron-blocks.collection.get",
+        "patron-blocks.automated-patron-blocks.collection.get",
+        "circulation.requests.item.post",
+        "circulation.requests.allowed-service-points.get",
+        "circulation-bff.requests.allowed-service-points.get",
+        "circulation-storage.requests.item.post",
+        "circulation-storage.request-preferences.collection.get",
+        "inventory-storage.locations.item.get",
+        "circulation-bff.requests.search-instances.get",
+        "circulation-bff.requests.post"
+      ],
+      "visible": true
+    },
+    {
+      "permissionName": "ui-requests.edit",
+      "displayName": "Requests: View, edit, cancel",
+      "subPermissions": [
+        "ui-requests.view",
+        "circulation.requests.item.put",
+        "circulation.requests.allowed-service-points.get",
+        "circulation-bff.requests.allowed-service-points.get",
+        "circulation-storage.requests.collection.delete",
+        "circulation-storage.requests.item.put",
+        "circulation-storage.requests.item.delete",
+        "circulation-storage.request-preferences.collection.get",
+        "tags.item.post"
+      ],
+      "visible": true
+    }
+  ],
+  "requires": [
+    {
+      "id": "cancellation-reason-storage",
+      "version": "1.1"
+    },
+    {
+      "id": "circulation",
+      "version": "14.2"
+    },
+    {
+      "id": "inventory",
+      "version": "10.0 11.0 12.0 13.0 14.0"
+    },
+    {
+      "id": "request-storage",
+      "version": "6.0"
+    },
+    {
+      "id": "pick-slips",
+      "version": "0.1"
+    },
+    {
+      "id": "search-slips",
+      "version": "0.1"
+    },
+    {
+      "id": "automated-patron-blocks",
+      "version": "0.1"
+    }
+  ],
+  "optional": [
+    {
+      "id": "circulation-bff-loans",
+      "version": "1.0"
+    }
+  ]
+}

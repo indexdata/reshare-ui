@@ -10,8 +10,8 @@ const mockKy = jest.fn();
 const mockEditor = jest.fn();
 let mockEntry;
 
-jest.mock('@folio/stripes/core', () => ({ useOkapiKy: () => mockKy }));
 jest.mock('@projectreshare/stripes-reshare', () => ({
+  useOkapiKy: () => mockKy,
   useOkapiQuery: () => ({ isSuccess: true, data: mockEntry }),
 }));
 jest.mock('react-router-dom', () => ({ useParams: () => ({ id: 'entry-id' }) }));

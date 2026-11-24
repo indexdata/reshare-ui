@@ -1,0 +1,13 @@
+{
+  "id": "projectreshare_rsdir-0.0.0",
+  "name": "ReShare Directory",
+  "permissionSets": [
+    {
+      "permissionName": "module.rsdir.enabled",
+      "displayName": "UI: ReShare directory module is enabled",
+      "visible": true
+    }
+  ],
+  "requires": [],
+  "optional": []
+}
