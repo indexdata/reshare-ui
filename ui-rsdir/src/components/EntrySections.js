@@ -5,8 +5,10 @@ import { Badge, NavList, NavListItem, NavListSection } from '@folio/stripes/comp
 import { sectionAppliesTo } from '../config/configSections';
 import css from './EntryPane.css';
 
-export const SECTIONS = [
-  { key: 'entry', segment: '', labelId: 'ui-rsdir.entry.section.entry' },
+const ENTRY_SECTION = { key: 'entry', segment: '', labelId: 'ui-rsdir.entry.section.entry' };
+
+// Listed after the entry section, sorted by translated label.
+const OTHER_SECTIONS = [
   { key: 'lmsconfig', segment: 'lmsconfig', labelId: 'ui-rsdir.entry.section.lmsConfig' },
   { key: 'catalogconfig', segment: 'catalogconfig', labelId: 'ui-rsdir.entry.section.catalogConfig' },
   { key: 'holdingspolicy', segment: 'holdingspolicy', labelId: 'ui-rsdir.entry.section.holdingsPolicy' },
@@ -19,7 +21,7 @@ export const SECTIONS = [
 
 export const sectionAt = (pathname, entryUrl) => {
   const segment = pathname.slice(entryUrl.length).split('/')[1] || '';
-  return SECTIONS.find(section => section.segment === segment) || SECTIONS[0];
+  return OTHER_SECTIONS.find(section => section.segment === segment) || ENTRY_SECTION;
 };
 
 // Missing counts mean not searched; zero means searched with no matches.
@@ -27,7 +29,13 @@ const EntrySections = ({ entryUrl, effectiveSections, active, counts = {} }) => 
   const intl = useIntl();
   const location = useLocation();
   const activeRef = useRef();
-  const sections = SECTIONS.filter(section => sectionAppliesTo(section.segment, effectiveSections));
+  const label = section => intl.formatMessage({ id: section.labelId });
+  const sections = [
+    ENTRY_SECTION,
+    ...OTHER_SECTIONS
+      .filter(section => sectionAppliesTo(section.segment, effectiveSections))
+      .sort((a, b) => label(a).localeCompare(label(b), intl.locale)),
+  ];
 
   // Section navigation unmounts the focused link. Focus the active section
   // if nothing else has focus; leave focus on a results row or other control.
