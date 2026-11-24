@@ -35,6 +35,7 @@
   "entry.section.catalogConfig" : "Catalog config",
   "entry.section.holdingsPolicy" : "Holdings policy",
   "entry.section.illConfig" : "ILL config",
+  "entry.section.discoveryConfig" : "Discovery",
   "entry.section.lmsConfig" : "LMS config",
   "entry.section.tiers" : "Tiers",
   "entry.section.networks" : "Networks",
@@ -398,5 +399,9 @@
   "illConfig.cancellationReasons": "Cancellation reasons",
   "illConfig.cancellationReasons.code": "Code",
   "illConfig.cancellationReasons.defaultDesc": "Description",
+  "discoveryConfig.queryUrl": "Discovery base URL",
+  "discoveryConfig.itemLinkTemplate": "Item link template",
+  "discoveryConfig.edit.success": "Discovery configuration updated successfully",
+  "discoveryConfig.empty": "No discovery configuration has been saved for this entry.",
   "SENTINEL" : "SENTINEL"
 }

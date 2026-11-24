@@ -3,11 +3,10 @@ import uniqBy from 'lodash/uniqBy';
 import { FORM_ERROR } from 'final-form';
 import { Form, Field } from 'react-final-form';
 import { FormattedMessage } from 'react-intl';
-import { useIsActionPending } from '@projectreshare/stripes-reshare';
+import { useIsActionPending, useTenantInstitution } from '@projectreshare/stripes-reshare';
 import { useStripes } from '@folio/stripes/core';
 import { Button, Col, Icon, Label, Layout, Loading, MessageBanner, Modal, ModalFooter, RadioButton, Row, TextArea, TextField } from '@folio/stripes/components';
 
-import { useTenantInstitution } from '#/util/useOwnedEntries';
 
 import actionMeta from '../actionMeta';
 

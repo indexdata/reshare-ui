@@ -8,8 +8,9 @@ import {
 
 import { createMemoryHistory } from 'history';
 import { renderWithRs } from '@projectreshare/stripes-reshare/testing/renderWithRs';
+import { makeOkapiKyMock } from '@projectreshare/stripes-reshare/testing/okapiKyMock';
 import { useNotificationList } from '#/components/chat/useNotifications';
-import { useTiers } from '#/util/useOwnedEntries';
+import { useTiers } from '@projectreshare/stripes-reshare';
 import FlowRoute from './FlowRoute';
 
 const mockPerformAction = jest.fn(() => Promise.resolve());
@@ -19,11 +20,6 @@ jest.mock('#/components/chat/useNotifications', () => ({
   useNotificationList: jest.fn(),
 }));
 
-// The stripes core mock below has no okapi client.
-jest.mock('#/util/useOwnedEntries', () => ({
-  useTiers: jest.fn(),
-}));
-
 jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
 jest.mock('@folio/stripes-components/lib/TextArea', () => require('#/test/textAreaMock').default);
 
@@ -31,11 +27,13 @@ jest.mock('@projectreshare/stripes-reshare', () => ({
   ...jest.requireActual('@projectreshare/stripes-reshare'),
   usePerformAction: () => mockPerformAction,
   useIsActionPending: (...args) => mockIsActionPending(...args),
+  useTiers: jest.fn(),
 }));
 
-// FlowRoute receives request/actions as props, so it never queries; only
-// useStripes (reshare flags) and CalloutContext are touched here.
-jest.mock('@folio/stripes/core', () => require('#/test/stripesCore').makeStripesCoreMock(() => ({})));
+// FlowRoute receives request/actions as props; its only query is the owned
+// directory entries, which carry the discovery link template.
+const mockOkapi = makeOkapiKyMock();
+jest.mock('@folio/stripes/core', () => require('#/test/stripesCore').makeStripesCoreMock(() => mockOkapi));
 
 const { CalloutContext } = require('@folio/stripes/core');
 
@@ -172,19 +170,22 @@ describe('FlowRoute', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockIsActionPending.mockReturnValue(false);
+    mockOkapi.setResponses({
+      'directory/entries/owned': { items: [{ id: 'inst', type: 'Institution', discoveryConfig: { itemLinkTemplate: 'https://discovery.example/inventory/view/{itemid}' } }] },
+    });
     useNotificationList.mockReturnValue({ data: { items: conditionNotifications } });
     useTiers.mockReturnValue({ tiers: [], isSettled: true });
   });
 
-  it('renders flow sections with title, shared-index link, and condition data', () => {
+  it('renders flow sections with title, shared-index link, and condition data', async () => {
     renderFlowRoute();
 
     expect(screen.getByText('Test Title')).toBeInTheDocument();
     expect(screen.getByText('ISIL:REQ')).toBeInTheDocument();
     expect(screen.getByText('ISIL:SUP')).toBeInTheDocument();
 
-    const siLink = screen.getByText('stripes-reshare.viewInSharedIndex').closest('a');
-    expect(siLink).toHaveAttribute('href', 'https://shared-index.example/inventory/view/instance-1');
+    const siLink = (await screen.findByText('stripes-reshare.viewInSharedIndex')).closest('a');
+    expect(siLink).toHaveAttribute('href', 'https://discovery.example/inventory/view/instance-1');
 
     expect(screen.getByText('ui-rs.flow.loanConditions.status')).toBeInTheDocument();
 

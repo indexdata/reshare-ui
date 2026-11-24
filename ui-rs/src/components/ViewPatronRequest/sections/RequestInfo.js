@@ -8,9 +8,9 @@ import {
   Row,
   FormattedUTCDate,
 } from '@folio/stripes/components';
+import { useOwnedEntries } from '@projectreshare/stripes-reshare';
 import formattedDateTime from '#/util/formattedDateTime';
 import { formatPickupLocationFull } from '#/util/formatPickupLocation';
-import { useOwnedEntries } from '#/util/useOwnedEntries';
 
 const RequestInfo = ({ record = {} }) => {
   const illRequest = record.illRequest || {};

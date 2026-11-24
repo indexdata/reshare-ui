@@ -15,7 +15,8 @@ import {
   TextField,
 } from '@folio/stripes/components';
 import { required } from '@folio/stripes/util';
-import { Pluggable, useStripes } from '@folio/stripes/core';
+import { Pluggable } from '@folio/stripes/core';
+import { useTenantInstitution } from '@projectreshare/stripes-reshare';
 import { formatTierOption, tiersOfType } from '#/util/tiers';
 import usePrefill from './usePrefill';
 
@@ -29,7 +30,7 @@ const PatronRequestForm = ({ prefillId, selectOptions, requireTier = false }) =>
   const serviceType = values?.serviceInfo?.serviceType;
   const isCopyReq = serviceType === 'Copy';
   const pickupLocationRequired = !isCopyReq && locations.length > 0;
-  const stripes = useStripes();
+  const queryUrl = useTenantInstitution().institution?.discoveryConfig?.queryUrl;
   const { prefill, isLoading: isPrefilling } = usePrefill();
   const recordId = values?.bibliographicInfo?.supplierUniqueRecordId;
   const copyrightCode = values?.serviceInfo?.copyrightCompliance?.['#text'];
@@ -227,9 +228,10 @@ const PatronRequestForm = ({ prefillId, selectOptions, requireTier = false }) =>
 
       <Accordion
         label={<FormattedMessage id="ui-rs.information.heading.requestedTitle" />}
-        displayWhenOpen={<Pluggable
+        // Sites without discovery leave queryUrl unset and expect no search button.
+        displayWhenOpen={queryUrl && <Pluggable
           type="rs-siquery"
-          endpoint={stripes.config?.reshare?.sharedIndex?.query}
+          endpoint={queryUrl}
           searchButtonStyle="primary marginBottom0"
           searchLabel={<FormattedMessage id="ui-rs.requestform.populateFromSI" />}
           disabled={isPrefilling}
