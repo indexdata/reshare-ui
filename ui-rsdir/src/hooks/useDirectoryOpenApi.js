@@ -1,5 +1,5 @@
-import { useOkapiKy } from '@folio/stripes/core';
 import { useQuery } from 'react-query';
+import { useOkapiKy } from '@projectreshare/stripes-reshare';
 
 const CACHE_TIME = 30 * 60 * 1000;
 

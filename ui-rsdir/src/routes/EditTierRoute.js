@@ -9,8 +9,8 @@ import {
   Pane,
   PaneFooter,
 } from '@folio/stripes/components';
-import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
-import { useCloseDirect, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { CalloutContext } from '@folio/stripes/core';
+import { useCloseDirect, useOkapiKy, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import TierForm from '../components/TierForm';
 
 const CREATE = 'create';
@@ -71,7 +71,7 @@ const EditTierRoute = () => {
         message: (
           <KeyValue
             label={<FormattedMessage id="ui-rsdir.tier.create.error" />}
-            value={err.response?.statusText || err.message}
+            value={err.message}
           />
         ),
       });
@@ -94,7 +94,7 @@ const EditTierRoute = () => {
         message: (
           <KeyValue
             label={<FormattedMessage id="ui-rsdir.tier.edit.error" />}
-            value={err.response?.statusText || err.message}
+            value={err.message}
           />
         ),
       });
@@ -117,7 +117,7 @@ const EditTierRoute = () => {
         message: (
           <KeyValue
             label={<FormattedMessage id="ui-rsdir.tier.delete.error" />}
-            value={err.response?.statusText || err.message}
+            value={err.message}
           />
         ),
       });

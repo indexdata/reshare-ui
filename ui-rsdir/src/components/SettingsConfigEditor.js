@@ -1,8 +1,8 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { useQueryClient } from 'react-query';
-import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
-import { useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { CalloutContext } from '@folio/stripes/core';
+import { useOkapiKy, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import {
   Badge,
   Button,

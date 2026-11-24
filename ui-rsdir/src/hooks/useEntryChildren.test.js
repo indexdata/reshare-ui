@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import useEntryChildren from './useEntryChildren';
 
 const mockKy = jest.fn();
+// The stripes-reshare client extends whatever stripes-core returns.
+mockKy.extend = () => mockKy;
 
 jest.mock('@folio/stripes/core', () => ({
   useOkapiKy: () => mockKy,

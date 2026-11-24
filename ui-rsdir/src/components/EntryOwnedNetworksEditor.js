@@ -3,7 +3,7 @@ import { FormattedMessage, useIntl } from 'react-intl';
 import { Form } from 'react-final-form';
 import { Prompt } from 'react-router-dom';
 import { useMutation, useQueryClient } from 'react-query';
-import { CalloutContext, useOkapiKy } from '@folio/stripes/core';
+import { CalloutContext } from '@folio/stripes/core';
 import {
   Button,
   Col,
@@ -13,7 +13,7 @@ import {
   ModalFooter,
   Row,
 } from '@folio/stripes/components';
-import { SimpleTable, useOkapiQuery } from '@projectreshare/stripes-reshare';
+import { SimpleTable, useOkapiKy, useOkapiQuery } from '@projectreshare/stripes-reshare';
 import useDirectoryPermissions from '../hooks/useDirectoryPermissions';
 import NetworkForm from './NetworkForm';
 
@@ -82,7 +82,7 @@ const EntryOwnedNetworksEditor = ({ id }) => {
       message: (
         <KeyValue
           label={<FormattedMessage id={labelId} />}
-          value={error.response?.statusText || error.message}
+          value={error.message}
         />
       ),
     });

@@ -7,6 +7,8 @@ import { quietQueryLog } from '@projectreshare/stripes-reshare/testing/quietQuer
 import useDirectoryOpenApi from './useDirectoryOpenApi';
 
 const mockKy = jest.fn();
+// The stripes-reshare client extends whatever stripes-core returns.
+mockKy.extend = () => mockKy;
 jest.mock('@folio/stripes/core', () => ({ useOkapiKy: () => mockKy }));
 
 const Consumer = ({ enabled = true }) => {

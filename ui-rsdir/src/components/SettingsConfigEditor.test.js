@@ -24,6 +24,9 @@ const selectionChangeImpact = options => changeImpact({ ...options, vendorFieldM
 
 jest.mock('@folio/stripes-components/lib/Icon', () => require('@projectreshare/stripes-reshare/testing/iconMock').default);
 
+const mockPatch = jest.fn();
+const mockKy = jest.fn();
+
 // The editor fetches the entry's local-only copy. Unless a test sets
 // mockLocalResource, that copy mirrors the rendered initialResource.
 // The other query, the parent entry's merged view, comes from mockParentResource.
@@ -31,6 +34,7 @@ let mockLocalResource;
 let mockRenderedResource;
 let mockParentResource;
 jest.mock('@projectreshare/stripes-reshare', () => ({
+  useOkapiKy: () => mockKy,
   useOkapiQuery: (path, { searchParams } = {}) => (searchParams?.['resolve-inherit'] === 'false' ? {
     isSuccess: true,
     data: mockLocalResource === undefined ? mockRenderedResource : mockLocalResource,
@@ -41,8 +45,6 @@ const SettingsConfigEditor = props => {
   return <RealSettingsConfigEditor {...props} />;
 };
 
-const mockPatch = jest.fn();
-const mockKy = jest.fn();
 let mockOpenApiData;
 let mockOpenApiState;
 let mockMessages;
@@ -69,7 +71,6 @@ jest.mock('@folio/stripes/core', () => {
 
   return {
     CalloutContext: createContext({ sendCallout: jest.fn() }),
-    useOkapiKy: () => mockKy,
   };
 });
 

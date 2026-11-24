@@ -374,9 +374,16 @@ describe('directory entries', () => {
     renderDirectory(['/directory/entries/e1/networks']);
     const input = await editPriority();
     fireEvent.change(input, { target: { value: '-4' } });
-    mockOkapi.patch.mockRejectedValueOnce(new Error('Save failed'));
+    // Shaped like the stripes-reshare client's error: the server's message, plus the response.
+    mockOkapi.patch.mockRejectedValueOnce(Object.assign(new Error('Save failed'), {
+      status: 400,
+      response: { status: 400, statusText: 'Bad Request' },
+    }));
     fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.network.priority.save' }));
     await waitFor(() => expect(sendCallout).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' })));
+    const callout = within(renderWithRs(sendCallout.mock.calls.at(-1)[0].message).container);
+    expect(callout.getByText('Save failed')).toBeInTheDocument();
+    expect(callout.queryByText('Bad Request')).not.toBeInTheDocument();
     expect(input).toHaveValue(-4);
     await waitFor(() => expect(screen.getByRole('button', { name: 'ui-rsdir.network.priority.save' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'ui-rsdir.network.priority.save' }));
