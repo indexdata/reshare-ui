@@ -51,11 +51,11 @@ const Recall = ({ request, performAction }) => {
                 help={<FormattedMessage id="ui-rs.actions.recall.dueDate.help" />}
               />
               <Layout className="padding-top-gutter">
-                <Label><FormattedMessage id="ui-rs.actions.note" /></Label>
+                <Label htmlFor="recall-note"><FormattedMessage id="ui-rs.actions.note" /></Label>
               </Layout>
               <Row>
                 <Col xs={12}>
-                  <Field name="note" component={TextArea} />
+                  <Field id="recall-note" name="note" component={TextArea} />
                 </Col>
               </Row>
               <ModalFooter>

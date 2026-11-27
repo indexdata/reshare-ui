@@ -111,6 +111,7 @@ const EmailPullslipsParams = () => {
               id={`scheduled-action-email-to-${field}`}
               name={field}
               component={EmailField}
+              ariaLabel={intl.formatMessage({ id: 'ui-rs.settings.scheduledActions.params.to' })}
               validate={validateEmail}
             />
           )}

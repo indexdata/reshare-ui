@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { Form, Field } from 'react-final-form';
 import { Button, Layout, TextField } from '@folio/stripes/components';
@@ -20,6 +20,7 @@ const ScanConfirmAction = ({
   const optionalParams = [...(withNote ? [noteParam] : []), ...params];
   const sendCallout = useIntlCallout();
   const actionPending = !!useIsActionPending(request.id);
+  const promptId = useId();
 
   const onSubmit = async values => {
     if (values?.reqId?.trim()?.toUpperCase() !== request.requesterRequestId?.toUpperCase()) {
@@ -39,14 +40,16 @@ const ScanConfirmAction = ({
       onSubmit={onSubmit}
       render={({ handleSubmit, submitting, invalid }) => (
         <form onSubmit={handleSubmit} autoComplete="off">
-          {prompt && <FormattedMessage id={prompt} />}
-          {!prompt &&
-            <FormattedMessage id={`stripes-reshare.actions.${action}`}>
-              {dispAction => <FormattedMessage id="ui-rs.actions.generic.prompt" values={{ action: dispAction }} />}
-            </FormattedMessage>
-          }
+          <span id={promptId}>
+            {prompt && <FormattedMessage id={prompt} />}
+            {!prompt &&
+              <FormattedMessage id={`stripes-reshare.actions.${action}`}>
+                {dispAction => <FormattedMessage id="ui-rs.actions.generic.prompt" values={{ action: dispAction }} />}
+              </FormattedMessage>
+            }
+          </span>
           <Layout className="display-flex flex-align-items-start">
-            <Field name="reqId" component={TextField} autoFocus />
+            <Field name="reqId" component={TextField} ariaLabelledBy={promptId} autoFocus />
             <Layout className="margin-start-gutter">
               <Button buttonStyle="primary mega" type="submit" disabled={submitting || invalid || actionPending}>
                 <FormattedMessage id="ui-rs.button.scan" />

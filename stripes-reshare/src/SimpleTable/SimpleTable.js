@@ -50,7 +50,11 @@ const SimpleTable = ({
 
   const header = (col) => {
     if (!col.sort) {
-      return <th key={col.key} scope="col" className={cellClass(col, css.header)}>{col.label}</th>;
+      return (
+        <th key={col.key} scope="col" className={cellClass(col, css.header)}>
+          {col.hideLabel ? <span className={css.srOnly}>{col.label}</span> : col.label}
+        </th>
+      );
     }
     const sorted = sort.column === col.key;
     return (
@@ -99,6 +103,7 @@ SimpleTable.propTypes = {
   columns: PropTypes.arrayOf(PropTypes.shape({
     key: PropTypes.string.isRequired,
     label: PropTypes.node,
+    hideLabel: PropTypes.bool,
     render: PropTypes.func,
     sort: PropTypes.oneOfType([PropTypes.bool, PropTypes.func]),
     defaultDirection: PropTypes.oneOf(['ascending', 'descending']),

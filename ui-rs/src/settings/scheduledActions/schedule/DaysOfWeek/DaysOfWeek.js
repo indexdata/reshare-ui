@@ -38,7 +38,6 @@ const DaysOfWeek = ({ id, label, required, input, meta }) => {
             marginBottom0
             onClick={() => toggle(dow)}
             aria-pressed={selected.has(dow)}
-            aria-label={dayName(intl, dow, 'long')}
           >
             {dayName(intl, dow, 'short')}
           </Button>

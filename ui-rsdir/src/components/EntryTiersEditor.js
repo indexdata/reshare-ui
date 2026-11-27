@@ -136,7 +136,8 @@ const EntryTiersEditor = ({ id }) => {
     { key: 'name', label: intl.formatMessage({ id: 'ui-rsdir.tiers.current' }), render: tierLabel, sort: true },
     {
       key: 'actions',
-      label: '',
+      label: <FormattedMessage id="stripes-reshare.actions" />,
+      hideLabel: true,
       fit: true,
       render: tier => (
         <IconButton

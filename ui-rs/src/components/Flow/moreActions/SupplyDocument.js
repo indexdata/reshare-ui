@@ -66,11 +66,11 @@ const SupplyDocument = ({ request, performAction, actions = [] }) => {
               {withNote &&
                 <>
                   <Layout className="padding-top-gutter">
-                    <Label><FormattedMessage id="ui-rs.actions.addNote" /></Label>
+                    <Label htmlFor="supply-document-note"><FormattedMessage id="ui-rs.actions.addNote" /></Label>
                   </Layout>
                   <Row>
                     <Col xs={12}>
-                      <Field name="note" component={TextArea} />
+                      <Field id="supply-document-note" name="note" component={TextArea} />
                     </Col>
                   </Row>
                 </>

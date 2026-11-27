@@ -198,7 +198,8 @@ const EntryOwnedTiersEditor = ({ id }) => {
     },
     {
       key: 'actions',
-      label: '',
+      label: <FormattedMessage id="stripes-reshare.actions" />,
+      hideLabel: true,
       fit: true,
       render: tier => (
         <>

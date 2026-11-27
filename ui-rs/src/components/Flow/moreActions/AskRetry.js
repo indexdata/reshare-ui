@@ -82,11 +82,11 @@ const AskRetry = ({ request, performAction }) => {
                 />
               </Layout>
               <Layout className="padding-top-gutter">
-                <Label><FormattedMessage id="ui-rs.actions.addNote" /></Label>
+                <Label htmlFor="ask-retry-note"><FormattedMessage id="ui-rs.actions.addNote" /></Label>
               </Layout>
               <Row>
                 <Col xs={12}>
-                  <Field name="note" component={TextArea} />
+                  <Field id="ask-retry-note" name="note" component={TextArea} />
                 </Col>
               </Row>
               <ModalFooter>

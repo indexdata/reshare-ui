@@ -25,7 +25,8 @@ Each column is an object:
 | Field | Type | Description |
 |---|---|---|
 | `key` | string, required | Column identity; also the row property shown when there is no `render`. |
-| `label` | node | Header text. `''` gives an empty header cell. |
+| `label` | node | Header text. |
+| `hideLabel` | bool | Show the header text to screen readers only, for a column such as action buttons that needs no visible header. Ignored on a sortable column. |
 | `render` | `(row) => node` | Cell content. |
 | `sort` | `true` or `(rowA, rowB) => number` | Makes the header a sort button. `true` compares the column's own row value as text, numeric-aware, with blanks first. A function gets whole rows rather than cell values, so it can break ties on other fields, and must order ascending. |
 | `defaultDirection` | `'ascending'` or `'descending'` | Direction used when initially sorting by this column or switching back to it. Ascending unless set. |

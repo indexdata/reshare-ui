@@ -185,7 +185,8 @@ const EntryClosuresEditor = ({ id }) => {
     },
     {
       key: 'actions',
-      label: '',
+      label: <FormattedMessage id="stripes-reshare.actions" />,
+      hideLabel: true,
       fit: true,
       render: closure => (
         <Layout className="full flex justify-end">

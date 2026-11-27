@@ -664,6 +664,7 @@ const TemplateForm = ({ initialValues, onSubmit, onClose, title, submitLabelId, 
                         id={`template-label-${field}`}
                         name={field}
                         component={TextField}
+                        ariaLabel={intl.formatMessage({ id: 'ui-rs.settings.templates.field.labels' })}
                         validate={validateLabelFormat}
                       />
                     )}

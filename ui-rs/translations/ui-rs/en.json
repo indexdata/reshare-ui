@@ -22,6 +22,7 @@
   "yes": "Yes",
   "no": "No",
   "viewInDirectory": "View in directory",
+  "patronrequests.flags": "Flags",
   "patronrequests.id": "Request Id",
   "patronrequests.isRequester": "Requester?",
   "patronrequests.dateCreated": "Created",
@@ -253,7 +254,7 @@
   "flow.volumes.remove.confirm": "Remove item {barcode} from this request?",
 
   "view.showTags": "Show tags",
-  "view.showChat": "{countType, select, unread {Messages ({count} unread)} total {Messages ({count} total)} other {Messages}}",
+  "view.showChat": "{countType, select, unread {Messages, {count} unread} total {Messages, {count} total} other {Messages}}",
   "view.title": "Request {id}",
   "view.banners.lastChanceCost": "Last chance to add a cost condition before request cost finalized",
   "view.banners.dueTooSoon": "The due date is less than a week away. Check the loan period, or override the due date when shipping.",

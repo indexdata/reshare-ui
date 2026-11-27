@@ -48,6 +48,7 @@ const SearchAndFilter = ({
   return (
     <>
       <SearchField
+        ariaLabel={intl.formatMessage({ id: 'stripes-smart-components.search' })}
         autoFocus
         name="query"
         indexName="qindex"

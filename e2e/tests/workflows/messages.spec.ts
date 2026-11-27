@@ -36,7 +36,7 @@ test('messages between borrower and lender', async ({ ownPage: borrower, peerPag
     await openMessages(borrower);
     await send(borrower, question);
     // the button's name comes from its tooltip
-    await expect(lender.getByRole('button', { name: 'Messages (1 unread)' })).toBeVisible({ timeout: 30_000 });
+    await expect(lender.getByRole('button', { name: 'Messages, 1 unread' })).toBeVisible({ timeout: 30_000 });
   });
 
   await step('lender finds the request under unread messages and reads it', async () => {
@@ -58,7 +58,7 @@ test('messages between borrower and lender', async ({ ownPage: borrower, peerPag
     await expect(pane.getByText('Unread', { exact: true })).toBeVisible();
     expect((await marked).ok()).toBe(true);
     await pane.getByRole('button', { name: 'Close', exact: true }).click();
-    await expect(lender.getByRole('button', { name: 'Messages (1 total)' })).toBeVisible();
+    await expect(lender.getByRole('button', { name: 'Messages, 1 total' })).toBeVisible();
   });
 
   await step('lender replies and the borrower sees it', async () => {

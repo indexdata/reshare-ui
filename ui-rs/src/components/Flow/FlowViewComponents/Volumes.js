@@ -61,7 +61,8 @@ const Volumes = ({ request, actions = [] }) => {
     }] : []),
     ...(canRemove ? [{
       key: 'actions',
-      label: '',
+      label: <FormattedMessage id="stripes-reshare.actions" />,
+      hideLabel: true,
       fit: true,
       render: item => (
         <Button

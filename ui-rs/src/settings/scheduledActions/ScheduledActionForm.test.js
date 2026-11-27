@@ -64,7 +64,7 @@ const fillRequired = () => {
   fireEvent.change(byId('scheduled-action-title'), { target: { value: 'Morning slips' } });
   fireEvent.change(byId('scheduled-action-batchQuery'), { target: { value: 'state==REQ' } });
   fireEvent.change(byId('scheduled-action-hours'), { target: { value: '9' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Monday' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Mon' }));
 };
 
 const TEMPLATE_SELECT = 'scheduled-action-email-templateLabel';

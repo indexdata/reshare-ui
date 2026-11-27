@@ -172,11 +172,11 @@ const AddCondition = ({ request, performAction }) => {
                   </Layout>
                 )}
                 <Layout className="padding-top-gutter">
-                  <Label><FormattedMessage id="ui-rs.actions.addNote" /></Label>
+                  <Label htmlFor="add-condition-note"><FormattedMessage id="ui-rs.actions.addNote" /></Label>
                 </Layout>
                 <Row>
                   <Col xs={11}>
-                    <Field name="note" component={TextArea} autoFocus />
+                    <Field id="add-condition-note" name="note" component={TextArea} autoFocus />
                   </Col>
                 </Row>
                 <ModalFooter>

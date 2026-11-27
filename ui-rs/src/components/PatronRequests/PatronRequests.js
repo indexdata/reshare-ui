@@ -236,7 +236,9 @@ const PatronRequests = ({
                   <MultiColumnList
                     autosize
                     columnMapping={{
-                      flags: '',
+                      // The badges need no visible header, so only screen readers get one,
+                      // through the global sr-only class from stripes-components.
+                      flags: <span className="sr-only"><FormattedMessage id="ui-rs.patronrequests.flags" /></span>,
                       hrid: <FormattedMessage id="ui-rs.patronrequests.id" />,
                       dateCreated: <FormattedMessage id="ui-rs.patronrequests.dateCreated" />,
                       lastUpdated: <FormattedMessage id="ui-rs.patronrequests.lastUpdated" />,
